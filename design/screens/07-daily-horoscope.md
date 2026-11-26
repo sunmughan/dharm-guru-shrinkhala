@@ -32,9 +32,9 @@ Presentation section Three, seventh phone mockup, and section Five, Free Layer.
 • Weekly action: "Weekly"
 • Hero title, sample when Mesha is selected: "Mesha Today" (Sample data)
 • Hero stars: "4 of 5"
-• Hero body, sample Mesha copy from the presentation: "Energy stays high till noon. A pending payment may clear today. Avoid harsh words at home in the evening."
-• Area labels and sample values: "Career", "Strong"; "Money", "Good"; "Health", "Steady"; "Love", "Warm"
-• Lucky labels and sample values: "Lucky Number", "5"; "Lucky Colour", "Saffron"
+• Hero body, sample Mesha copy from the presentation: "Energy stays high till noon. A pending payment may clear today. Avoid harsh words at home in the evening." (Sample data)
+• Area labels and sample values: "Career", "Strong"; "Money", "Good"; "Health", "Steady"; "Love", "Warm" (Sample data)
+• Lucky labels and sample values: "Lucky Number", "5"; "Lucky Colour", "Saffron" (Sample data)
 • Primary: "Read Weekly Horoscope"
 
 ## States

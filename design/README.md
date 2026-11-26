@@ -7,7 +7,7 @@ Design lead deliverable, 26 November 2026. Source of truth: presentation artifac
 • `DESIGN-SYSTEM.md` is the single system for every screen. Read it first. No screen invents its own colour, type, spacing, or button.
 • `screens/` holds one file per screen, user app first, then admin panel. Each file gives layout top to bottom, components, exact copy, states, and gating.
 • `flows/` holds six UX flows: kundli chart readability, panchang clarity, matching, remedies, live consult, premium upgrade.
-• Sample data is labelled "Sample data" in every file. The sample kundli is birth 14 March 1998, Jaipur, Surya in Meena lagna at 01° 24′. Pricing is "to be decided" everywhere. No astrologer names, no real horoscope predictions, and no prices are invented anywhere in this folder.
+• Sample data is labelled "Sample data" in every file. The sample kundli is birth 14 March 1998, Jaipur, Surya in Meena lagna at 01° 24′. Pricing is "to be decided" everywhere. No astrologer names and no prices are invented anywhere in this folder. The only prediction text is the labelled presentation sample in screen 07; no other prediction copy is written anywhere in this folder.
 
 ## Screen index
 

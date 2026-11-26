@@ -94,12 +94,16 @@ class _DharmGuruAppState extends State<DharmGuruApp> {
     if (!widget.firebaseReady) {
       return MaterialApp(
         theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: ThemeMode.light,
         home: const _FirebaseSetupNeededScreen(),
       );
     }
     if (!_splashDone) {
       return MaterialApp(
         theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: ThemeMode.light,
         home: SplashScreen(
           onDone: () => setState(() => _splashDone = true),
         ),
@@ -108,6 +112,8 @@ class _DharmGuruAppState extends State<DharmGuruApp> {
     if (!_onboardingDone) {
       return MaterialApp(
         theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: ThemeMode.light,
         home: OnboardingScreen(
           onDone: () => setState(() => _onboardingDone = true),
         ),
@@ -116,6 +122,8 @@ class _DharmGuruAppState extends State<DharmGuruApp> {
     return MaterialApp(
       title: 'Dharm Guru Shrinkhala',
       theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.light,
       home: const AppShell(),
     );
   }

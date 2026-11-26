@@ -12,14 +12,22 @@ Flutter app direct to Firebase, no backend. Follow these console steps in order.
 ## 2. Register the Android app
 
 * In Project settings, add an Android app
-* Package name: use the package name from the Android app config in this repo
+* Package name: `com.codeair.dharm_guru_shrinkhala`, the Android
+  applicationId from `android/app/build.gradle.kts` in this repo.
+  The `android/` directory is part of the Flutter project
+  scaffolding. If it is missing, create it with
+  `flutter create --platforms=android,ios,web .` in the repo root
+  before this step, and do not copy the generated `lib/` or
+  `pubspec.yaml` over the existing files.
 * Download `google-services.json` and place it in `android/app/`
 * This file is gitignored. Never commit a real `google-services.json`
 
 ## 3. Register the iOS app
 
 * In Project settings, add an iOS app
-* Bundle id: use the bundle id from the iOS app config in this repo
+* Bundle id: `com.codeair.dharm_guru_shrinkhala`, the iOS bundle
+  id from the `ios/` project scaffolding in this repo. If the
+  `ios/` directory is missing, create it the same way as in step 2.
 * Download `GoogleService-Info.plist` and place it in `ios/Runner/`
 * This file is gitignored. Never commit a real `GoogleService-Info.plist`
 

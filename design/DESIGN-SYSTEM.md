@@ -85,7 +85,7 @@ The brand mark and the avatar use one flat pair only: #F59E0B to #B45309. This i
 • One serif heading per screen at most in the top area. Everything below it is sans.
 • Minimum body size is 14. Chart rashi labels are 13 minimum, planet abbreviations are 14 semibold minimum, so elders can read the chart without zoom.
 • Headings are sentence case, never all caps, except the 11 point overline label.
-• Copy is plain and simple. No horoscope prediction is written by design. All prediction copy comes from published content in the admin panel.
+• Copy is plain and simple. No horoscope prediction is written by design. All prediction copy comes from published content in the admin panel. The only prediction text in this folder is the presentation sample copy in screen 07, labelled Sample data, which the admin panel replaces with published content.
 • No hyphen and no em dash in any visible copy. Write "09:42 AM to 11:15 AM" not a range with a dash. This rule applies to every screen file in this folder.
 
 ## 4. Spacing grid
@@ -262,7 +262,7 @@ Sample data is labelled "Sample data" wherever it appears in a screen spec, and 
 • Surya in Meena lagna at 01° 24′. Full planet table is in `screens/06-planet-details.md`.
 • Second sample name for matching only: Priya, Karka Lagna.
 
-No other names, no real horoscope predictions, and no prices appear anywhere in this design folder.
+No other names, and no prices, appear anywhere in this design folder. The only prediction text is the labelled presentation sample in screen 07; no other prediction copy appears anywhere in this design folder.
 
 ## 16. Open questions for the client
 

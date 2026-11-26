@@ -1,7 +1,8 @@
 // Placeholder Firebase configuration for Dharm Guru Shrinkhala.
 // Real values come from the Firebase console only. See FIREBASE-SETUP.md.
-// This file is gitignored in .gitignore. Copy the generated file here
-// after running flutterfire configure. Do not invent values by hand.
+// This file is tracked in git with placeholder values. It is NOT
+// gitignored. Run flutterfire configure to replace the placeholders
+// with generated values. Do not invent values by hand.
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;

@@ -37,6 +37,31 @@ class AppColors {
   static const Color premiumGold = gold;
 }
 
+/// Dark colour tokens from design/DESIGN-SYSTEM.md section 2.
+/// Same token names as the light set, dark values. Use these in
+/// AppTheme.dark. Dark mode follows the system setting once the
+/// text styles become brightness aware; until then themeMode
+/// stays light so text never renders unreadable.
+class AppColorsDark {
+  AppColorsDark._();
+
+  static const Color bg = Color(0xFF14100C);
+  static const Color bg2 = Color(0xFF1D1710);
+  static const Color surface = Color(0xFF201913);
+  static const Color surface2 = Color(0xFF2A2118);
+  static const Color ink = Color(0xFFF7EBD7);
+  static const Color ink2 = Color(0xFFD8C4A6);
+  static const Color ink3 = Color(0xFFA68F73);
+  static const Color saffron = Color(0xFFF59E0B);
+  static const Color saffron2 = Color(0xFFFBBF24);
+  static const Color maroon = Color(0xFFFDBA74);
+  static const Color gold = Color(0xFFE3B94E);
+  static const Color line = Color(0xFF3A2E20);
+  static const Color line2 = Color(0xFF54432C);
+  static const Color good = Color(0xFF7BC796);
+  static const Color phonebg = Color(0xFF1B1510);
+}
+
 class AppTextStyles {
   AppTextStyles._();
 
@@ -144,9 +169,14 @@ class AppSpacing {
   AppSpacing._();
 
   /// Base unit is 4. All spacing uses multiples of 4.
+  /// Names follow the spec tokens: xs is space.1, sm is
+  /// space.2, space3 is space.3, md is space.4, space5 is
+  /// space.5, lg is space.6, xl is space.8, xxl is space.12.
   static const double xs = 4;
   static const double sm = 8;
+  static const double space3 = 12;
   static const double md = 16;
+  static const double space5 = 20;
   static const double lg = 24;
   static const double xl = 32;
   static const double xxl = 48;
@@ -154,6 +184,8 @@ class AppSpacing {
   static const double cardRadius = 18;
   static const double smallRadius = 14;
   static const double pillRadius = 999;
+  static const double chartRadius = 16;
+  static const double sheetRadius = 24;
   static const double buttonRadius = pillRadius;
   static const double buttonHeight = 52;
   static const double screenPadding = 16;
@@ -209,6 +241,68 @@ class AppTheme {
         backgroundColor: AppColors.surface,
         selectedItemColor: AppColors.saffron,
         unselectedItemColor: AppColors.ink3,
+        type: BottomNavigationBarType.fixed,
+      ),
+    );
+  }
+
+  /// Dark theme from the spec dark tokens. Primary buttons use
+  /// saffron #F59E0B fill with #14100C text, never white text,
+  /// because white on #F59E0B is weak contrast.
+  /// NOTE: AppTextStyles is still the light set, so themeMode
+  /// stays light in the app until the text styles become
+  /// brightness aware. Do not switch themeMode to system yet.
+  static ThemeData dark() {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: AppColorsDark.bg,
+      primaryColor: AppColorsDark.saffron,
+      colorScheme: const ColorScheme.dark(
+        primary: AppColorsDark.saffron,
+        secondary: AppColorsDark.saffron2,
+        surface: AppColorsDark.surface,
+        onPrimary: AppColorsDark.bg,
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: AppColorsDark.surface,
+        foregroundColor: AppColorsDark.ink,
+        centerTitle: false,
+        titleTextStyle: AppTextStyles.cardTitle.copyWith(
+          color: AppColorsDark.ink,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColorsDark.saffron,
+          foregroundColor: AppColorsDark.bg,
+          textStyle: AppTextStyles.button.copyWith(
+            color: AppColorsDark.bg,
+          ),
+          minimumSize: const Size.fromHeight(AppSpacing.buttonHeight),
+          shape: RoundedRectangleBorder(
+            borderRadius:
+                BorderRadius.circular(AppSpacing.buttonRadius),
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+          ),
+        ),
+      ),
+      cardTheme: const CardThemeData(
+        color: AppColorsDark.surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(
+            Radius.circular(AppSpacing.cardRadius),
+          ),
+          side: BorderSide(color: AppColorsDark.line),
+        ),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: AppColorsDark.surface,
+        selectedItemColor: AppColorsDark.saffron,
+        unselectedItemColor: AppColorsDark.ink3,
         type: BottomNavigationBarType.fixed,
       ),
     );

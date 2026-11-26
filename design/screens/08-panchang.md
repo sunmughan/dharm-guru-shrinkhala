@@ -11,10 +11,10 @@ Presentation section Three, eighth phone mockup, and section Four, Panchang Wire
 ## Layout, top to bottom
 
 1. Top bar: back chevron on the left, title "Todays Panchang" in H3 serif 18. Right side: text button "Jaipur" with a chevron, showing the city for the panchang. Tapping it opens city choice. The sample city is Jaipur.
-2. Date line, Body 16 ink2, 8 below the top bar: "Thursday, Jaipur". The date itself is the device date in words, for example "Thursday". No year is shown in the line because the top bar already carries the screen title and the device date is clear from context. If the client wants the full date, add it here in the same line.
+2. Date line, Body 16 ink2, 8 below the top bar: "Saturday, Jaipur". The date itself is the device date in words, for example "Saturday". No year is shown in the line because the top bar already carries the screen title and the device date is clear from context. If the client wants the full date, add it here in the same line.
 3. Two by two grid of detail cards, 16 gap, each standard card padding 16, label Caption 12 ink3 above value Title 17 ink:
    • "Tithi", "Shukla Panchami"
-   • "Vaar", "Guruvaar"
+   • "Vaar", "Shanivaar"
    • "Nakshatra", "Rohini till 04:12 PM"
    • "Yoga", "Siddhi"
    • Second row continues the grid with "Karana", "Bava", and a sixth card "Sunrise", "06:48 AM", plus "Sunset", "05:52 PM". Layout is a two column grid, so the six cards flow as three rows of two.
@@ -26,20 +26,20 @@ Presentation section Three, eighth phone mockup, and section Four, Panchang Wire
 ## Components
 
 • City button in the top bar.
-• Six detail cards in a two by two grid.
+• Seven detail cards in a two by two grid.
 • Shubh Muhurat hero card.
 • Rahu Kaal warning strip.
 • Festival notes text button, conditional.
 
 ## Copy
 
-All values below are sample data from the presentation, for Thursday in Jaipur.
+All values below are sample data from the presentation, for Saturday in Jaipur.
 
 • Title: "Todays Panchang"
 • City: "Jaipur"
-• Date line: "Thursday, Jaipur"
+• Date line: "Saturday, Jaipur"
 • "Tithi", "Shukla Panchami"
-• "Vaar", "Guruvaar"
+• "Vaar", "Shanivaar"
 • "Nakshatra", "Rohini till 04:12 PM"
 • "Yoga", "Siddhi"
 • "Karana", "Bava"

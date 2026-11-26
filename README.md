@@ -23,7 +23,7 @@ All screens in Phase 1 use the same sample data, labelled sample data on screen:
 
 Design tokens in `lib/core/theme/design_tokens.dart` use the exact values from `design/DESIGN-SYSTEM.md`, which takes every token from the presentation.
 
-No real horoscope prediction is shown. No astrologer names are used. Planet rows other than Surya are sample rows with values to be added by the kundli calculation service in a later phase.
+No real horoscope prediction is shown. No astrologer names are used. Planet rows carry the exact sample values from `design/screens/06-planet-details.md`. Panchang values carry the exact sample values from `design/screens/08-panchang.md`. Sample day is Saturday 14 March 1998, so Vaar is Shanivaar.
 
 ## Project structure
 
