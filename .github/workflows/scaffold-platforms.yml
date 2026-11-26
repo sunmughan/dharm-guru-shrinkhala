@@ -1,0 +1,33 @@
+name: Scaffold Platforms
+
+# One off job. Generates the standard Flutter platform directories
+# (android, ios, web) with flutter create on the runner and commits
+# them to main. Run once from the Actions tab with Run workflow.
+# It copies only android, ios and web. It never touches lib,
+# pubspec.yaml or test, so the existing code and tests are safe.
+# Delete this file after the first successful run.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Generate platform scaffolding
+        run: |
+          flutter create --platforms=android,ios,web --org com.codeair --project-name dharm_guru_shrinkhala /tmp/dharm-scaffold
+          cp -r /tmp/dharm-scaffold/android /tmp/dharm-scaffold/ios /tmp/dharm-scaffold/web .
+      - name: Commit platform directories
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add android ios web
+          git commit -m "Add Android, iOS and web platform scaffolding (D10)"
+          git push
