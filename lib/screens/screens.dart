@@ -6,43 +6,102 @@ import '../models/panchang.dart';
 import '../widgets/kundli_chart.dart';
 import '../widgets/planet_details.dart';
 
-/// Splash screen. Shows the app name, then moves to onboarding.
-class SplashScreen extends StatelessWidget {
+/// Splash screen. Wordmark only, no button, no link, no
+/// version text. Auto advances after two seconds, per
+/// design/screens/01-splash.md. The sun mark uses the closest
+/// line icon, Icons.wb_sunny, because Flutter has no drawn
+/// sun mark.
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key, required this.onDone});
 
   final VoidCallback onDone;
 
   @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  bool _advanced = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.delayed(const Duration(seconds: 2), () {
+      if (!mounted || _advanced) {
+        return;
+      }
+      _advanced = true;
+      widget.onDone();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.deepInk,
-      body: Center(
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Icon(Icons.auto_awesome, size: 72, color: AppColors.saffron),
-            const SizedBox(height: AppSpacing.lg),
-            const Text(
-              'Dharm Guru Shrinkhala',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    const Icon(
+                      Icons.wb_sunny,
+                      size: 64,
+                      color: AppColors.saffron,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Text(
+                      'Dharm Guru',
+                      style: AppTextStyles.display,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Your kundli. Your guidance. Every single day.',
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.ink2,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.space3),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        _SplashDot(active: false),
+                        SizedBox(width: AppSpacing.sm),
+                        _SplashDot(active: true),
+                        SizedBox(width: AppSpacing.sm),
+                        _SplashDot(active: false),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            const Text(
-              'Astrology and horoscope',
-              style: TextStyle(fontSize: 16, color: Colors.white70),
             ),
             const SizedBox(height: AppSpacing.xxl),
-            ElevatedButton(
-              onPressed: onDone,
-              child: const Text('Begin'),
-            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SplashDot extends StatelessWidget {
+  const _SplashDot({required this.active});
+
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: active ? AppColors.saffron : AppColors.line2,
+        shape: BoxShape.circle,
       ),
     );
   }
@@ -322,28 +381,282 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
   }
 }
 
-/// Kundli chart screen with the North Indian chart and planet details.
-class KundliChartScreen extends StatelessWidget {
+/// Kundli chart screen with the North Indian chart, the
+/// Lagna and Moon chart switcher, the summary chips and the
+/// planet summary list, per design/screens/05-kundli-chart.md.
+/// Moon Chart has no engine data in Phase 1, so it shows the
+/// not ready state and invents no values.
+class KundliChartScreen extends StatefulWidget {
   const KundliChartScreen({super.key});
+
+  @override
+  State<KundliChartScreen> createState() => _KundliChartScreenState();
+}
+
+class _KundliChartScreenState extends State<KundliChartScreen> {
+  bool _showMoonChart = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Your Kundli')),
+      appBar: AppBar(title: const Text('Birth Kundli')),
+      body: ListView(
+        padding: const EdgeInsets.all(AppSpacing.screenPadding),
+        children: <Widget>[
+          const SampleDataBanner(),
+          const SizedBox(height: AppSpacing.md),
+          _ChartSwitcher(
+            showMoon: _showMoonChart,
+            onChanged: (bool showMoon) {
+              setState(() {
+                _showMoonChart = showMoon;
+              });
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (_showMoonChart)
+            const _MoonChartNotReady()
+          else ...<Widget>[
+            const KundliChart(),
+            const SizedBox(height: AppSpacing.space3),
+            const _ChartLegend(),
+            const SizedBox(height: AppSpacing.md),
+            const _PlanetSummaryList(),
+          ],
+          const SizedBox(height: AppSpacing.lg),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const PlanetDetailsScreen(),
+                  ),
+                );
+              },
+              child: const Text('See Planet Details'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Segmented control for Lagna Chart and Moon Chart, per the
+/// design system section 10.3. Pill container in surface2,
+/// selected segment in surface with a line2 border and saffron
+/// text, unselected segment in ink2 text. Height 40.
+class _ChartSwitcher extends StatelessWidget {
+  const _ChartSwitcher({
+    required this.showMoon,
+    required this.onChanged,
+  });
+
+  final bool showMoon;
+  final void Function(bool showMoon) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: _switcherSegment(
+              label: 'Lagna Chart',
+              selected: !showMoon,
+              onTap: () => onChanged(false),
+            ),
+          ),
+          Expanded(
+            child: _switcherSegment(
+              label: 'Moon Chart',
+              selected: showMoon,
+              onTap: () => onChanged(true),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _switcherSegment({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.surface : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
+          border: selected
+              ? Border.all(color: AppColors.line2, width: 1)
+              : null,
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.bodySmall.copyWith(
+            fontWeight: FontWeight.w600,
+            color: selected ? AppColors.saffron : AppColors.ink2,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MoonChartNotReady extends StatelessWidget {
+  const _MoonChartNotReady();
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 1,
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.cardWhite,
+          border: Border.all(color: AppColors.deepInk, width: 1),
+          borderRadius:
+              BorderRadius.circular(AppSpacing.chartRadius),
+        ),
+        child: const Text(
+          'Moon chart is not ready yet.',
+          style: AppTextStyles.body,
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+}
+
+/// Three summary chips below the chart: Lagna, Rashi,
+/// Nakshatra. Each is a small card with the label in Caption
+/// 12 ink3 above the value in Title 17 ink. Tapping a chip
+/// does nothing. They are a summary, not buttons.
+class _ChartLegend extends StatelessWidget {
+  const _ChartLegend();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: const <Widget>[
+        Expanded(child: _LegendChip(label: 'Lagna', value: 'Meena')),
+        SizedBox(width: AppSpacing.space3),
+        Expanded(child: _LegendChip(label: 'Rashi', value: 'Kanya')),
+        SizedBox(width: AppSpacing.space3),
+        Expanded(
+          child: _LegendChip(label: 'Nakshatra', value: 'Hasta'),
+        ),
+      ],
+    );
+  }
+}
+
+class _LegendChip extends StatelessWidget {
+  const _LegendChip({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.space3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(label, style: AppTextStyles.caption),
+            Text(value, style: AppTextStyles.listTitle),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Planet summary list below the chart. One row per planet in
+/// the chart, in the same order as the planet details table.
+/// This list is the text equivalent of the chart figure.
+class _PlanetSummaryList extends StatelessWidget {
+  const _PlanetSummaryList();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: SampleKundli.planets.map((PlanetDetail planet) {
+        final String abbr =
+            SampleKundli.abbreviations[planet.name] ?? '';
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.surface2,
+                  borderRadius: BorderRadius.circular(
+                    AppSpacing.pillRadius,
+                  ),
+                  border: Border.all(color: AppColors.line2, width: 1),
+                ),
+                child: Text(
+                  abbr,
+                  style: AppTextStyles.chartPlanet,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.space3),
+              Expanded(
+                child: Text(
+                  planet.name,
+                  style: AppTextStyles.listTitle,
+                ),
+              ),
+              Text(
+                '${planet.rashi}, ${planet.bhava}',
+                style: AppTextStyles.bodySmall,
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+/// Planet details screen: full table with exact degrees,
+/// swami notes and the premium note, per
+/// design/screens/06-planet-details.md.
+class PlanetDetailsScreen extends StatelessWidget {
+  const PlanetDetailsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Planet Details')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: const <Widget>[
           SampleDataBanner(),
           SizedBox(height: AppSpacing.md),
-          Text('Lagna: Meena', style: AppTextStyles.title),
-          SizedBox(height: AppSpacing.sm),
           Text(
-            'Birth 14 March 1998, 06:25 AM, Jaipur, Rajasthan. Surya in Meena lagna at 01° 24′.',
-            style: AppTextStyles.bodySmall,
+            'Position, rashi, bhava and exact degree of every graha.',
+            style: AppTextStyles.body,
           ),
           SizedBox(height: AppSpacing.md),
-          KundliChart(),
-          SizedBox(height: AppSpacing.lg),
           PlanetDetails(),
         ],
       ),
@@ -385,32 +698,135 @@ class HoroscopeScreen extends StatelessWidget {
   }
 }
 
-/// Panchang screen: tithi, vaar, nakshatra, shubh muhurat.
-/// Sample date 14 March 1998. Values are marked sample.
+/// Panchang screen: tithi, vaar, nakshatra, yoga, karana,
+/// sunrise, sunset, shubh muhurat and rahu kaal, per
+/// design/screens/08-panchang.md. Sample date is Saturday
+/// 14 March 1998, Jaipur. Values are marked sample.
 class PanchangScreen extends StatelessWidget {
   const PanchangScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final Panchang panchang = Panchang.sample;
+    final List<String> muhuratWindows =
+        panchang.shubhMuhurat.split(' and ');
     return Scaffold(
-      appBar: AppBar(title: const Text('Panchang')),
+      appBar: AppBar(
+        title: const Text('Todays Panchang'),
+        actions: <Widget>[
+          TextButton.icon(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('City choice is a later phase.'),
+                ),
+              );
+            },
+            icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+            label: Text(
+              panchang.city,
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.saffron2,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
           const SampleDataBanner(),
           const SizedBox(height: AppSpacing.md),
-          Text(panchang.date, style: AppTextStyles.title),
+          Text(
+            panchang.dateLine,
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.ink2,
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
-          _PanchangRow(label: 'Tithi', value: panchang.tithi),
-          _PanchangRow(label: 'Vaar', value: panchang.vaar),
-          _PanchangRow(label: 'Nakshatra', value: panchang.nakshatra),
-          _PanchangRow(label: 'Shubh Muhurat', value: panchang.shubhMuhurat),
-          _PanchangRow(label: 'Sunrise', value: panchang.sunrise),
-          _PanchangRow(label: 'Sunset', value: panchang.sunset),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: AppSpacing.md,
+            crossAxisSpacing: AppSpacing.md,
+            childAspectRatio: 1.7,
+            children: <Widget>[
+              _PanchangCard(label: 'Tithi', value: panchang.tithi),
+              _PanchangCard(label: 'Vaar', value: panchang.vaar),
+              _PanchangCard(
+                label: 'Nakshatra',
+                value: panchang.nakshatra,
+              ),
+              _PanchangCard(label: 'Yoga', value: panchang.yoga),
+              _PanchangCard(label: 'Karana', value: panchang.karana),
+              _PanchangCard(label: 'Sunrise', value: panchang.sunrise),
+              _PanchangCard(label: 'Sunset', value: panchang.sunset),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Card(
+            color: AppColors.surface2,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.space5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Shubh Muhurat',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.saffron2,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  ...muhuratWindows.map(
+                    (String window) => Text(
+                      window,
+                      style: AppTextStyles.subtitle,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Text(
+                    'Best for new beginnings.',
+                    style: AppTextStyles.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.space3),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.space3),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(
+                AppSpacing.smallRadius,
+              ),
+              border: const Border(
+                left: BorderSide(color: AppColors.maroon, width: 3),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Rahu Kaal',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.maroon,
+                  ),
+                ),
+                Text(
+                  panchang.rahuKaal,
+                  style: AppTextStyles.bodySmall,
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
           const Text(
-            'Panchang values are sample labels in Phase 1. Real panchang calculation is a later phase.',
+            'Panchang values are sample values in Phase 1. Real panchang calculation is a later phase.',
             style: AppTextStyles.bodySmall,
           ),
         ],
@@ -419,8 +835,8 @@ class PanchangScreen extends StatelessWidget {
   }
 }
 
-class _PanchangRow extends StatelessWidget {
-  const _PanchangRow({required this.label, required this.value});
+class _PanchangCard extends StatelessWidget {
+  const _PanchangCard({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -428,9 +844,16 @@ class _PanchangRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: ListTile(
-        title: Text(label, style: AppTextStyles.subtitle),
-        trailing: Text(value, style: AppTextStyles.body),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Text(label, style: AppTextStyles.caption),
+            Text(value, style: AppTextStyles.listTitle),
+          ],
+        ),
       ),
     );
   }
