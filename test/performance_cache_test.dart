@@ -27,17 +27,13 @@ void main() {
     test('PERF-02 panchang calculation finishes in under 5 seconds', () {
       PanchangCalculator.clearCache();
       final Timed<Panchang> timed = measureSync(
-        () => PanchangCalculator.forDate(
-          DateTime(2026, 11, 28),
-          kDefaultPlace,
-        ),
+        () => PanchangCalculator.forDate(DateTime(2026, 11, 28), kDefaultPlace),
       );
       expect(timed.value.tithi, isNotEmpty);
       expect(timed.elapsedMs, lessThan(5000));
     });
 
-    test('PERF-03 repeated kundli calculation returns the cached chart',
-        () {
+    test('PERF-03 repeated kundli calculation returns the cached chart', () {
       KundliCalculator.clearCache();
       final KundliResult first = KundliCalculator.calculate(
         birthLocal: DateTime(2000, 1, 15, 7, 30),

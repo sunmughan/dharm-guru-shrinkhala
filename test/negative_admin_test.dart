@@ -21,9 +21,10 @@ void main() {
     test('NEG-02 a uid with role member is not an admin', () async {
       final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
       final FirestoreService service = FirestoreService(firestore: fake);
-      await fake.collection('admins').doc('u1').set(
-        <String, Object?>{'role': 'member', 'email': 'u1@example.com'},
-      );
+      await fake.collection('admins').doc('u1').set(<String, Object?>{
+        'role': 'member',
+        'email': 'u1@example.com',
+      });
       expect(await service.isAdmin('u1'), isFalse);
       expect(
         await service.isAdminUser(uid: 'u1', email: 'u1@example.com'),
@@ -36,38 +37,32 @@ void main() {
       final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
       final FirestoreService service = FirestoreService(firestore: fake);
       expect(
-        await service.isAdminUser(
-          uid: 'seed-uid',
-          email: 'admin@gmail.com',
-        ),
+        await service.isAdminUser(uid: 'seed-uid', email: 'admin@gmail.com'),
         isTrue,
       );
     });
 
-    test('NEG-04 a uid with role owner passes the doc based check',
-        () async {
+    test('NEG-04 a uid with role owner passes the doc based check', () async {
       final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
       final FirestoreService service = FirestoreService(firestore: fake);
-      await fake.collection('admins').doc('owner1').set(
-        <String, Object?>{'role': 'owner', 'email': 'owner@example.com'},
-      );
+      await fake.collection('admins').doc('owner1').set(<String, Object?>{
+        'role': 'owner',
+        'email': 'owner@example.com',
+      });
       expect(await service.isAdmin('owner1'), isTrue);
       expect(
-        await service.isAdminUser(
-          uid: 'owner1',
-          email: 'owner@example.com',
-        ),
+        await service.isAdminUser(uid: 'owner1', email: 'owner@example.com'),
         isTrue,
       );
     });
 
-    test('NEG-05 ensureAdminDoc does not overwrite an existing role',
-        () async {
+    test('NEG-05 ensureAdminDoc does not overwrite an existing role', () async {
       final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
       final FirestoreService service = FirestoreService(firestore: fake);
-      await fake.collection('admins').doc('u2').set(
-        <String, Object?>{'role': 'member', 'email': 'u2@example.com'},
-      );
+      await fake.collection('admins').doc('u2').set(<String, Object?>{
+        'role': 'member',
+        'email': 'u2@example.com',
+      });
       await service.ensureAdminDoc('u2', 'u2@example.com');
       final Map<String, dynamic>? doc =
           (await fake.collection('admins').doc('u2').get()).data();

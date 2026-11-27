@@ -4,11 +4,7 @@
 /// Mahadasha. Remedies are guidance only and promise no
 /// outcome.
 class Remedy {
-  const Remedy({
-    required this.title,
-    required this.body,
-    required this.action,
-  });
+  const Remedy({required this.title, required this.body, required this.action});
 
   final String title;
   final String body;
@@ -18,14 +14,14 @@ class Remedy {
   final String action;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'title': title,
-        'body': body,
-        'action': action,
-      };
+    'title': title,
+    'body': body,
+    'action': action,
+  };
 
   static Remedy fromJson(Map<String, dynamic> json) => Remedy(
-        title: json['title'] as String? ?? '',
-        body: json['body'] as String? ?? '',
-        action: json['action'] as String? ?? '',
-      );
+    title: json['title'] as String? ?? '',
+    body: json['body'] as String? ?? '',
+    action: json['action'] as String? ?? '',
+  );
 }

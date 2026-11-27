@@ -38,12 +38,13 @@ jobs:
           channel: stable
       - name: Install dependencies
         run: flutter pub get
-      # TEMPORARY ORACLE, one run only: format in place and print
-      # the diff, so the exact formatting can be applied by hand.
-      # The check version of this step comes back right after.
-      - name: Show formatting diff
+      # Only the files this quality phase added or changed are
+      # format gated. Pre-existing formatting debt in the rest
+      # of lib is a P3 in docs/qa/PERFORMANCE_REPORT.md, not a
+      # gate, so an old file can never turn a new change red.
+      - name: Verify formatting of phase 12 and 18 files
         run: |
-          dart format \
+          dart format --output=none --set-exit-if-changed \
             lib/core/input_validation.dart \
             lib/core/performance.dart \
             lib/core/app_logger.dart \
@@ -60,8 +61,6 @@ jobs:
             test/performance_cache_test.dart \
             test/security_rules_test.dart \
             test/negative_admin_test.dart
-          git diff --stat
-          git diff
 
   test:
     runs-on: ubuntu-latest

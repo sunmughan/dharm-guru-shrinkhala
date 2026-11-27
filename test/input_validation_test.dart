@@ -25,35 +25,23 @@ void main() {
     });
     test('VAL-05 accepts a valid birth date', () {
       expect(
-        InputValidation.birthDate(
-          '2000-01-15',
-          today: DateTime(2026, 11, 28),
-        ),
+        InputValidation.birthDate('2000-01-15', today: DateTime(2026, 11, 28)),
         isNull,
       );
     });
     test('VAL-06 rejects a future birth date', () {
       expect(
-        InputValidation.birthDate(
-          '2030-01-15',
-          today: DateTime(2026, 11, 28),
-        ),
+        InputValidation.birthDate('2030-01-15', today: DateTime(2026, 11, 28)),
         isNotNull,
       );
     });
     test('VAL-07 rejects a bad birth date format and year', () {
       expect(
-        InputValidation.birthDate(
-          '15-01-2000',
-          today: DateTime(2026, 11, 28),
-        ),
+        InputValidation.birthDate('15-01-2000', today: DateTime(2026, 11, 28)),
         isNotNull,
       );
       expect(
-        InputValidation.birthDate(
-          '1899-01-15',
-          today: DateTime(2026, 11, 28),
-        ),
+        InputValidation.birthDate('1899-01-15', today: DateTime(2026, 11, 28)),
         isNotNull,
       );
     });

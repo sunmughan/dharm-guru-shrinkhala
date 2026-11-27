@@ -13,10 +13,7 @@ void main() {
     });
 
     test('LOG-02 redacts a long digit run such as a phone number', () {
-      expect(
-        AppLogger.redact('call 9876543210 now'),
-        'call [number] now',
-      );
+      expect(AppLogger.redact('call 9876543210 now'), 'call [number] now');
     });
 
     test('LOG-03 leaves short numbers and plain text alone', () {

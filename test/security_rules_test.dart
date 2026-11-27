@@ -30,10 +30,7 @@ void main() {
 
     test('RULES-02 a user reads and writes only their own profile', () {
       expect(rules.contains('match /users/{uid}'), isTrue);
-      expect(
-        rules.contains('request.auth.uid == uid'),
-        isTrue,
-      );
+      expect(rules.contains('request.auth.uid == uid'), isTrue);
     });
 
     test('RULES-03 published content writes need the owner role', () {
@@ -43,9 +40,7 @@ void main() {
 
     test('RULES-04 chat messages can only be sent as yourself', () {
       expect(
-        rules.contains(
-          'request.resource.data.senderId == request.auth.uid',
-        ),
+        rules.contains('request.resource.data.senderId == request.auth.uid'),
         isTrue,
       );
     });
@@ -65,10 +60,7 @@ void main() {
     });
 
     test('RULES-08 Storage rules have no open allow', () {
-      expect(
-        storageRules.contains('allow read, write: if true'),
-        isFalse,
-      );
+      expect(storageRules.contains('allow read, write: if true'), isFalse);
       expect(storageRules.contains('allow read: if true'), isFalse);
     });
   });

@@ -45,7 +45,7 @@ Verified live 28 Nov 2026 00:06 IST by a browser task, signed in as sunmughan@gm
 * firebase.json now points at the rules, the indexes and the
   Storage rules files.
 * Firestore pagination: FirestoreService.getDocsPaged, limit 25 by
-  default, cursor by document id. Covered by PAGE-01 to PAGE-04
+  default, cursor by the createdAt value of the last document. Covered by PAGE-01 to PAGE-04
   in test/pagination_test.dart, PASS in CI.
 * Calculation caching: Kundli and Panchang results are memoised in
   a bounded cache of 64 entries, keyed by inputs only, never by

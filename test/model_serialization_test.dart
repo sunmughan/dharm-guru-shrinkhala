@@ -18,8 +18,7 @@ void main() {
         nakshatra: 'Hasta',
         tithiAtBirth: 'Shukla Panchami',
       );
-      final BirthDetails back =
-          BirthDetails.fromJson(original.toJson());
+      final BirthDetails back = BirthDetails.fromJson(original.toJson());
       expect(back.name, 'Test User');
       expect(back.dateOfBirth, '2000-01-15');
       expect(back.timeOfBirth, '07:30');
@@ -38,8 +37,7 @@ void main() {
         swami: 'Sun',
         note: 'Sun in Simha.',
       );
-      final PlanetDetail back =
-          PlanetDetail.fromJson(original.toJson());
+      final PlanetDetail back = PlanetDetail.fromJson(original.toJson());
       expect(back.name, 'Sun');
       expect(back.rashi, 'Simha');
       expect(back.bhava, 'Bhava 1');
@@ -77,8 +75,7 @@ void main() {
         date: '2026-11-28',
         summary: 'A strong day for money talks.',
       );
-      final HoroscopeEntry back =
-          HoroscopeEntry.fromJson(original.toJson());
+      final HoroscopeEntry back = HoroscopeEntry.fromJson(original.toJson());
       expect(back.rashi, 'Kanya');
       expect(back.date, '2026-11-28');
       expect(back.summary, 'A strong day for money talks.');
@@ -89,10 +86,7 @@ void main() {
         displayName: 'Test User',
         plan: PlanTier.premium,
       );
-      expect(
-        UserProfile.fromJson(premium.toJson()).plan,
-        PlanTier.premium,
-      );
+      expect(UserProfile.fromJson(premium.toJson()).plan, PlanTier.premium);
       const UserProfile free = UserProfile(
         displayName: 'Test User',
         plan: PlanTier.free,
@@ -115,15 +109,14 @@ void main() {
     });
 
     test('SER-07 fromJson tolerates missing fields with empty strings', () {
-      final BirthDetails back =
-          BirthDetails.fromJson(<String, dynamic>{});
+      final BirthDetails back = BirthDetails.fromJson(<String, dynamic>{});
       expect(back.name, '');
-      final Panchang panchang =
-          Panchang.fromJson(<String, dynamic>{'city': 'Jaipur'});
+      final Panchang panchang = Panchang.fromJson(<String, dynamic>{
+        'city': 'Jaipur',
+      });
       expect(panchang.city, 'Jaipur');
       expect(panchang.tithi, '');
-      final UserProfile profile =
-          UserProfile.fromJson(<String, dynamic>{});
+      final UserProfile profile = UserProfile.fromJson(<String, dynamic>{});
       expect(profile.plan, PlanTier.free);
     });
   });

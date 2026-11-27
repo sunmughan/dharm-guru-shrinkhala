@@ -28,10 +28,14 @@ void main() {
     test('RET-03 gives up after maxAttempts and rethrows', () async {
       int attempts = 0;
       await expectLater(
-        BackoffRetry.run(() async {
-          attempts++;
-          throw StateError('UNAVAILABLE');
-        }, maxAttempts: 2, delay: const Duration(milliseconds: 1)),
+        BackoffRetry.run(
+          () async {
+            attempts++;
+            throw StateError('UNAVAILABLE');
+          },
+          maxAttempts: 2,
+          delay: const Duration(milliseconds: 1),
+        ),
         throwsStateError,
       );
       expect(attempts, 2);
@@ -78,8 +82,9 @@ void main() {
     });
 
     test('CACHE-02 drops the oldest entry past maxEntries', () {
-      final MemoCache<String, int> cache =
-          MemoCache<String, int>(maxEntries: 2);
+      final MemoCache<String, int> cache = MemoCache<String, int>(
+        maxEntries: 2,
+      );
       cache.put('a', 1);
       cache.put('b', 2);
       cache.put('c', 3);

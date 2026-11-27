@@ -21,21 +21,22 @@ Future<void> _seed(
 
 void main() {
   group('Firestore pagination', () {
-    test('PAGE-01 first page returns at most the limit, newest first',
-        () async {
-      final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
-      final FirestoreService service = FirestoreService(firestore: fake);
-      await _seed(service, 'horoscopes', 5);
-      final ({List<Map<String, dynamic>> docs, String? lastId}) page =
-          await service.getDocsPaged('horoscopes', limit: 2);
-      expect(page.docs.length, 2);
-      expect(page.docs.first['title'], 'Doc 4');
-      expect(page.docs.last['title'], 'Doc 3');
-      expect(page.lastId, isNotNull);
-    });
+    test(
+      'PAGE-01 first page returns at most the limit, newest first',
+      () async {
+        final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
+        final FirestoreService service = FirestoreService(firestore: fake);
+        await _seed(service, 'horoscopes', 5);
+        final ({List<Map<String, dynamic>> docs, String? lastId}) page =
+            await service.getDocsPaged('horoscopes', limit: 2);
+        expect(page.docs.length, 2);
+        expect(page.docs.first['title'], 'Doc 4');
+        expect(page.docs.last['title'], 'Doc 3');
+        expect(page.lastId, isNotNull);
+      },
+    );
 
-    test('PAGE-02 walking all pages returns every document once',
-        () async {
+    test('PAGE-02 walking all pages returns every document once', () async {
       final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
       final FirestoreService service = FirestoreService(firestore: fake);
       await _seed(service, 'horoscopes', 5);
@@ -44,10 +45,10 @@ void main() {
       for (int step = 0; step < 10; step++) {
         final ({List<Map<String, dynamic>> docs, String? lastId}) page =
             await service.getDocsPaged(
-          'horoscopes',
-          limit: 2,
-          startAfterId: cursor,
-        );
+              'horoscopes',
+              limit: 2,
+              startAfterId: cursor,
+            );
         if (page.docs.isEmpty) break;
         seen.addAll(
           page.docs.map((Map<String, dynamic> d) => d['id'] as String),
@@ -58,8 +59,7 @@ void main() {
       expect(seen.toSet().length, 5);
     });
 
-    test('PAGE-03 a limit larger than the collection returns all',
-        () async {
+    test('PAGE-03 a limit larger than the collection returns all', () async {
       final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
       final FirestoreService service = FirestoreService(firestore: fake);
       await _seed(service, 'horoscopes', 3);

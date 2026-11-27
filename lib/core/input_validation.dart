@@ -4,9 +4,7 @@
 class InputValidation {
   InputValidation._();
 
-  static final RegExp _email = RegExp(
-    r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-  );
+  static final RegExp _email = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
   static final RegExp _date = RegExp(r'^\d{4}-\d{2}-\d{2}$');
   static final RegExp _time = RegExp(r'^([01]\d|2[0-3]):[0-5]\d$');
 

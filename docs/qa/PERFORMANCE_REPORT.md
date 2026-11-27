@@ -38,7 +38,7 @@ stays NOT_TESTED.
 ## Phase 12 quality work done
 
 * Query optimisation: FirestoreService.getDocsPaged, limit 25 by
-  default, cursor by document id. Admin lists must use it.
+  default, cursor by the createdAt value of the last document. Admin lists must use it.
 * Firestore indexes: firebase/firestore.indexes.json, six indexes,
   valid JSON, checked in CI.
 * Cache invalidation: MemoCache.invalidate per key and clear for

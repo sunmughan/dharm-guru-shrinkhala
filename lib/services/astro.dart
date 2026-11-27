@@ -203,8 +203,7 @@ class AstroPlace {
   final double longitude;
 }
 
-const AstroPlace kDefaultPlace =
-    AstroPlace('Jaipur', 26.9124, 75.7873);
+const AstroPlace kDefaultPlace = AstroPlace('Jaipur', 26.9124, 75.7873);
 
 /// Major Indian cities, latitude and longitude in degrees.
 /// The lookup matches on the city name, so "Jaipur, Rajasthan"
@@ -288,16 +287,15 @@ double _sinD(double degrees) => math.sin(degrees * math.pi / 180.0);
 
 double _cosD(double degrees) => math.cos(degrees * math.pi / 180.0);
 
-double _atan2D(double y, double x) =>
-    math.atan2(y, x) * 180.0 / math.pi;
+double _atan2D(double y, double x) => math.atan2(y, x) * 180.0 / math.pi;
 
 /// Schlyter day number: days since 2000 Jan 0.0, from a UTC
 /// date time. The fraction of the day is included.
 double _dayNumber(DateTime utc) {
   final int y = utc.year;
   final int m = utc.month;
-  final double day = utc.day +
-      (utc.hour + utc.minute / 60.0 + utc.second / 3600.0) / 24.0;
+  final double day =
+      utc.day + (utc.hour + utc.minute / 60.0 + utc.second / 3600.0) / 24.0;
   return 367.0 * y -
       (7.0 * (y + (m + 9) ~/ 12) / 4.0).floorToDouble() +
       (275.0 * m / 9.0).floorToDouble() +
@@ -317,18 +315,14 @@ double ayanamsa(double d) {
   final double w = 282.9404 + 4.70935e-5 * d;
   final double e = 0.016709 - 1.151e-9 * d;
   final double m = 356.0470 + 0.9856002585 * d;
-  final double ecl = m +
-      (180.0 / math.pi) * e * _sinD(m) * (1.0 + e * _cosD(m));
+  final double ecl =
+      m + (180.0 / math.pi) * e * _sinD(m) * (1.0 + e * _cosD(m));
   final double x = _cosD(ecl) - e;
   final double y = _sinD(ecl) * math.sqrt(1.0 - e * e);
   final double v = _atan2D(y, x);
   final double r = math.sqrt(x * x + y * y);
   final double lon = _norm(v + w);
-  return (
-    lon: lon,
-    xs: r * _cosD(lon),
-    ys: r * _sinD(lon),
-  );
+  return (lon: lon, xs: r * _cosD(lon), ys: r * _sinD(lon));
 }
 
 /// Tropical Moon longitude in degrees, Schlyter, with the
@@ -340,16 +334,16 @@ double _moonLongitude(double d) {
   const double a = 60.2666;
   const double e = 0.054900;
   final double m = 115.3654 + 13.0649929509 * d;
-  final double ecl = m +
-      (180.0 / math.pi) * e * _sinD(m) * (1.0 + e * _cosD(m));
+  final double ecl =
+      m + (180.0 / math.pi) * e * _sinD(m) * (1.0 + e * _cosD(m));
   final double x = a * (_cosD(ecl) - e);
   final double y = a * _sinD(ecl) * math.sqrt(1.0 - e * e);
   final double v = _atan2D(y, x);
   final double r = math.sqrt(x * x + y * y);
-  final double xh = r *
-      (_cosD(n) * _cosD(v + w) - _sinD(n) * _sinD(v + w) * _cosD(i));
-  final double yh = r *
-      (_sinD(n) * _cosD(v + w) + _cosD(n) * _sinD(v + w) * _cosD(i));
+  final double xh =
+      r * (_cosD(n) * _cosD(v + w) - _sinD(n) * _sinD(v + w) * _cosD(i));
+  final double yh =
+      r * (_sinD(n) * _cosD(v + w) + _cosD(n) * _sinD(v + w) * _cosD(i));
   double lon = _atan2D(yh, xh);
   final double ms = 356.0470 + 0.9856002585 * d;
   final double ws = 282.9404 + 4.70935e-5 * d;
@@ -357,7 +351,8 @@ double _moonLongitude(double d) {
   final double ls = _norm(ws + ms);
   final double dd = _norm(lm - ls);
   final double f = _norm(lm - n);
-  lon += -1.274 * _sinD(m - 2 * dd) +
+  lon +=
+      -1.274 * _sinD(m - 2 * dd) +
       0.658 * _sinD(2 * dd) -
       0.186 * _sinD(ms) -
       0.059 * _sinD(2 * m - 2 * dd) -
@@ -388,45 +383,45 @@ class _PlanetElements {
 _PlanetElements _elements(String name, double d) {
   return switch (name) {
     'Mercury' => _PlanetElements(
-        48.3313 + 3.24587e-5 * d,
-        7.0047 + 5.00e-8 * d,
-        29.1241 + 1.01444e-5 * d,
-        0.387098,
-        0.205635 + 5.59e-10 * d,
-        168.6562 + 4.0923344368 * d,
-      ),
+      48.3313 + 3.24587e-5 * d,
+      7.0047 + 5.00e-8 * d,
+      29.1241 + 1.01444e-5 * d,
+      0.387098,
+      0.205635 + 5.59e-10 * d,
+      168.6562 + 4.0923344368 * d,
+    ),
     'Venus' => _PlanetElements(
-        76.6799 + 2.46590e-5 * d,
-        3.3946 + 2.75e-8 * d,
-        54.8910 + 1.38374e-5 * d,
-        0.723330,
-        0.006773 - 1.302e-9 * d,
-        48.0052 + 1.6021302244 * d,
-      ),
+      76.6799 + 2.46590e-5 * d,
+      3.3946 + 2.75e-8 * d,
+      54.8910 + 1.38374e-5 * d,
+      0.723330,
+      0.006773 - 1.302e-9 * d,
+      48.0052 + 1.6021302244 * d,
+    ),
     'Mars' => _PlanetElements(
-        49.5574 + 2.11081e-5 * d,
-        1.8497 - 1.78e-8 * d,
-        286.5016 + 2.92961e-5 * d,
-        1.523688,
-        0.093405 + 2.516e-9 * d,
-        18.6021 + 0.5240207766 * d,
-      ),
+      49.5574 + 2.11081e-5 * d,
+      1.8497 - 1.78e-8 * d,
+      286.5016 + 2.92961e-5 * d,
+      1.523688,
+      0.093405 + 2.516e-9 * d,
+      18.6021 + 0.5240207766 * d,
+    ),
     'Jupiter' => _PlanetElements(
-        100.4542 + 2.76854e-5 * d,
-        1.3030 - 1.557e-7 * d,
-        273.8777 + 1.64505e-5 * d,
-        5.20256,
-        0.048498 + 4.469e-9 * d,
-        19.8950 + 0.0830853001 * d,
-      ),
+      100.4542 + 2.76854e-5 * d,
+      1.3030 - 1.557e-7 * d,
+      273.8777 + 1.64505e-5 * d,
+      5.20256,
+      0.048498 + 4.469e-9 * d,
+      19.8950 + 0.0830853001 * d,
+    ),
     'Saturn' => _PlanetElements(
-        113.6634 + 2.38980e-5 * d,
-        2.4886 - 1.081e-7 * d,
-        339.3939 + 2.97661e-5 * d,
-        9.55475,
-        0.055546 - 9.499e-9 * d,
-        316.9670 + 0.0334442282 * d,
-      ),
+      113.6634 + 2.38980e-5 * d,
+      2.4886 - 1.081e-7 * d,
+      339.3939 + 2.97661e-5 * d,
+      9.55475,
+      0.055546 - 9.499e-9 * d,
+      316.9670 + 0.0334442282 * d,
+    ),
     _ => throw ArgumentError('No elements for $name'),
   };
 }
@@ -434,37 +429,33 @@ _PlanetElements _elements(String name, double d) {
 /// Geocentric tropical longitude of a planet, Schlyter.
 double _planetLongitude(String name, double d, double xs, double ys) {
   final _PlanetElements el = _elements(name, d);
-  final double ecl = el.m +
-      (180.0 / math.pi) *
-          el.e *
-          _sinD(el.m) *
-          (1.0 + el.e * _cosD(el.m));
+  final double ecl =
+      el.m +
+      (180.0 / math.pi) * el.e * _sinD(el.m) * (1.0 + el.e * _cosD(el.m));
   final double x = el.a * (_cosD(ecl) - el.e);
-  final double y =
-      el.a * _sinD(ecl) * math.sqrt(1.0 - el.e * el.e);
+  final double y = el.a * _sinD(ecl) * math.sqrt(1.0 - el.e * el.e);
   final double v = _atan2D(y, x);
   final double r = math.sqrt(x * x + y * y);
-  final double xh = r *
+  final double xh =
+      r *
       (_cosD(el.n) * _cosD(v + el.w) -
           _sinD(el.n) * _sinD(v + el.w) * _cosD(el.i));
-  final double yh = r *
+  final double yh =
+      r *
       (_sinD(el.n) * _cosD(v + el.w) +
           _cosD(el.n) * _sinD(v + el.w) * _cosD(el.i));
   return _norm(_atan2D(yh + ys, xh + xs));
 }
 
 /// Mean lunar node (Rahu) tropical longitude in degrees.
-double _rahuLongitude(double d) =>
-    _norm(125.1228 - 0.0529538083 * d);
+double _rahuLongitude(double d) => _norm(125.1228 - 0.0529538083 * d);
 
 /// Tropical ascendant in degrees, from the day number and the
 /// place. Found as the intersection of the ecliptic plane and
 /// the horizon plane, taking the rising intersection.
 double _ascendant(double d, AstroPlace place) {
   final double jd = 2451543.5 + d;
-  final double gmst = _norm(
-    280.46061837 + 360.98564736629 * (jd - 2451545.0),
-  );
+  final double gmst = _norm(280.46061837 + 360.98564736629 * (jd - 2451545.0));
   final double lst = _norm(gmst + place.longitude);
   final double eps = 23.4393 - 3.563e-7 * d;
   // Ecliptic north pole in equatorial coordinates:
@@ -496,8 +487,7 @@ double _ascendant(double d, AstroPlace place) {
   return lon;
 }
 
-int _rashiIndex(double siderealLon) =>
-    (siderealLon ~/ 30.0) % 12;
+int _rashiIndex(double siderealLon) => (siderealLon ~/ 30.0) % 12;
 
 /// Degrees inside the rashi, formatted as 01° 24′.
 String formatDegree(double siderealLon) {
@@ -640,21 +630,16 @@ class KundliCalculator {
     required String placeText,
     bool timeKnown = true,
   }) {
-    final String key =
-        '${birthLocal.toIso8601String()}|$placeText|$timeKnown';
+    final String key = '${birthLocal.toIso8601String()}|$placeText|$timeKnown';
     final KundliResult? cached = _cache.get(key);
     if (cached != null) return cached;
     final AstroPlace? found = placeFor(placeText);
     final AstroPlace place = found ?? kDefaultPlace;
     final DateTime local = timeKnown
         ? birthLocal
-        : DateTime(
-            birthLocal.year, birthLocal.month, birthLocal.day, 12,
-          );
+        : DateTime(birthLocal.year, birthLocal.month, birthLocal.day, 12);
     // India is IST, UTC plus 5 hours 30 minutes.
-    final DateTime utc = local.subtract(
-      const Duration(hours: 5, minutes: 30),
-    );
+    final DateTime utc = local.subtract(const Duration(hours: 5, minutes: 30));
     final double d = _dayNumber(utc);
     final double ayan = ayanamsa(d);
     final ({double lon, double xs, double ys}) sun = _sunPosition(d);
@@ -665,10 +650,7 @@ class KundliCalculator {
     final double lagnaSidereal = _norm(lagnaTropical - ayan);
     final int lagnaIndex = _rashiIndex(lagnaSidereal);
     final String lagna = kRashis[lagnaIndex];
-    PlanetDetail planet(
-      String name,
-      double tropicalLon,
-    ) {
+    PlanetDetail planet(String name, double tropicalLon) {
       final double sidereal = _norm(tropicalLon - ayan);
       final int sign = _rashiIndex(sidereal);
       final int bhava = ((sign - lagnaIndex) % 12 + 12) % 12 + 1;
@@ -679,7 +661,8 @@ class KundliCalculator {
         bhava: 'Bhava $bhava',
         degree: formatDegree(sidereal),
         swami: kRashiLords[sign],
-        note: '$name in $rashi, Bhava $bhava, at '
+        note:
+            '$name in $rashi, Bhava $bhava, at '
             '${formatDegree(sidereal)}.',
       );
     }
@@ -715,8 +698,7 @@ class KundliCalculator {
 
 /// Equation of time in minutes, standard approximation.
 double _equationOfTime(DateTime date) {
-  final int n =
-      date.difference(DateTime(date.year, 1, 1)).inDays + 1;
+  final int n = date.difference(DateTime(date.year, 1, 1)).inDays + 1;
   final double b = 360.0 / 365.0 * (n - 81);
   return 9.87 * _sinD(2 * b) - 7.53 * _cosD(b) - 1.5 * _sinD(b);
 }
@@ -729,8 +711,9 @@ String _formatClock(double hours) {
   final int shownHour = hour % 12 == 0 ? 12 : hour % 12;
   final String suffix = hour >= 12 ? 'PM' : 'AM';
   final int fixedMinute = minute == 60 ? 0 : minute;
-  final int fixedHour =
-      minute == 60 ? (shownHour == 12 ? 1 : shownHour + 1) : shownHour;
+  final int fixedHour = minute == 60
+      ? (shownHour == 12 ? 1 : shownHour + 1)
+      : shownHour;
   return '${fixedHour.toString().padLeft(2, '0')}:${fixedMinute.toString().padLeft(2, '0')} $suffix';
 }
 
@@ -743,8 +726,9 @@ class PanchangCalculator {
 
   /// Same bounded memo cache as KundliCalculator. The key
   /// carries only the date and the place name.
-  static final MemoCache<String, Panchang> _cache =
-      MemoCache<String, Panchang>(maxEntries: 64);
+  static final MemoCache<String, Panchang> _cache = MemoCache<String, Panchang>(
+    maxEntries: 64,
+  );
 
   /// Clears the calculation cache. Tests use this so one test
   /// never sees another test's cached panchang.
@@ -754,8 +738,7 @@ class PanchangCalculator {
     final String key = '${day.year}-${day.month}-${day.day}|${place.name}';
     final Panchang? cached = _cache.get(key);
     if (cached != null) return cached;
-    final DateTime noon =
-        DateTime(day.year, day.month, day.day, 12);
+    final DateTime noon = DateTime(day.year, day.month, day.day, 12);
     final DateTime utcNoon = noon.subtract(
       const Duration(hours: 5, minutes: 30),
     );
@@ -769,17 +752,13 @@ class PanchangCalculator {
 
     // Sunrise and sunset from the solar declination.
     final double eps = 23.4393 - 3.563e-7 * d;
-    final double decl = math.asin(
-          _sinD(eps) * _sinD(sun.lon),
-        ) *
-        180.0 /
-        math.pi;
-    final double cosH = (_sinD(-0.833) -
-            _sinD(place.latitude) * _sinD(decl)) /
+    final double decl =
+        math.asin(_sinD(eps) * _sinD(sun.lon)) * 180.0 / math.pi;
+    final double cosH =
+        (_sinD(-0.833) - _sinD(place.latitude) * _sinD(decl)) /
         (_cosD(place.latitude) * _cosD(decl));
     final double clamped = cosH.clamp(-1.0, 1.0);
-    final double h0 =
-        math.acos(clamped) * 180.0 / math.pi / 15.0;
+    final double h0 = math.acos(clamped) * 180.0 / math.pi / 15.0;
     // Solar noon in local clock time: 12 minus the longitude
     // difference from the IST meridian, minus the equation of
     // time. IST meridian is 82.5 degrees east.
@@ -802,19 +781,20 @@ class PanchangCalculator {
     // nakshatra boundary.
     String nakshatra = _nakshatraName(moonSidereal);
     final DateTime startUtc = DateTime(
-      day.year, day.month, day.day,
+      day.year,
+      day.month,
+      day.day,
     ).subtract(const Duration(hours: 5, minutes: 30));
-    final DateTime endUtc = DateTime(
-      day.year, day.month, day.day,
-    ).add(const Duration(days: 1)).subtract(
-          const Duration(hours: 5, minutes: 30),
-        );
-    final double moonStart =
-        _norm(_moonLongitude(_dayNumber(startUtc)) - ayanamsa(_dayNumber(startUtc)));
-    final double moonEnd =
-        _norm(_moonLongitude(_dayNumber(endUtc)) - ayanamsa(_dayNumber(endUtc)));
-    final double boundary =
-        ((moonStart ~/ (40.0 / 3.0)) + 1) * (40.0 / 3.0);
+    final DateTime endUtc = DateTime(day.year, day.month, day.day)
+        .add(const Duration(days: 1))
+        .subtract(const Duration(hours: 5, minutes: 30));
+    final double moonStart = _norm(
+      _moonLongitude(_dayNumber(startUtc)) - ayanamsa(_dayNumber(startUtc)),
+    );
+    final double moonEnd = _norm(
+      _moonLongitude(_dayNumber(endUtc)) - ayanamsa(_dayNumber(endUtc)),
+    );
+    final double boundary = ((moonStart ~/ (40.0 / 3.0)) + 1) * (40.0 / 3.0);
     double walked = _norm(moonEnd - moonStart);
     if (walked == 0) walked = 360.0;
     final double toBoundary = _norm(boundary - moonStart);
@@ -833,9 +813,11 @@ class PanchangCalculator {
       karana: _karanaName(elongation),
       sunrise: _formatClock(sunrise),
       sunset: _formatClock(sunset),
-      shubhMuhurat: 'Abhijit ${_formatClock(abhijitStart)} to '
+      shubhMuhurat:
+          'Abhijit ${_formatClock(abhijitStart)} to '
           '${_formatClock(abhijitEnd)}',
-      rahuKaal: '${_formatClock(rahuStart)} to ${_formatClock(rahuEnd)}. '
+      rahuKaal:
+          '${_formatClock(rahuStart)} to ${_formatClock(rahuEnd)}. '
           'Avoid starting new work in this window.',
     );
     _cache.put(key, result);
@@ -870,11 +852,7 @@ const Map<String, int> kDashaYears = <String, int>{
 
 /// One Mahadasha span: the ruling planet and its dates.
 class DashaInfo {
-  const DashaInfo({
-    required this.lord,
-    required this.start,
-    required this.end,
-  });
+  const DashaInfo({required this.lord, required this.start, required this.end});
 
   final String lord;
   final DateTime start;
@@ -892,15 +870,11 @@ DashaInfo vimshottariDasha({
     const Duration(hours: 5, minutes: 30),
   );
   final double d = _dayNumber(utc);
-  final double moonSidereal =
-      _norm(_moonLongitude(d) - ayanamsa(d));
-  final int nakshatraIndex =
-      (moonSidereal ~/ (40.0 / 3.0)) % 27;
+  final double moonSidereal = _norm(_moonLongitude(d) - ayanamsa(d));
+  final int nakshatraIndex = (moonSidereal ~/ (40.0 / 3.0)) % 27;
   final String firstLord = kNakshatraLords[nakshatraIndex];
-  final double travelled =
-      (moonSidereal % (40.0 / 3.0)) / (40.0 / 3.0);
-  final double balanceYears =
-      (1.0 - travelled) * kDashaYears[firstLord]!;
+  final double travelled = (moonSidereal % (40.0 / 3.0)) / (40.0 / 3.0);
+  final double balanceYears = (1.0 - travelled) * kDashaYears[firstLord]!;
   int orderIndex = kDashaOrder.indexOf(firstLord);
   DateTime start = birthLocal;
   double spanYears = balanceYears;
@@ -913,9 +887,8 @@ DashaInfo vimshottariDasha({
     }
     start = end;
     orderIndex += 1;
-    spanYears =
-        kDashaYears[kDashaOrder[orderIndex % kDashaOrder.length]]!
-            .toDouble();
+    spanYears = kDashaYears[kDashaOrder[orderIndex % kDashaOrder.length]]!
+        .toDouble();
   }
   return DashaInfo(
     lord: kDashaOrder[orderIndex % kDashaOrder.length],
@@ -930,15 +903,19 @@ DashaInfo vimshottariDasha({
 /// use the same Moon nakshatra math as the current dasha.
 /// The last span is cut at birth plus 120 years.
 List<DashaInfo> vimshottariTimeline({required DateTime birthLocal}) {
-  final DateTime cycleEnd =
-      DateTime(birthLocal.year + 120, birthLocal.month, birthLocal.day);
+  final DateTime cycleEnd = DateTime(
+    birthLocal.year + 120,
+    birthLocal.month,
+    birthLocal.day,
+  );
   final List<DashaInfo> spans = <DashaInfo>[];
   DateTime cursor = birthLocal;
   for (int step = 0; step < 12; step++) {
-    final DashaInfo span =
-        vimshottariDasha(birthLocal: birthLocal, asOf: cursor);
-    final DateTime end =
-        span.end.isAfter(cycleEnd) ? cycleEnd : span.end;
+    final DashaInfo span = vimshottariDasha(
+      birthLocal: birthLocal,
+      asOf: cursor,
+    );
+    final DateTime end = span.end.isAfter(cycleEnd) ? cycleEnd : span.end;
     spans.add(DashaInfo(lord: span.lord, start: span.start, end: end));
     if (!end.isBefore(cycleEnd)) {
       break;
@@ -955,9 +932,17 @@ DateTime? parseBirthDateTime(String dateText, String timeText) {
   final List<String> dateBits = dateText.trim().split(' ');
   if (dateBits.length != 3) return null;
   const Map<String, int> months = <String, int>{
-    'January': 1, 'February': 2, 'March': 3, 'April': 4,
-    'May': 5, 'June': 6, 'July': 7, 'August': 8,
-    'September': 9, 'October': 10, 'November': 11,
+    'January': 1,
+    'February': 2,
+    'March': 3,
+    'April': 4,
+    'May': 5,
+    'June': 6,
+    'July': 7,
+    'August': 8,
+    'September': 9,
+    'October': 10,
+    'November': 11,
     'December': 12,
   };
   final int? month = months[dateBits[1]];
