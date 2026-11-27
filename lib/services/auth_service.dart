@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 /// Thrown when Google sign in finds an existing email and
@@ -27,6 +28,22 @@ class AuthService {
   // Private initializing formal: only AuthService() with no argument
   // is ever called, from any library, so no caller passes _auth.
   AuthService({this._auth});
+
+  /// Web OAuth client for this Firebase project, shared by the
+  /// user and admin apps. Passed as serverClientId so the native
+  /// Google sign in requests an ID token. Without it the plugin
+  /// falls back to the default_web_client_id string resource,
+  /// which does not exist in the APK because the google-services
+  /// Gradle plugin is not applied. With neither, sign in opens
+  /// the account picker and then fails with no token. This is a
+  /// public client identifier, not a secret.
+  static const String _webClientId =
+      '987289079284-50u9u48eanvlama6bqvlffm3sd3cqiph.apps.googleusercontent.com';
+
+  /// Google sign in wired to the project web client, so the
+  /// native side always requests an ID token.
+  GoogleSignIn _googleSignIn() =>
+      GoogleSignIn(serverClientId: _webClientId);
 
   // Nullable on purpose: tests subclass AuthService and override the
   // stream and methods below, so FirebaseAuth.instance is never
@@ -118,6 +135,19 @@ class AuthService {
       return 'An account already exists for this email. Sign in with '
           'your password once to link Google to it.';
     }
+    if (error is PlatformException) {
+      // Google sign in fails on the native side when the app has
+      // no OAuth client set up for it, for example when the
+      // signing certificate was never added in the Firebase
+      // console. The account picker still opens, then the token
+      // request fails. Say so plainly instead of the generic line.
+      if (error.code == 'sign_in_failed') {
+        return 'Google sign in could not finish. The app setup for '
+            'Google sign in is incomplete. Sign in with email and '
+            'password for now and tell the app team.';
+      }
+      return 'Something went wrong. Try again.';
+    }
     if (error is! FirebaseAuthException) {
       return 'Something went wrong. Try again.';
     }
@@ -164,12 +194,23 @@ class AuthService {
   /// second account is created.
   Future<void> signInWithGoogle() async {
     final GoogleSignInAccount? account =
-        await GoogleSignIn().signIn();
+        await _googleSignIn().signIn();
     if (account == null) {
       return;
     }
     final GoogleSignInAuthentication googleAuth =
         await account.authentication;
+    // No tokens at all means the native side could not issue one,
+    // which happens when the app has no OAuth client set up for
+    // it. Fail with the honest reason instead of handing Firebase
+    // an empty credential and showing a generic error.
+    if (googleAuth.accessToken == null && googleAuth.idToken == null) {
+      throw AuthMessageException(
+        'Google sign in could not finish. The app setup for Google '
+        'sign in is incomplete. Sign in with email and password for '
+        'now and tell the app team.',
+      );
+    }
     final OAuthCredential credential = GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
       idToken: googleAuth.idToken,
@@ -250,7 +291,7 @@ class AuthService {
       await user.reauthenticateWithCredential(credential);
     } else {
       final GoogleSignInAccount? account =
-          await GoogleSignIn().signIn();
+          await _googleSignIn().signIn();
       if (account == null) {
         return;
       }

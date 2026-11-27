@@ -39,9 +39,9 @@ jobs:
         # Gradle plugin, so the same values are also written as
         # string resources: FirebaseInitProvider reads them and the
         # native default app exists before Flutter starts. The
-        # plugin itself is not applied: it would fail the admin
-        # flavor build because the admin package has no matching
-        # client in the file yet (console step, still owed).
+        # plugin itself is not applied, so default_web_client_id
+        # is written by hand too: without it Google sign in opens
+        # the account picker and then fails with no ID token.
         env:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
@@ -57,12 +57,18 @@ jobs:
               data = json.load(f)
           info = data['project_info']
           client = data['client'][0]
+          web_client = next(
+              o['client_id']
+              for o in client['oauth_client']
+              if o.get('client_type') == 3
+          )
           values = {
               'google_app_id': client['client_info']['mobilesdk_app_id'],
               'gcm_defaultSenderId': info['project_number'],
               'google_api_key': client['api_key'][0]['current_key'],
               'google_storage_bucket': info['storage_bucket'],
               'project_id': info['project_id'],
+              'default_web_client_id': web_client,
           }
           lines = ['<?xml version="1.0" encoding="utf-8"?>', '<resources>']
           for name in sorted(values):
