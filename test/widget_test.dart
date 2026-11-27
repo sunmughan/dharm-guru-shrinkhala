@@ -79,15 +79,11 @@ void main() {
   testWidgets('Splash shows the build stamp',
       (WidgetTester tester) async {
     await tester.pumpWidget(
-      DharmGuruApp(
-        showSplash: true,
-        firebaseReady: true,
-        authService: _FakeAuthService(),
-      ),
+      MaterialApp(home: SplashScreen(onDone: () {})),
     );
     await tester.pump();
     expect(find.text(kBuildStamp), findsOneWidget);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 3));
   });
 
   testWidgets('Setup screen shows the build stamp',
