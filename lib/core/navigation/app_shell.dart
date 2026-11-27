@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/design_tokens.dart';
-import 'screens.dart';
+import '../../screens/screens.dart';
 
 /// Bottom tab navigation shell.
 /// Tabs in fixed order: Home, Kundli, Panchang, Consult, Profile.
