@@ -363,16 +363,26 @@ void main() {
 
   testWidgets('Admin daily content shows empty states with no docs',
       (WidgetTester tester) async {
+    // The shell shows every admin screen inside a scroll view,
+    // so the test pumps it the same way.
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: DailyContentScreen(firestore: _FakeFirestore()),
+          body: SingleChildScrollView(
+            child: DailyContentScreen(firestore: _FakeFirestore()),
+          ),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('No horoscopes published yet'), findsOneWidget);
-    expect(find.text('No panchang published yet'), findsOneWidget);
+    // Horoscope tab: one card per rashi, each with no content.
+    expect(find.text('No content yet.'), findsNWidgets(12));
+    expect(find.text('Mesha'), findsOneWidget);
+    // Panchang tab: the form opens with empty fields.
+    await tester.tap(find.text('Panchang'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tithi'), findsOneWidget);
+    expect(find.text('City'), findsOneWidget);
   });
 
   testWidgets('User horoscope shows the published admin content',

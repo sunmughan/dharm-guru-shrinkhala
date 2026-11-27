@@ -301,11 +301,15 @@ class _StatCard extends StatelessWidget {
             Text(
               label,
               style: AppTextStyles.themed(context, AppTextStyles.caption),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               value,
               style: AppTextStyles.themed(context, AppTextStyles.title),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -653,32 +657,37 @@ class AdminDashboardScreen extends StatelessWidget {
         LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
             final int cols = constraints.maxWidth > 700 ? 4 : 2;
-            return GridView.count(
-              crossAxisCount: cols,
+            final List<Widget> cards = <Widget>[
+              _CountStat(
+                label: 'Users',
+                stream: firestore.watchDocs('users'),
+              ),
+              _CountStat(
+                label: 'Astrologers',
+                stream: firestore.watchDocs('astrologers'),
+              ),
+              _CountStat(
+                label: 'Published horoscopes',
+                stream: firestore.watchDocs('horoscopes'),
+                count: (List<Map<String, dynamic>> docs) => docs
+                    .where((Map<String, dynamic> d) =>
+                        str(d, 'status') == 'published')
+                    .length,
+              ),
+              _EarningsStat(firestore: firestore),
+            ];
+            return GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: cols,
+                mainAxisSpacing: AppSpacing.md,
+                crossAxisSpacing: AppSpacing.md,
+                mainAxisExtent: 150,
+              ),
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: AppSpacing.md,
-              crossAxisSpacing: AppSpacing.md,
-              childAspectRatio: 1.2,
-              children: <Widget>[
-                _CountStat(
-                  label: 'Users',
-                  stream: firestore.watchDocs('users'),
-                ),
-                _CountStat(
-                  label: 'Astrologers',
-                  stream: firestore.watchDocs('astrologers'),
-                ),
-                _CountStat(
-                  label: 'Published horoscopes',
-                  stream: firestore.watchDocs('horoscopes'),
-                  count: (List<Map<String, dynamic>> docs) => docs
-                      .where((Map<String, dynamic> d) =>
-                          str(d, 'status') == 'published')
-                      .length,
-                ),
-                _EarningsStat(firestore: firestore),
-              ],
+              itemCount: cards.length,
+              itemBuilder: (BuildContext context, int index) =>
+                  cards[index],
             );
           },
         ),
@@ -2152,31 +2161,36 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             return LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 final int cols = constraints.maxWidth > 700 ? 4 : 2;
-                return GridView.count(
-                  crossAxisCount: cols,
+                final List<Widget> cards = <Widget>[
+                  _StatCard(
+                    label: 'Daily users',
+                    value: inRangeDocs.isEmpty
+                        ? 'No data yet'
+                        : '${inRangeDocs.length}',
+                  ),
+                  _RangeStat(
+                    label: 'Kundlis created',
+                    stream: widget.firestore.watchDocs('users'),
+                    range: _range,
+                  ),
+                  const _StatCard(
+                    label: 'Consult minutes',
+                    value: 'No data yet',
+                  ),
+                  _EarningsStat(firestore: widget.firestore),
+                ];
+                return GridView.builder(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: cols,
+                    mainAxisSpacing: AppSpacing.md,
+                    crossAxisSpacing: AppSpacing.md,
+                    mainAxisExtent: 150,
+                  ),
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: AppSpacing.md,
-                  crossAxisSpacing: AppSpacing.md,
-                  childAspectRatio: 1.2,
-                  children: <Widget>[
-                    _StatCard(
-                      label: 'Daily users',
-                      value: inRangeDocs.isEmpty
-                          ? 'No data yet'
-                          : '${inRangeDocs.length}',
-                    ),
-                    _RangeStat(
-                      label: 'Kundlis created',
-                      stream: widget.firestore.watchDocs('users'),
-                      range: _range,
-                    ),
-                    const _StatCard(
-                      label: 'Consult minutes',
-                      value: 'No data yet',
-                    ),
-                    _EarningsStat(firestore: widget.firestore),
-                  ],
+                  itemCount: cards.length,
+                  itemBuilder: (BuildContext context, int index) =>
+                      cards[index],
                 );
               },
             );
