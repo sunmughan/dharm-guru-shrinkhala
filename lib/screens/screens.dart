@@ -1228,7 +1228,7 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
         kundli: shown,
         chartKind: _showMoonChart ? 'Moon Chart' : 'Lagna Chart',
       );
-      final Uint8List bytes = await KundliPdfBuilder.build(data, fonts);
+      final Uint8List bytes = await KundliPdfBuilder.build(data, fonts: fonts);
       final String safeName = widget.birth.name.replaceAll(
         RegExp(r'[^A-Za-z0-9]+'),
         '_',

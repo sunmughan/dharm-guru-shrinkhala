@@ -132,7 +132,7 @@ void main() {
       final KundliPdfFonts fonts = KundliPdfFonts.fromBytes(regular, bold);
       final Uint8List bytes = await KundliPdfBuilder.build(
         realReport(),
-        fonts,
+        fonts: fonts,
         compress: false,
       );
       // ignore: avoid_print

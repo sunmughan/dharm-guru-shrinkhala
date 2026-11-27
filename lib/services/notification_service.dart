@@ -45,7 +45,7 @@ class NotificationService {
         debugPrint('FCM token fetch failed: $error');
       }
     }
-    FirebaseMessaging.onTokenRefresh.listen((String newToken) async {
+    messaging.onTokenRefresh.listen((String newToken) async {
       if (uid == null) return;
       try {
         if (!await _authorised(messaging)) return;
