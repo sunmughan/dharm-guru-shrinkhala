@@ -39,18 +39,18 @@ jobs:
       - name: Verify APK package names differ
         run: |
           AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt | head -n 1)
-          "$AAPT" dump badging build/app/outputs/flutter-apk/user/release/app-user-release.apk | grep "package: name='com.codeair.dharm_guru_shrinkhala'"
-          "$AAPT" dump badging build/app/outputs/flutter-apk/admin/release/app-admin-release.apk | grep "package: name='com.codeair.dharm_guru_shrinkhala.admin'"
+          "$AAPT" dump badging build/app/outputs/flutter-apk/app-user-release.apk | grep "package: name='com.codeair.dharm_guru_shrinkhala'"
+          "$AAPT" dump badging build/app/outputs/flutter-apk/app-admin-release.apk | grep "package: name='com.codeair.dharm_guru_shrinkhala.admin'"
       - name: Upload user APK
         uses: actions/upload-artifact@v4
         with:
           name: dharm-guru-release-apk
-          path: build/app/outputs/flutter-apk/user/release/app-user-release.apk
+          path: build/app/outputs/flutter-apk/app-user-release.apk
       - name: Upload admin APK
         uses: actions/upload-artifact@v4
         with:
           name: dharm-guru-admin-release-apk
-          path: build/app/outputs/flutter-apk/admin/release/app-admin-release.apk
+          path: build/app/outputs/flutter-apk/app-admin-release.apk
 
   build-ios:
     runs-on: macos-latest
