@@ -11,7 +11,7 @@ void main() {
     expect(result.birthSteps, '14 = 5');
     expect(result.lifePathNumber, 8);
     expect(result.bhagyank, 8);
-    expect(result.lifePathSteps, contains('-> 8'));
+    expect(result.lifePathSteps, contains('= 8'));
     expect(result.planetFor(5), 'Mercury');
     expect(result.planetFor(8), 'Saturn');
   });
@@ -61,7 +61,10 @@ void main() {
     expect(result.loShuCounts[4], 1);
     expect(result.loShuCounts[8], 1);
     expect(result.loShuMissing, <int>[2, 5, 6, 7]);
-    expect(result.loShuCompleteLines, isEmpty);
+    expect(
+      result.loShuCompleteLines.map((List<int> l) => l.join()).toList(),
+      <String>['438'],
+    );
   });
 
   test('P7N5 Lo Shu complete line for a date with 4, 5 and 6 present', () {
@@ -69,7 +72,10 @@ void main() {
       name: 'Ram',
       birthDate: DateTime(1996, 5, 4),
     );
-    expect(result.loShuCompleteLines, contains(<int>[4, 5, 6]));
+    expect(
+      result.loShuCompleteLines.map((List<int> l) => l.join()).toList(),
+      contains('456'),
+    );
   });
 
   test('P7N6 number compatibility uses planet friendship', () {
