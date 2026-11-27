@@ -202,7 +202,7 @@ void main() {
       expect(BirthProfile.accuracyLabel('unknown'), 'Time not known');
     });
     test('P8B6 Jaipur city suggests real coordinates', () {
-      final BirthProfile profile = BirthProfile(
+      const BirthProfile profile = BirthProfile(
         name: 'Asha',
         birthCity: 'Jaipur',
       );
