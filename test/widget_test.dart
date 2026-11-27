@@ -73,7 +73,8 @@ void main() {
     expect(find.text('Begin My Journey'), findsOneWidget);
     expect(find.text('I Have an Account'), findsOneWidget);
     // Skip moves to the tab shell for a signed in user, never
-    // past the auth gate on its own.
+    // past the auth gate on its own. The fake FirestoreService
+    // keeps the shell off real Firebase while it is pumped.
     await tester.tap(find.text('Skip'));
     await tester.pumpAndSettle();
     expect(find.text('Namaste, Aarav Sharma'), findsOneWidget);
