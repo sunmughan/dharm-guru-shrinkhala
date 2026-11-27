@@ -1,0 +1,41 @@
+[2026-11-27T19:28:00.162Z] console.debug: Injecting <script> tag. Using callback.
+[2026-11-27T19:28:01.545Z] requestfailed: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.wasm :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:01.549Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:01.549Z] requestfailed: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.js :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:01.549Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:01.566Z] pageerror: TypeError: Failed to fetch
+[2026-11-27T19:28:01.886Z] requestfailed: https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Me4GZLCzYlKw.woff2 :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:01.886Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:01.886Z] console.warning: Failed to load font Roboto at https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Me4GZLCzYlKw.woff2
+[2026-11-27T19:28:01.889Z] console.warning: Flutter Web engine failed to complete HTTP request to fetch "https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Me4GZLCzYlKw.woff2": TypeError: Failed to fetch
+[2026-11-27T19:28:01.889Z] pageerror: Error: TypeError: Failed to fetch dynamically imported module: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.js
+
+Dart stack trace:
+
+[2026-11-27T19:28:15.273Z] state: desktop title=dharm_guru_shrinkhala url=http://127.0.0.1:8317/
+[2026-11-27T19:28:15.275Z] state: flutter canvas present=false
+[2026-11-27T19:28:15.347Z] console.debug: Injecting <script> tag. Using callback.
+[2026-11-27T19:28:15.977Z] requestfailed: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.wasm :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:15.977Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:15.977Z] pageerror: TypeError: Failed to fetch
+[2026-11-27T19:28:16.168Z] requestfailed: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.js :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:16.168Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:16.335Z] requestfailed: https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Me4GZLCzYlKw.woff2 :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:16.336Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:16.338Z] console.warning: Failed to load font Roboto at https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Me4GZLCzYlKw.woff2
+[2026-11-27T19:28:16.338Z] console.warning: Flutter Web engine failed to complete HTTP request to fetch "https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Me4GZLCzYlKw.woff2": TypeError: Failed to fetch
+[2026-11-27T19:28:16.340Z] pageerror: Error: TypeError: Failed to fetch dynamically imported module: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.js
+
+Dart stack trace:
+
+[2026-11-27T19:28:27.683Z] state: after reload same text=true
+[2026-11-27T19:28:27.687Z] probe: {"hasSignInText":false,"hasSetupText":false,"hasDeniedText":false,"inputCount":0,"inputs":[],"textLen":0}
+[2026-11-27T19:28:28.894Z] mobile.console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:28.896Z] mobile.pageerror: TypeError: Failed to fetch
+[2026-11-27T19:28:29.005Z] mobile.console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:30.289Z] mobile.console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:28:30.326Z] mobile.pageerror: Error: TypeError: Failed to fetch dynamically imported module: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.js
+
+Dart stack trace:
+
+[2026-11-27T19:28:40.368Z] state: mobile horizontal overflow=false
