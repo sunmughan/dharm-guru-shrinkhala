@@ -807,12 +807,15 @@ void main() {
     expect(find.text('Enter your full name.'), findsOneWidget);
     expect(firestore.lastSavedProfile, isNull);
     // Fill the required fields: name, date of birth, birth city.
+    // TextField order in the form: name, occupation, date of
+    // birth, time of birth, city, state, country, phone, alert
+    // time. So the date field is at index 2, the city at 4.
     await tester.enterText(find.byType(TextField).at(0), 'Test User');
-    await tester.tap(find.byType(TextField).at(1));
+    await tester.tap(find.byType(TextField).at(2));
     await tester.pumpAndSettle();
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).at(3), 'Jaipur');
+    await tester.enterText(find.byType(TextField).at(4), 'Jaipur');
     await tester.tap(find.text('Save profile'));
     await tester.pumpAndSettle();
     expect(firestore.lastSavedProfile, isNotNull);
