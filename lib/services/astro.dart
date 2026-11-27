@@ -25,9 +25,11 @@ import '../models/panchang.dart';
 /// moves a planet to another rashi except within half a degree
 /// of a cusp. Upgrade to full VSOP87 only if sub degree
 /// precision is ever needed.
-/// shortcut: places outside the city list fall back to Jaipur
-/// coordinates and the result is marked approximate. Add the
-/// city to the list when a user reports it.
+/// An unknown birth place is an error, never a silent Jaipur
+/// fallback: see KundliCalculator.calculate. Time and location
+/// helpers (julianDay, indiaUtcOffset, sunriseSunset,
+/// moonriseMoonset, localSolarDay) are public so the Phase 17
+/// reference tests can check them against JPL DE421 numbers.
 const List<String> kRashis = <String>[
   'Mesha',
   'Vrishabha',
@@ -275,6 +277,343 @@ AstroPlace? placeFor(String text) {
     }
   }
   return null;
+}
+
+/// Julian Day number for a UTC instant. J2000.0 is
+/// 2000-01-01 12:00 UTC, JD 2451545.0. The engine day number
+/// used below is JD minus 2451543.5.
+double julianDay(DateTime utc) {
+  final DateTime u = utc.toUtc();
+  final int a = (14 - u.month) ~/ 12;
+  final int y = u.year + 4800 - a;
+  final int m = u.month + 12 * a - 3;
+  final int jdn = u.day +
+      ((153 * m + 2) ~/ 5) +
+      365 * y +
+      (y ~/ 4) -
+      (y ~/ 100) +
+      (y ~/ 400) -
+      32045;
+  final double fraction = (u.hour - 12) / 24.0 +
+      u.minute / 1440.0 +
+      u.second / 86400.0;
+  return jdn + fraction;
+}
+
+/// Ayanamsa system. Lahiri is the default everywhere: the
+/// Indian government standard, fixed so Spica sits at 180
+/// degrees sidereal longitude. Raman and Krishnamurti are
+/// fixed offsets from Lahiri, documented in
+/// docs/implementation/ASTROLOGY_LIBRARY_EVALUATION.md.
+enum AyanamshaMode { lahiri, raman, krishnamurti }
+
+/// Ayanamsa in degrees for an engine day number, in the
+/// requested system. Raman runs 1 degree 26 minutes below
+/// Lahiri (matches published Raman values to about 3
+/// arcminutes); Krishnamurti runs 6 arcminutes below Lahiri.
+double ayanamshaFor(AyanamshaMode mode, double d) {
+  final double lahiri = ayanamsa(d);
+  return switch (mode) {
+    AyanamshaMode.lahiri => lahiri,
+    AyanamshaMode.raman => lahiri - 1.4333,
+    AyanamshaMode.krishnamurti => lahiri - 0.1,
+  };
+}
+
+/// Lunar node model. Mean is the smooth regression, true
+/// adds the five short period terms from Meeus, Astronomical
+/// Algorithms 2nd edition, chapter 47. The two can differ by
+/// up to about 2 degrees, enough to move Rahu across a sign
+/// or nakshatra boundary, so the mode is part of the
+/// calculation config, never a hidden default.
+enum NodeMode { mean, trueNode }
+
+/// Delaunay arguments in degrees for an engine day number:
+/// mean elongation of the Moon (d), Sun mean anomaly (m),
+/// Moon mean anomaly (mp) and Moon argument of latitude (f),
+/// Meeus chapter 47 polynomials in Julian centuries.
+({double d, double m, double mp, double f}) _delaunay(double dayNumber) {
+  final double t = (dayNumber - 1.5) / 36525.0;
+  final double t2 = t * t;
+  final double t3 = t2 * t;
+  final double t4 = t3 * t;
+  return (
+    d: 297.8501921 +
+        445267.1114034 * t -
+        0.0018819 * t2 +
+        t3 / 545868 -
+        t4 / 113065000,
+    m: 357.5291092 +
+        35999.0502909 * t -
+        0.0001536 * t2 +
+        t3 / 24490000,
+    mp: 134.9633964 +
+        477198.8675055 * t +
+        0.0087414 * t2 +
+        t3 / 69699 -
+        t4 / 14712000,
+    f: 93.2720950 +
+        483202.0175233 * t -
+        0.0036539 * t2 -
+        t3 / 3526000 +
+        t4 / 863310000,
+  );
+}
+
+/// True ascending node (Rahu) tropical longitude in degrees:
+/// the Meeus mean node plus the five periodic terms. The mean
+/// node here is the Meeus polynomial, which sits about 0.08
+/// degrees from the Schlyter mean node the engine uses for
+/// the default mean mode; the difference is named, not hidden.
+double trueNodeLongitude(double dayNumber) {
+  final double t = (dayNumber - 1.5) / 36525.0;
+  final double t2 = t * t;
+  final double t3 = t2 * t;
+  final double t4 = t3 * t;
+  final double mean = 125.0445479 -
+      1934.1362891 * t +
+      0.0020754 * t2 +
+      t3 / 467441 -
+      t4 / 60616000;
+  final ({double d, double m, double mp, double f}) arg =
+      _delaunay(dayNumber);
+  final double correction = -1.4979 * _sinD(2 * (arg.d - arg.f)) -
+      0.1500 * _sinD(arg.m) -
+      0.1226 * _sinD(2 * arg.d) +
+      0.1176 * _sinD(2 * arg.f) -
+      0.0801 * _sinD(2 * (arg.mp - arg.f));
+  return _norm(mean + correction);
+}
+
+/// Ascending node (Rahu) tropical longitude in the requested
+/// node mode. Ketu is always exactly 180 degrees opposite.
+double nodeLongitude(double dayNumber, NodeMode mode) {
+  return switch (mode) {
+    NodeMode.mean => _rahuLongitude(dayNumber),
+    NodeMode.trueNode => trueNodeLongitude(dayNumber),
+  };
+}
+
+/// Tropical longitude of a planet, the Sun or the Moon at a
+/// UTC instant, in degrees. Rahu and Ketu use the mean node.
+/// Names are Sun, Moon, Mars, Mercury, Jupiter, Venus,
+/// Saturn, Rahu, Ketu. Anything else throws ArgumentError.
+double tropicalLongitudeAt({
+  required String planet,
+  required DateTime utc,
+}) {
+  final double d = _dayNumber(utc.toUtc());
+  final ({double lon, double xs, double ys}) sun = _sunPosition(d);
+  return switch (planet) {
+    'Sun' => sun.lon,
+    'Moon' => _moonLongitude(d),
+    'Rahu' => _rahuLongitude(d),
+    'Ketu' => _norm(_rahuLongitude(d) + 180.0),
+    _ => _planetLongitude(planet, d, sun.xs, sun.ys),
+  };
+}
+
+/// Tropical ascendant in degrees at a UTC instant for a place.
+/// Public so the Phase 17 reference tests can check it against
+/// the GMST based value from JPL DE421.
+double ascendantTropical({
+  required DateTime utc,
+  required AstroPlace place,
+}) {
+  return _ascendant(_dayNumber(utc.toUtc()), place);
+}
+
+/// UTC offset for a local time in India. IST is UTC plus 5
+/// hours 30 minutes since 1906. India ran wartime daylight
+/// saving, UTC plus 6 hours 30 minutes, from 15 May 1942 to
+/// 15 October 1945. Before 1906 each city kept local mean
+/// time, so the offset comes from the longitude: 4 minutes
+/// per degree east. Any place outside India needs its own
+/// offset passed in by the caller; the engine never guesses
+/// one from a city name.
+Duration indiaUtcOffset({
+  required DateTime local,
+  required double longitude,
+}) {
+  if (local.isAfter(DateTime(1942, 5, 14)) &&
+      local.isBefore(DateTime(1945, 10, 16))) {
+    return const Duration(hours: 6, minutes: 30);
+  }
+  if (local.isAfter(DateTime(1905, 12, 31))) {
+    return const Duration(hours: 5, minutes: 30);
+  }
+  return Duration(minutes: (longitude * 4.0).round());
+}
+
+/// Sunrise and sunset as local wall clock times on [day] for
+/// [place]. [utcOffset] is the zone offset that day, for
+/// example IST plus 5 hours 30 minutes: the caller owns the
+/// zone, the engine only owns the astronomy. Solar noon is
+/// 12 minus the longitude difference from the zone meridian,
+/// minus the equation of time. Polar days and nights return
+/// a sunrise after the sunset; the caller checks that.
+({DateTime sunrise, DateTime sunset}) sunriseSunset({
+  required DateTime day,
+  required AstroPlace place,
+  required Duration utcOffset,
+}) {
+  final DateTime noon =
+      DateTime(day.year, day.month, day.day, 12);
+  final DateTime utcNoon = noon.subtract(utcOffset);
+  final double d = _dayNumber(utcNoon);
+  final ({double lon, double xs, double ys}) sun = _sunPosition(d);
+  final double eps = 23.4393 - 3.563e-7 * d;
+  final double decl =
+      math.asin(_sinD(eps) * _sinD(sun.lon)) * 180.0 / math.pi;
+  final double cosH = (_sinD(-0.833) -
+          _sinD(place.latitude) * _sinD(decl)) /
+      (_cosD(place.latitude) * _cosD(decl));
+  final double clamped = cosH.clamp(-1.0, 1.0);
+  final double h0 = math.acos(clamped) * 180.0 / math.pi / 15.0;
+  final double standardMeridian =
+      utcOffset.inMinutes / 60.0 * 15.0;
+  final double noonLocal = 12.0 -
+      (place.longitude - standardMeridian) / 15.0 -
+      _equationOfTime(day) / 60.0;
+  DateTime at(double hours) {
+    final DateTime midnight =
+        DateTime(day.year, day.month, day.day);
+    return midnight.add(Duration(minutes: (hours * 60.0).round()));
+  }
+
+  return (sunrise: at(noonLocal - h0), sunset: at(noonLocal + h0));
+}
+
+/// Geocentric equatorial coordinates of the Moon: right
+/// ascension and declination in degrees. Same Schlyter lunar
+/// theory as _moonLongitude, with the ecliptic latitude kept
+/// from the main Meeus latitude terms instead of dropped.
+/// Latitude error stays under about 0.1 degrees, which moves
+/// a moonrise by a few minutes at most.
+({double ra, double dec}) _moonEquatorial(double d) {
+  final double lon = _moonLongitude(d);
+  final ({double d, double m, double mp, double f}) arg = _delaunay(d);
+  final double lat = 5.128122 * _sinD(arg.f) +
+      0.280602 * _sinD(arg.mp + arg.f) +
+      0.277693 * _sinD(arg.mp - arg.f) +
+      0.173237 * _sinD(2 * arg.d - arg.f);
+  final double lonR = lon * math.pi / 180.0;
+  final double latR = lat * math.pi / 180.0;
+  final double xe = math.cos(latR) * math.cos(lonR);
+  final double ye = math.cos(latR) * math.sin(lonR);
+  final double ze = math.sin(latR);
+  final double eps = 23.4393 - 3.563e-7 * d;
+  final double epsR = eps * math.pi / 180.0;
+  final double xeq = xe;
+  final double yeq = ye * math.cos(epsR) - ze * math.sin(epsR);
+  final double zeq = ye * math.sin(epsR) + ze * math.cos(epsR);
+  return (
+    ra: _norm(_atan2D(yeq, xeq)),
+    dec: math.asin(zeq.clamp(-1.0, 1.0)) * 180.0 / math.pi,
+  );
+}
+
+double _bodyAltitude({
+  required double ra,
+  required double dec,
+  required DateTime utc,
+  required AstroPlace place,
+}) {
+  final double jd = 2451543.5 + _dayNumber(utc.toUtc());
+  final double gmst = _norm(
+    280.46061837 + 360.98564736629 * (jd - 2451545.0),
+  );
+  final double lst = _norm(gmst + place.longitude);
+  double ha = _norm(lst - ra);
+  if (ha > 180.0) ha -= 360.0;
+  final double sinAlt = _sinD(place.latitude) * _sinD(dec) +
+      _cosD(place.latitude) * _cosD(dec) * _cosD(ha);
+  return math.asin(sinAlt.clamp(-1.0, 1.0)) * 180.0 / math.pi;
+}
+
+/// Moonrise and moonset as local wall clock times on [day]
+/// for [place]. Either is null when the Moon does not rise or
+/// does not set that local day, which happens near the
+/// poles and on the day the Moon stays up or down. Found by
+/// sampling the Moon altitude every 10 minutes and bisecting
+/// each crossing of minus 0.583 degrees to the minute.
+({DateTime? moonrise, DateTime? moonset}) moonriseMoonset({
+  required DateTime day,
+  required AstroPlace place,
+  required Duration utcOffset,
+}) {
+  final DateTime midnight = DateTime(day.year, day.month, day.day);
+  double altitudeAt(DateTime local) {
+    final DateTime utc = local.subtract(utcOffset);
+    final ({double ra, double dec}) eq =
+        _moonEquatorial(_dayNumber(utc));
+    return _bodyAltitude(
+      ra: eq.ra,
+      dec: eq.dec,
+      utc: utc,
+      place: place,
+    );
+  }
+
+  DateTime bisect(DateTime a, DateTime b) {
+    DateTime lo = a;
+    DateTime hi = b;
+    for (int step = 0; step < 12; step++) {
+      final DateTime mid =
+          lo.add(Duration(minutes: hi.difference(lo).inMinutes ~/ 2));
+      if ((altitudeAt(mid) + 0.583) *
+              (altitudeAt(lo) + 0.583) <=
+          0) {
+        hi = mid;
+      } else {
+        lo = mid;
+      }
+    }
+    return hi;
+  }
+
+  DateTime? rise;
+  DateTime? set;
+  DateTime prev = midnight;
+  double prevAlt = altitudeAt(prev) + 0.583;
+  for (int step = 1; step <= 144; step++) {
+    final DateTime now =
+        midnight.add(Duration(minutes: step * 10));
+    final double alt = altitudeAt(now) + 0.583;
+    if (prevAlt < 0 && alt >= 0 && rise == null) {
+      rise = bisect(prev, now);
+    }
+    if (prevAlt >= 0 && alt < 0 && set == null) {
+      set = bisect(prev, now);
+    }
+    prev = now;
+    prevAlt = alt;
+  }
+  return (moonrise: rise, moonset: set);
+}
+
+/// Local solar day: sunrise to the next sunrise, and its
+/// length. The Hindu day runs sunrise to sunrise, so this is
+/// the day boundary the panchang uses, not midnight.
+({DateTime sunrise, DateTime nextSunrise, Duration length})
+    localSolarDay({
+  required DateTime day,
+  required AstroPlace place,
+  required Duration utcOffset,
+}) {
+  final DateTime sunrise =
+      sunriseSunset(day: day, place: place, utcOffset: utcOffset)
+          .sunrise;
+  final DateTime nextSunrise = sunriseSunset(
+    day: day.add(const Duration(days: 1)),
+    place: place,
+    utcOffset: utcOffset,
+  ).sunrise;
+  return (
+    sunrise: sunrise,
+    nextSunrise: nextSunrise,
+    length: nextSunrise.difference(sunrise),
+  );
 }
 
 double _norm(double degrees) {
@@ -579,7 +918,9 @@ class KundliResult {
   final AstroPlace place;
 
   /// True when the place text matched no city and Jaipur
-  /// coordinates were used instead.
+  /// coordinates were used instead. Never true now: an
+  /// unknown place throws in calculate instead of falling
+  /// back. The field stays so callers keep compiling.
   final bool placeApproximate;
 
   /// True when the birth time was not known and noon was used.
@@ -599,6 +940,7 @@ class KundliResult {
         degree: p.degree,
         swami: p.swami,
         note: p.note,
+        longitude: p.longitude,
       );
     }).toList();
     return KundliResult(
@@ -620,6 +962,10 @@ class KundliResult {
 /// the place. [timeKnown] is false when the user does not know
 /// the birth time: noon is used and the result is marked
 /// approximate, since the lagna then depends on the time.
+/// Throws ArgumentError when [placeText] matches no city in
+/// the list: an unknown place is never silently replaced with
+/// Jaipur. The caller shows the error and asks for a place
+/// the engine knows, or a manual latitude and longitude.
 class KundliCalculator {
   KundliCalculator._();
 
@@ -629,15 +975,20 @@ class KundliCalculator {
     bool timeKnown = true,
   }) {
     final AstroPlace? found = placeFor(placeText);
-    final AstroPlace place = found ?? kDefaultPlace;
+    if (found == null) {
+      throw ArgumentError(
+        'Unknown birth place "$placeText". Pick a city from '
+        'the list or enter latitude and longitude manually.',
+      );
+    }
+    final AstroPlace place = found;
     final DateTime local = timeKnown
         ? birthLocal
         : DateTime(
             birthLocal.year, birthLocal.month, birthLocal.day, 12,
           );
-    // India is IST, UTC plus 5 hours 30 minutes.
     final DateTime utc = local.subtract(
-      const Duration(hours: 5, minutes: 30),
+      indiaUtcOffset(local: local, longitude: place.longitude),
     );
     final double d = _dayNumber(utc);
     final double ayan = ayanamsa(d);
@@ -665,6 +1016,7 @@ class KundliCalculator {
         swami: kRashiLords[sign],
         note: '$name in $rashi, Bhava $bhava, at '
             '${formatDegree(sidereal)}.',
+        longitude: sidereal,
       );
     }
 
@@ -689,7 +1041,7 @@ class KundliCalculator {
       tithiAtBirth: _tithiName(elongation),
       planets: planets,
       place: place,
-      placeApproximate: found == null,
+      placeApproximate: false,
       timeApproximate: !timeKnown,
     );
   }
@@ -856,8 +1208,10 @@ DashaInfo vimshottariDasha({
   required DateTime birthLocal,
   required DateTime asOf,
 }) {
+  // India local time: IST, with the wartime and pre 1906
+  // rules from indiaUtcOffset on the IST meridian.
   final DateTime utc = birthLocal.subtract(
-    const Duration(hours: 5, minutes: 30),
+    indiaUtcOffset(local: birthLocal, longitude: 82.5),
   );
   final double d = _dayNumber(utc);
   final double moonSidereal =

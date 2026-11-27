@@ -87,13 +87,14 @@ void main() {
       expect(result.lagna, isNot('Kumbha'));
     });
 
-    test('unknown place falls back to Jaipur and says so', () {
-      final KundliResult result = KundliCalculator.calculate(
-        birthLocal: DateTime(1998, 3, 14, 6, 25),
-        placeText: 'Somewhere Not In The List',
+    test('unknown place throws instead of falling back to Jaipur', () {
+      expect(
+        () => KundliCalculator.calculate(
+          birthLocal: DateTime(1998, 3, 14, 6, 25),
+          placeText: 'Somewhere Not In The List',
+        ),
+        throwsArgumentError,
       );
-      expect(result.place.name, 'Jaipur');
-      expect(result.placeApproximate, isTrue);
     });
 
     test('unknown birth time uses noon and says so', () {

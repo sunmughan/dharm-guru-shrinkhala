@@ -1,0 +1,557 @@
+{
+  "source": "Skyfield 1.55 with JPL DE421, apparent geocentric ecliptic longitudes, GMST ascendant, skyfield.almanac rise/set",
+  "cases": [
+    {
+      "name": "canonical",
+      "utc": "1998-03-14 00:55",
+      "latitude": 26.9124,
+      "longitude": 75.7873,
+      "note": "14 Mar 1998 06:25 IST Jaipur, Lagna Kumbha",
+      "tropical_longitudes": {
+        "Sun": 353.2684,
+        "Moon": 182.4691,
+        "Mercury": 9.8575,
+        "Venus": 307.6117,
+        "Mars": 7.2565,
+        "Jupiter": 339.0346,
+        "Saturn": 19.6025
+      },
+      "degrees_per_day": {
+        "Sun": 0.9973,
+        "Moon": 11.8307,
+        "Mercury": 1.5628,
+        "Venus": 0.8696,
+        "Mars": 0.7702,
+        "Jupiter": 0.2375,
+        "Saturn": 0.1184
+      },
+      "ascendant_tropical": 347.4588,
+      "sun_rise_set_utc": [
+        {
+          "event": "sunrise",
+          "utc": "1998-03-14T01:07:57Z"
+        },
+        {
+          "event": "sunset",
+          "utc": "1998-03-14T13:04:47Z"
+        }
+      ],
+      "moon_rise_set_utc": [
+        {
+          "event": "moonset",
+          "utc": "1998-03-14T01:44:31Z"
+        },
+        {
+          "event": "moonrise",
+          "utc": "1998-03-14T14:09:49Z"
+        }
+      ]
+    },
+    {
+      "name": "leap_2000",
+      "utc": "2000-02-29 06:30",
+      "latitude": 28.6139,
+      "longitude": 77.209,
+      "note": "29 Feb 2000 12:00 IST Delhi, leap day",
+      "tropical_longitudes": {
+        "Sun": 339.9773,
+        "Moon": 272.83,
+        "Mercury": 342.7375,
+        "Venus": 313.675,
+        "Mars": 13.0508,
+        "Jupiter": 32.5354,
+        "Saturn": 42.3487
+      },
+      "degrees_per_day": {
+        "Sun": 1.0043,
+        "Moon": 11.8123,
+        "Mercury": -0.997,
+        "Venus": 1.2358,
+        "Mars": 0.7526,
+        "Jupiter": 0.1882,
+        "Saturn": 0.0818
+      },
+      "ascendant_tropical": 77.4741,
+      "sun_rise_set_utc": [
+        {
+          "event": "sunrise",
+          "utc": "2000-02-29T01:17:16Z"
+        },
+        {
+          "event": "sunset",
+          "utc": "2000-02-29T12:50:28Z"
+        }
+      ],
+      "moon_rise_set_utc": [
+        {
+          "event": "moonset",
+          "utc": "2000-02-29T07:42:32Z"
+        },
+        {
+          "event": "moonrise",
+          "utc": "2000-02-29T21:49:40Z"
+        }
+      ]
+    },
+    {
+      "name": "leap_2024_midnight",
+      "utc": "2024-02-29 18:29",
+      "latitude": 19.076,
+      "longitude": 72.8777,
+      "note": "29 Feb 2024 23:59 IST Mumbai, leap day near midnight",
+      "tropical_longitudes": {
+        "Sun": 340.3225,
+        "Moon": 217.3586,
+        "Mercury": 341.5535,
+        "Venus": 315.8722,
+        "Mars": 312.4028,
+        "Jupiter": 40.9387,
+        "Saturn": 339.5487
+      },
+      "degrees_per_day": {
+        "Sun": 1.0035,
+        "Moon": 12.1076,
+        "Mercury": 1.8902,
+        "Venus": 1.2372,
+        "Mars": 0.7748,
+        "Jupiter": 0.1698,
+        "Saturn": 0.1224
+      },
+      "ascendant_tropical": 234.7306,
+      "sun_rise_set_utc": [
+        {
+          "event": "sunrise",
+          "utc": "2024-02-29T01:28:20Z"
+        },
+        {
+          "event": "sunset",
+          "utc": "2024-02-29T13:13:46Z"
+        }
+      ],
+      "moon_rise_set_utc": [
+        {
+          "event": "moonset",
+          "utc": "2024-02-29T04:06:35Z"
+        },
+        {
+          "event": "moonrise",
+          "utc": "2024-02-29T17:12:29Z"
+        }
+      ]
+    },
+    {
+      "name": "sydney_south",
+      "utc": "2005-06-14 22:30",
+      "latitude": -33.8688,
+      "longitude": 151.2093,
+      "note": "15 Jun 2005 08:30 AEST Sydney, southern hemisphere winter",
+      "tropical_longitudes": {
+        "Sun": 83.8701,
+        "Moon": 172.5243,
+        "Mercury": 97.3023,
+        "Venus": 103.7279,
+        "Mars": 1.8931,
+        "Jupiter": 188.9953,
+        "Saturn": 116.0094
+      },
+      "degrees_per_day": {
+        "Sun": 0.9557,
+        "Moon": 12.1961,
+        "Mercury": 1.9631,
+        "Venus": 1.2191,
+        "Mars": 0.6914,
+        "Jupiter": 0.0292,
+        "Saturn": 0.1153
+      },
+      "ascendant_tropical": 104.5164,
+      "sun_rise_set_utc": [
+        {
+          "event": "sunset",
+          "utc": "2005-06-14T06:52:49Z"
+        },
+        {
+          "event": "sunrise",
+          "utc": "2005-06-14T20:58:11Z"
+        }
+      ],
+      "moon_rise_set_utc": [
+        {
+          "event": "moonrise",
+          "utc": "2005-06-14T01:53:09Z"
+        },
+        {
+          "event": "moonset",
+          "utc": "2005-06-14T13:22:09Z"
+        }
+      ]
+    },
+    {
+      "name": "newyork_dst_first",
+      "utc": "2010-11-07 05:30",
+      "latitude": 40.7128,
+      "longitude": -74.006,
+      "note": "7 Nov 2010 01:30 EDT New York, DST fall back first hour",
+      "tropical_longitudes": {
+        "Sun": 224.5426,
+        "Moon": 238.116,
+        "Mercury": 237.1953,
+        "Venus": 210.2389,
+        "Mars": 247.0216,
+        "Jupiter": 353.5656,
+        "Saturn": 192.0214
+      },
+      "degrees_per_day": {
+        "Sun": 1.0047,
+        "Moon": 14.0384,
+        "Mercury": 1.511,
+        "Venus": -0.453,
+        "Mars": 0.7275,
+        "Jupiter": -0.0397,
+        "Saturn": 0.111
+      },
+      "ascendant_tropical": 152.178,
+      "sun_rise_set_utc": [
+        {
+          "event": "sunrise",
+          "utc": "2010-11-07T11:33:23Z"
+        },
+        {
+          "event": "sunset",
+          "utc": "2010-11-07T21:45:35Z"
+        }
+      ],
+      "moon_rise_set_utc": [
+        {
+          "event": "moonrise",
+          "utc": "2010-11-07T13:19:57Z"
+        },
+        {
+          "event": "moonset",
+          "utc": "2010-11-07T22:40:17Z"
+        }
+      ]
+    },
+    {
+      "name": "newyork_dst_second",
+      "utc": "2010-11-07 06:30",
+      "latitude": 40.7128,
+      "longitude": -74.006,
+      "note": "7 Nov 2010 01:30 EST New York, DST fall back second hour",
+      "tropical_longitudes": {
+        "Sun": 224.5845,
+        "Moon": 238.7009,
+        "Mercury": 237.2583,
+        "Venus": 210.22,
+        "Mars": 247.0519,
+        "Jupiter": 353.5639,
+        "Saturn": 192.026
+      },
+      "degrees_per_day": {
+        "Sun": 1.0028,
+        "Moon": 14.0224,
+        "Mercury": 1.5102,
+        "Venus": -0.4507,
+        "Mars": 0.7273,
+        "Jupiter": -0.0382,
+        "Saturn": 0.1111
+      },
+      "ascendant_tropical": 164.0277,
+      "sun_rise_set_utc": [
+        {
+          "event": "sunrise",
+          "utc": "2010-11-07T11:33:23Z"
+        },
+        {
+          "event": "sunset",
+          "utc": "2010-11-07T21:45:35Z"
+        }
+      ],
+      "moon_rise_set_utc": [
+        {
+          "event": "moonrise",
+          "utc": "2010-11-07T13:19:57Z"
+        },
+        {
+          "event": "moonset",
+          "utc": "2010-11-07T22:40:17Z"
+        }
+      ]
+    },
+    {
+      "name": "london_bst",
+      "utc": "2026-03-29 01:30",
+      "latitude": 51.5074,
+      "longitude": -0.1278,
+      "note": "29 Mar 2026 01:30 UTC London, BST starts 01:00 UTC",
+      "tropical_longitudes": {
+        "Sun": 8.0061,
+        "Moon": 139.6012,
+        "Mercury": 341.094,
+        "Venus": 27.6537,
+        "Mars": 350.45,
+        "Jupiter": 105.2336,
+        "Saturn": 4.8133
+      },
+      "degrees_per_day": {
+        "Sun": 0.9889,
+        "Moon": 13.4057,
+        "Mercury": 0.6724,
+        "Venus": 1.2339,
+        "Mars": 0.7828,
+        "Jupiter": 0.057,
+        "Saturn": 0.1249
+      },
+      "ascendant_tropical": 266.2456,
+      "sun_rise_set_utc": [
+        {
+          "event": "sunrise",
+          "utc": "2026-03-29T05:42:52Z"
+        },
+        {
+          "event": "sunset",
+          "utc": "2026-03-29T18:28:40Z"
+        }
+      ],
+      "moon_rise_set_utc": [
+        {
+          "event": "moonset",
+          "utc": "2026-03-29T04:32:35Z"
+        },
+        {
+          "event": "moonrise",
+          "utc": "2026-03-29T14:24:04Z"
+        }
+      ]
+    },
+    {
+      "name": "midnight_kolkata",
+      "utc": "2014-12-31 18:30",
+      "latitude": 22.5726,
+      "longitude": 88.3639,
+      "note": "1 Jan 2015 00:00 IST Kolkata, midnight birth",
+      "tropical_longitudes": {
+        "Sun": 279.7861,
+        "Moon": 47.3763,
+        "Mercury": 293.0812,
+        "Venus": 296.2239,
+        "Mars": 320.6606,
+        "Jupiter": 141.5647,
+        "Saturn": 240.6322
+      },
+      "degrees_per_day": {
+        "Sun": 1.0178,
+        "Moon": 13.2394,
+        "Mercury": 1.5897,
+        "Venus": 1.2541,
+        "Mars": 0.7828,
+        "Jupiter": -0.0734,
+        "Saturn": 0.1018
+      },
+      "ascendant_tropical": 194.7139,
+      "sun_rise_set_utc": [
+        {
+          "event": "sunrise",
+          "utc": "2014-12-31T00:46:11Z"
+        },
+        {
+          "event": "sunset",
+          "utc": "2014-12-31T11:32:39Z"
+        }
+      ],
+      "moon_rise_set_utc": [
+        {
+          "event": "moonrise",
+          "utc": "2014-12-31T07:46:56Z"
+        },
+        {
+          "event": "moonset",
+          "utc": "2014-12-31T20:58:18Z"
+        }
+      ]
+    },
+    {
+      "name": "jupiter_retrograde",
+      "utc": "2025-12-01 12:00",
+      "latitude": 26.9124,
+      "longitude": 75.7873,
+      "note": "1 Dec 2025 12:00 UTC Jaipur, Jupiter retrograde",
+      "tropical_longitudes": {
+        "Sun": 249.1833,
+        "Moon": 20.3202,
+        "Mercury": 230.6109,
+        "Venus": 240.4633,
+        "Mars": 259.3025,
+        "Jupiter": 114.1395,
+        "Saturn": 354.8044
+      },
+      "degrees_per_day": {
+        "Sun": 1.0135,
+        "Moon": 14.5716,
+        "Mercury": 0.2989,
+        "Venus": 1.2561,
+        "Mars": 0.7425,
+        "Jupiter": -0.0649,
+        "Saturn": 0.0063
+      },
+      "ascendant_tropical": 69.8223,
+      "sun_rise_set_utc": [
+        {
+          "event": "sunrise",
+          "utc": "2025-12-01T01:28:36Z"
+        },
+        {
+          "event": "sunset",
+          "utc": "2025-12-01T12:03:00Z"
+        }
+      ],
+      "moon_rise_set_utc": [
+        {
+          "event": "moonrise",
+          "utc": "2025-12-01T09:01:35Z"
+        },
+        {
+          "event": "moonset",
+          "utc": "2025-12-01T22:13:45Z"
+        }
+      ]
+    },
+    {
+      "name": "saturn_retrograde",
+      "utc": "2025-08-01 12:00",
+      "latitude": 26.9124,
+      "longitude": 75.7873,
+      "note": "1 Aug 2025 12:00 UTC Jaipur, Saturn retrograde",
+      "tropical_longitudes": {
+        "Sun": 129.1424,
+        "Moon": 218.8298,
+        "Mercury": 128.2735,
+        "Venus": 91.1869,
+        "Mars": 176.2504,
+        "Jupiter": 101.4611,
+        "Saturn": 1.2645
+      },
+      "degrees_per_day": {
+        "Sun": 0.9561,
+        "Moon": 11.855,
+        "Mercury": -0.7334,
+        "Venus": 1.1571,
+        "Mars": 0.6156,
+        "Jupiter": 0.2134,
+        "Saturn": -0.0311
+      },
+      "ascendant_tropical": 282.6988,
+      "sun_rise_set_utc": [
+        {
+          "event": "sunrise",
+          "utc": "2025-08-01T00:21:18Z"
+        },
+        {
+          "event": "sunset",
+          "utc": "2025-08-01T13:44:49Z"
+        }
+      ],
+      "moon_rise_set_utc": [
+        {
+          "event": "moonrise",
+          "utc": "2025-08-01T07:06:57Z"
+        },
+        {
+          "event": "moonset",
+          "utc": "2025-08-01T18:05:10Z"
+        }
+      ]
+    },
+    {
+      "name": "new_moon_dec_2026",
+      "utc": "2026-12-08 06:30",
+      "latitude": 26.9124,
+      "longitude": 75.7873,
+      "note": "8 Dec 2026 12:00 IST Jaipur, new moon Amavasya",
+      "tropical_longitudes": {
+        "Sun": 255.7903,
+        "Moon": 247.3761,
+        "Mercury": 242.5247,
+        "Venus": 212.2786,
+        "Mars": 154.0897,
+        "Jupiter": 146.6085,
+        "Saturn": 7.5588
+      },
+      "degrees_per_day": {
+        "Sun": 1.017,
+        "Moon": 12.0518,
+        "Mercury": 1.5223,
+        "Venus": 0.7144,
+        "Mars": 0.3254,
+        "Jupiter": 0.0147,
+        "Saturn": -0.0046
+      },
+      "ascendant_tropical": 333.0397,
+      "sun_rise_set_utc": [
+        {
+          "event": "sunrise",
+          "utc": "2026-12-08T01:33:26Z"
+        },
+        {
+          "event": "sunset",
+          "utc": "2026-12-08T12:03:43Z"
+        }
+      ],
+      "moon_rise_set_utc": [
+        {
+          "event": "moonrise",
+          "utc": "2026-12-08T00:56:44Z"
+        },
+        {
+          "event": "moonset",
+          "utc": "2026-12-08T11:17:57Z"
+        }
+      ]
+    },
+    {
+      "name": "full_moon_dec_2026",
+      "utc": "2026-12-23 06:30",
+      "latitude": 26.9124,
+      "longitude": 75.7873,
+      "note": "23 Dec 2026 12:00 IST Jaipur, full moon Purnima",
+      "tropical_longitudes": {
+        "Sun": 271.0484,
+        "Moon": 79.7636,
+        "Mercury": 265.7035,
+        "Venus": 224.7016,
+        "Mars": 158.0925,
+        "Jupiter": 146.4738,
+        "Saturn": 7.6893
+      },
+      "degrees_per_day": {
+        "Sun": 1.017,
+        "Moon": 15.2522,
+        "Mercury": 1.5654,
+        "Venus": 0.9226,
+        "Mars": 0.2037,
+        "Jupiter": -0.0334,
+        "Saturn": 0.0221
+      },
+      "ascendant_tropical": 353.1699,
+      "sun_rise_set_utc": [
+        {
+          "event": "sunrise",
+          "utc": "2026-12-23T01:42:22Z"
+        },
+        {
+          "event": "sunset",
+          "utc": "2026-12-23T12:09:14Z"
+        }
+      ],
+      "moon_rise_set_utc": [
+        {
+          "event": "moonset",
+          "utc": "2026-12-23T00:48:29Z"
+        },
+        {
+          "event": "moonrise",
+          "utc": "2026-12-23T11:18:57Z"
+        }
+      ]
+    }
+  ]
+}
