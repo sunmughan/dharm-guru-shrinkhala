@@ -1844,7 +1844,7 @@ class _ConsultationsScreenState extends State<ConsultationsScreen> {
                           context,
                           'Cancel this consultation?',
                           _s(doc, 'user'),
-                          'Cancel',
+                          'Yes, cancel',
                         );
                         if (!ok) return;
                         await _changeStatus(

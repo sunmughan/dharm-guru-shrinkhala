@@ -254,7 +254,13 @@ void main() {
       expect(find.text('No library entries yet'), findsOneWidget);
       await tester.tap(find.text('New entry'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).first, 'Shani Sade Sati');
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(TextField),
+        ).first,
+        'Shani Sade Sati',
+      );
       await tester.pump();
       await tester.tap(find.text('Save entry'));
       await tester.pumpAndSettle();
@@ -339,7 +345,10 @@ void main() {
       await tester.tap(find.text('New content'));
       await tester.pumpAndSettle();
       await tester.enterText(
-        find.byType(TextField).first,
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(TextField),
+        ).first,
         'Diwali Festival Notes',
       );
       await tester.pump();
@@ -410,7 +419,7 @@ void main() {
       await tester.tap(find.text('Cancel booking'));
       await tester.pumpAndSettle();
       expect(find.text('Cancel this consultation?'), findsOneWidget);
-      await tester.tap(find.text('Cancel'));
+      await tester.tap(find.text('Yes, cancel'));
       await tester.pumpAndSettle();
       final Map<String, dynamic>? doc =
           await service.getDoc('consultations', 'c1');
