@@ -8,6 +8,10 @@ name: QA Web Build Admin
 # placeholder until a web app is registered in the console.
 on:
   workflow_dispatch:
+  push:
+    branches: [phase16-qa-admin]
+    paths:
+      - .github/workflows/qa-web-build.yml
 
 jobs:
   build-web-admin:
