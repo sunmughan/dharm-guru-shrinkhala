@@ -24,11 +24,12 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
       - name: Build admin web
-        # HTML renderer, not CanvasKit: CanvasKit loads its wasm
-        # and js from the public CDN at runtime, which the QA
-        # sandbox cannot reach, so a CanvasKit build never boots
-        # there. HTML renderer keeps the build self contained.
-        run: flutter build web --release --web-renderer html -t lib/main_admin.dart
+        # Self host CanvasKit: the build already bundles
+        # canvaskit locally, but the engine loads it from the
+        # public CDN by default, which the QA sandbox cannot
+        # reach. This define points the engine at the local
+        # copy served with the build.
+        run: flutter build web --release -t lib/main_admin.dart --dart-define=FLUTTER_WEB_CANVASKIT_URL=/canvaskit/
       - name: Upload admin web build
         uses: actions/upload-artifact@v4
         with:
