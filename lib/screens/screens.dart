@@ -1570,7 +1570,7 @@ class ProfileScreen extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.md),
-          const Card(
+          Card(
             child: ListTile(
               title: Text('Plan', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
               subtitle: Text(
@@ -1579,7 +1579,7 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
           ),
-          const Card(
+          Card(
             child: ListTile(
               title: Text('Notifications', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
               subtitle: Text(
