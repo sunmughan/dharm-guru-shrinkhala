@@ -5,7 +5,6 @@ import 'package:material_ui/material_ui.dart';
 import '../core/theme/design_tokens.dart';
 import 'auth_screen.dart';
 import '../services/auth_service.dart';
-import '../services/firebase_service.dart';
 import '../services/firestore_service.dart';
 
 /// Admin app for Dharm Guru Shrinkhala. Same Firebase project as
@@ -1006,7 +1005,7 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
             }
             if (docs.isEmpty) {
               if (snap.data!.isEmpty) {
-                return _Empty(
+                return const _Empty(
                   title: 'No astrologers yet',
                   body: 'Add your first astrologer to open live consult.',
                 );
@@ -2107,24 +2106,6 @@ class AnalyticsScreen extends StatefulWidget {
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   String _range = '7 days';
 
-  List<double> _perDay(
-    List<Map<String, dynamic>> docs,
-    int days,
-  ) {
-    final DateTime now = DateTime.now();
-    final DateTime start =
-        DateTime(now.year, now.month, now.day).subtract(Duration(days: days - 1));
-    final List<double> counts = List<double>.filled(days, 0);
-    for (final Map<String, dynamic> doc in docs) {
-      final DateTime? day = docDay(doc);
-      if (day == null) continue;
-      final DateTime d = DateTime(day.year, day.month, day.day);
-      final int index = d.difference(start).inDays;
-      if (index >= 0 && index < days) counts[index] += 1;
-    }
-    return counts;
-  }
-
   @override
   Widget build(BuildContext context) {
     final int days = _range == 'Today' ? 1 : _range == '7 days' ? 7 : 30;
@@ -2162,7 +2143,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             if (!snap.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
-            final List<Map<String, dynamic>> inRange = snap.data!
+            final List<Map<String, dynamic>> inRangeDocs = snap.data!
                 .where((Map<String, dynamic> d) => inRange(docDay(d), _range))
                 .toList();
             return LayoutBuilder(
@@ -2178,9 +2159,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   children: <Widget>[
                     _StatCard(
                       label: 'Daily users',
-                      value: inRange.isEmpty
+                      value: inRangeDocs.isEmpty
                           ? 'No data yet'
-                          : '${inRange.length}',
+                          : '${inRangeDocs.length}',
                     ),
                     _RangeStat(
                       label: 'Kundlis created',
@@ -2262,12 +2243,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         : 0;
                     return Column(
                       children: <Widget>[
-                        _EventRow(name: 'Screen views', value: 'No data yet'),
+                        const _EventRow(
+                          name: 'Screen views',
+                          value: 'No data yet',
+                        ),
                         _EventRow(
                           name: 'Kundli creation',
                           value: snap.hasData ? '$created' : 'Loading',
                         ),
-                        _EventRow(
+                        const _EventRow(
                           name: 'Consult bookings',
                           value: 'No data yet',
                         ),

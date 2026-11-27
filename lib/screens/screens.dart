@@ -818,7 +818,7 @@ class HoroscopeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (firestore == null) {
-      return _HoroscopeView(entry: HoroscopeEntry.sample);
+      return const _HoroscopeView(entry: HoroscopeEntry.sample);
     }
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: firestore!.watchDocs('horoscopes'),
@@ -865,6 +865,11 @@ class HoroscopeScreen extends StatelessWidget {
 String str(Map<String, dynamic> doc, String key) {
   final Object? value = doc[key];
   return value is String ? value : '';
+}
+
+double numVal(Map<String, dynamic> doc, String key) {
+  final Object? value = doc[key];
+  return value is num ? value.toDouble() : 0;
 }
 
 class _HoroscopeView extends StatelessWidget {

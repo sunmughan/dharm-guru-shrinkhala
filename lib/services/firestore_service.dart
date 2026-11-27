@@ -5,7 +5,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// The owner writes content from the admin app; the user app
 /// only reads published content.
 class FirestoreService {
-  FirestoreService({FirebaseFirestore? firestore}) : _firestore = firestore;
+  // Private initializing formal, same as AuthService: no caller
+  // ever passes a firestore object in.
+  FirestoreService({this._firestore});
 
   // Nullable on purpose: tests subclass this service and override
   // the methods below, so FirebaseFirestore.instance is never
