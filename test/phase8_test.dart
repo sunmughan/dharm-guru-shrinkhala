@@ -361,6 +361,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Current Dasha'), findsOneWidget);
       expect(find.text('Sade Sati'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Dasha timeline'),
+        200,
+      );
       expect(find.text('Dasha timeline'), findsOneWidget);
     });
 

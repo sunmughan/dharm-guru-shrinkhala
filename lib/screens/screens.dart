@@ -1319,7 +1319,7 @@ class _ChartSwitcher extends StatelessWidget {
           Expanded(
             child: _switcherSegment(
               context,
-              label: 'Lagna',
+              label: 'Lagna Chart',
               selected: mode == 0,
               onTap: () => onChanged(0),
             ),
@@ -1327,7 +1327,7 @@ class _ChartSwitcher extends StatelessWidget {
           Expanded(
             child: _switcherSegment(
               context,
-              label: 'Moon',
+              label: 'Moon Chart',
               selected: mode == 1,
               onTap: () => onChanged(1),
             ),
@@ -1335,7 +1335,7 @@ class _ChartSwitcher extends StatelessWidget {
           Expanded(
             child: _switcherSegment(
               context,
-              label: 'Navamsa',
+              label: 'Navamsa Chart',
               selected: mode == 2,
               onTap: () => onChanged(2),
             ),
@@ -2056,21 +2056,6 @@ class _PanchangBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.space3),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'Festivals this month',
-            style: AppTextStyles.themed(context, AppTextStyles.title),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          ..._monthFestivals(date).map(
-            (FestivalDay f) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Text(
-                '${formatDay(f.date)}: ${f.tithi}, ${f.observance}.',
-                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
-              ),
-            ),
-          ),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.space3),
@@ -2108,6 +2093,21 @@ class _PanchangBody extends StatelessWidget {
                   style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Festivals this month',
+            style: AppTextStyles.themed(context, AppTextStyles.title),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ..._monthFestivals(date).map(
+            (FestivalDay f) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Text(
+                '${formatDay(f.date)}: ${f.tithi}, ${f.observance}.',
+                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+              ),
             ),
           ),
         ],
