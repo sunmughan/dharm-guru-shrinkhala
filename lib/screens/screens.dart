@@ -14,6 +14,7 @@ import '../services/auth_service.dart';
 import '../services/chat_service.dart';
 import '../services/firebase_service.dart';
 import '../services/firestore_service.dart';
+import '../services/library_content.dart';
 import '../services/matching.dart';
 import '../services/notification_schedule.dart';
 import '../services/premium_service.dart';
@@ -635,6 +636,21 @@ class HomeScreen extends StatelessWidget {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => RemediesScreen(
+                    firestore: firestore,
+                    authService: authService,
+                  ),
+                ),
+              );
+            },
+          ),
+          _HomeCard(
+            title: 'Library',
+            body: 'Dasha timeline, festival days and planet reference.',
+            icon: Icons.menu_book,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => LibraryScreen(
                     firestore: firestore,
                     authService: authService,
                   ),
@@ -2704,6 +2720,363 @@ class _RemediesScreenState extends State<RemediesScreen> {
   }
 }
 
+/// Library screen. Real computed content only, no stored
+/// articles and no made up list. Three sections: the users
+/// own Vimshottari dasha timeline from the real chart,
+/// festival days in the next 30 days computed by the
+/// Panchang engine, and a planet reference paired with the
+/// users own computed positions when a profile exists.
+/// Every row opens real content: a dasha span opens its
+/// lords reference, a festival day opens that days full
+/// panchang, a planet opens its reference and own position.
+class LibraryScreen extends StatelessWidget {
+  const LibraryScreen({super.key, this.firestore, this.authService});
+
+  final FirestoreService? firestore;
+  final AuthService? authService;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? uid = authService?.currentUserId;
+    final Future<Map<String, dynamic>?>? profileFuture =
+        firestore != null && uid != null
+            ? firestore!.getUserProfile(uid)
+            : null;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Library')),
+      body: profileFuture == null
+          ? _LibraryBody(
+              profile: null,
+              firestore: firestore,
+              authService: authService,
+            )
+          : FutureBuilder<Map<String, dynamic>?>(
+              future: profileFuture,
+              builder: (
+                BuildContext context,
+                AsyncSnapshot<Map<String, dynamic>?> snapshot,
+              ) {
+                if (snapshot.connectionState ==
+                    ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+                final AppUserProfile? profile = snapshot.data == null
+                    ? null
+                    : AppUserProfile.fromMap(snapshot.data!);
+                return _LibraryBody(
+                  profile: profile,
+                  firestore: firestore,
+                  authService: authService,
+                );
+              },
+            ),
+    );
+  }
+}
+
+class _LibraryBody extends StatelessWidget {
+  const _LibraryBody({
+    required this.profile,
+    required this.firestore,
+    required this.authService,
+  });
+
+  final AppUserProfile? profile;
+  final FirestoreService? firestore;
+  final AuthService? authService;
+
+  KundliResult? _kundli() {
+    final AppUserProfile? p = profile;
+    if (p == null || !p.isComplete) return null;
+    final DateTime? birth = parseBirthDateTime(
+      AppUserProfile.displayDate(p.dateOfBirth!),
+      p.birthTimeUnknown || p.timeOfBirth == null
+          ? '12:00 PM'
+          : AppUserProfile.displayTime(p.timeOfBirth!),
+    );
+    if (birth == null) return null;
+    return KundliCalculator.calculate(
+      birthLocal: birth,
+      placeText: p.placeLine,
+      timeKnown: !p.birthTimeUnknown,
+    );
+  }
+
+  DateTime? _birth() {
+    final AppUserProfile? p = profile;
+    if (p == null || !p.isComplete) return null;
+    return parseBirthDateTime(
+      AppUserProfile.displayDate(p.dateOfBirth!),
+      p.birthTimeUnknown || p.timeOfBirth == null
+          ? '12:00 PM'
+          : AppUserProfile.displayTime(p.timeOfBirth!),
+    );
+  }
+
+  Future<void> _showPlanet(
+    BuildContext context,
+    PlanetReference ref,
+    KundliResult? kundli,
+  ) async {
+    final PlanetDetail? own =
+        kundli == null ? null : findPlanet(kundli, ref.name);
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(ref.name),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text('Signifies ${ref.signifies}.'),
+                const SizedBox(height: AppSpacing.sm),
+                Text('Rules ${ref.rules}.'),
+                Text('Exalted in ${ref.exalted}.'),
+                Text('Debilitated in ${ref.debilitated}.'),
+                if (own != null) ...<Widget>[
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'In your chart: ${own.note}',
+                    style: AppTextStyles.themed(
+                      context,
+                      AppTextStyles.body,
+                    ),
+                  ),
+                ] else ...<Widget>[
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Add your birth details to see where this planet sits in your chart.',
+                    style: AppTextStyles.themed(
+                      context,
+                      AppTextStyles.bodySmall,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showFestival(
+    BuildContext context,
+    FestivalDay day,
+  ) async {
+    final Panchang panchang =
+        PanchangCalculator.forDate(day.date, kDefaultPlace);
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('${day.observance} ${formatDay(day.date)}'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text('Tithi ${panchang.tithi}.'),
+                Text('Nakshatra ${panchang.nakshatra}.'),
+                Text('Yoga ${panchang.yoga}.'),
+                Text('Karana ${panchang.karana}.'),
+                Text('Sunrise ${panchang.sunrise}.'),
+                Text('Sunset ${panchang.sunset}.'),
+                Text('Shubh muhurat ${panchang.shubhMuhurat}.'),
+                Text('Rahu kaal ${panchang.rahuKaal}'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final KundliResult? kundli = _kundli();
+    final DateTime? birth = _birth();
+    final List<DashaInfo> timeline =
+        birth == null ? <DashaInfo>[] : vimshottariTimeline(birthLocal: birth);
+    final DateTime today = DateTime.now();
+    final DateTime todayDay = DateTime(today.year, today.month, today.day);
+    final List<FestivalDay> festivals =
+        festivalDays(from: todayDay);
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.screenPadding),
+      children: <Widget>[
+        Text(
+          'Your dasha timeline',
+          style: AppTextStyles.themed(context, AppTextStyles.title),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (timeline.isEmpty)
+          Card(
+            child: ListTile(
+              leading: const Icon(
+                Icons.person_add,
+                color: AppColors.deepSaffron,
+                size: 32,
+              ),
+              title: Text(
+                'Complete your profile',
+                style: AppTextStyles.themed(
+                  context,
+                  AppTextStyles.subtitle,
+                ),
+              ),
+              subtitle: Text(
+                'Add your birth details to see your dasha timeline.',
+                style: AppTextStyles.themed(
+                  context,
+                  AppTextStyles.bodySmall,
+                ),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => KundliInputScreen(
+                      firestore: firestore,
+                      authService: authService,
+                    ),
+                  ),
+                );
+              },
+            ),
+          )
+        else
+          ...timeline.map((DashaInfo span) {
+            final bool current = !todayDay.isBefore(span.start) &&
+                !todayDay.isAfter(span.end);
+            final PlanetReference ref = kPlanetReference.firstWhere(
+              (PlanetReference r) => r.name == span.lord,
+            );
+            return Card(
+              child: ListTile(
+                leading: Icon(
+                  Icons.circle,
+                  color: current
+                      ? AppColors.deepSaffron
+                      : AppColors.ink2,
+                  size: 16,
+                ),
+                title: Text(
+                  '${span.lord} Mahadasha',
+                  style: AppTextStyles.themed(
+                    context,
+                    AppTextStyles.subtitle,
+                  ),
+                ),
+                subtitle: Text(
+                  '${formatDay(span.start)} to ${formatDay(span.end)}',
+                  style: AppTextStyles.themed(
+                    context,
+                    AppTextStyles.bodySmall,
+                  ),
+                ),
+                trailing: current
+                    ? const Text('Current')
+                    : const Icon(Icons.chevron_right),
+                onTap: () => _showPlanet(context, ref, kundli),
+              ),
+            );
+          }),
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          'Festivals in the next 30 days',
+          style: AppTextStyles.themed(context, AppTextStyles.title),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (festivals.isEmpty)
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: Text('No festival day in the next 30 days.'),
+            ),
+          )
+        else
+          ...festivals.map(
+            (FestivalDay day) => Card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.celebration,
+                  color: AppColors.deepSaffron,
+                  size: 32,
+                ),
+                title: Text(
+                  day.observance,
+                  style: AppTextStyles.themed(
+                    context,
+                    AppTextStyles.subtitle,
+                  ),
+                ),
+                subtitle: Text(
+                  '${formatDay(day.date)} ${day.tithi}',
+                  style: AppTextStyles.themed(
+                    context,
+                    AppTextStyles.bodySmall,
+                  ),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showFestival(context, day),
+              ),
+            ),
+          ),
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          'Planets',
+          style: AppTextStyles.themed(context, AppTextStyles.title),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        ...kPlanetReference.map(
+          (PlanetReference ref) => Card(
+            child: ListTile(
+              leading: const Icon(
+                Icons.public,
+                color: AppColors.deepSaffron,
+                size: 32,
+              ),
+              title: Text(
+                ref.name,
+                style: AppTextStyles.themed(
+                  context,
+                  AppTextStyles.subtitle,
+                ),
+              ),
+              subtitle: Text(
+                'Rules ${ref.rules}. Exalted in ${ref.exalted}.',
+                style: AppTextStyles.themed(
+                  context,
+                  AppTextStyles.bodySmall,
+                ),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _showPlanet(context, ref, kundli),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Consult screen. Lists the astrologers the admin
 /// approved, in real time, with a real chat and a real call
 /// path for each one. Chat opens a Firestore backed room
@@ -3506,6 +3879,10 @@ class NotificationsScreen extends StatelessWidget {
                             MaterialPageRoute<void>(
                               builder: (_) => target,
                             ),
+                          );
+                        } else if (open == 'Home') {
+                          Navigator.of(context).popUntil(
+                            (Route<dynamic> route) => route.isFirst,
                           );
                         }
                       },

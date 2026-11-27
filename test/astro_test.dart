@@ -1,4 +1,5 @@
 import 'package:dharm_guru_shrinkhala/models/kundli.dart';
+import 'package:dharm_guru_shrinkhala/models/panchang.dart';
 import 'package:dharm_guru_shrinkhala/services/astro.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -147,6 +148,22 @@ void main() {
       expect(panchang.karana, isNotEmpty);
       expect(panchang.sunrise, contains('AM'));
       expect(panchang.sunset, contains('PM'));
+    });
+
+    test('new moon day is Amavasya and full moon day is Purnima', () {
+      // Real moon phases, December 2026: new moon 8 December,
+      // full moon 23 December. The old table labelled the 30th
+      // tithi Krishna Purnima, so Amavasya never appeared.
+      final Panchang newMoon = PanchangCalculator.forDate(
+        DateTime(2026, 12, 8),
+        kDefaultPlace,
+      );
+      expect(newMoon.tithi, 'Krishna Amavasya');
+      final Panchang fullMoon = PanchangCalculator.forDate(
+        DateTime(2026, 12, 23),
+        kDefaultPlace,
+      );
+      expect(fullMoon.tithi, 'Shukla Purnima');
     });
   });
 

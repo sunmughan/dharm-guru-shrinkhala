@@ -513,6 +513,11 @@ String formatDegree(double siderealLon) {
 String _tithiName(double elongation) {
   final int num = (elongation ~/ 12.0) + 1;
   if (num <= 15) return 'Shukla ${kTithiNames[num - 1]}';
+  // The 30th tithi is Amavasya, not a second Purnima: the
+  // shared 15 name table has no Amavasya entry, so the old
+  // code labelled it Krishna Purnima and Amavasya never
+  // appeared. 16 to 29 are Krishna Pratipada to Chaturdashi.
+  if (num == 30) return 'Krishna Amavasya';
   return 'Krishna ${kTithiNames[num - 16]}';
 }
 
@@ -885,6 +890,30 @@ DashaInfo vimshottariDasha({
     start: start,
     end: start.add(const Duration(days: 365)),
   );
+}
+
+/// Full Vimshottari timeline from birth: every Mahadasha span
+/// in order, covering the whole 120 year cycle. Built by
+/// walking vimshottariDasha forward from birth, so the spans
+/// use the same Moon nakshatra math as the current dasha.
+/// The last span is cut at birth plus 120 years.
+List<DashaInfo> vimshottariTimeline({required DateTime birthLocal}) {
+  final DateTime cycleEnd =
+      DateTime(birthLocal.year + 120, birthLocal.month, birthLocal.day);
+  final List<DashaInfo> spans = <DashaInfo>[];
+  DateTime cursor = birthLocal;
+  for (int step = 0; step < 12; step++) {
+    final DashaInfo span =
+        vimshottariDasha(birthLocal: birthLocal, asOf: cursor);
+    final DateTime end =
+        span.end.isAfter(cycleEnd) ? cycleEnd : span.end;
+    spans.add(DashaInfo(lord: span.lord, start: span.start, end: end));
+    if (!end.isBefore(cycleEnd)) {
+      break;
+    }
+    cursor = end.add(const Duration(days: 1));
+  }
+  return spans;
 }
 
 /// Parses the birth form text the app already uses:
