@@ -550,13 +550,13 @@ class _ChartLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       children: const <Widget>[
-        const Expanded(child: _LegendChip(label: 'Lagna', value: 'Meena')),
+        Expanded(child: _LegendChip(label: 'Lagna', value: 'Meena')),
         SizedBox(width: AppSpacing.space3),
-        const Expanded(child: _LegendChip(label: 'Rashi', value: 'Kanya')),
+        Expanded(child: _LegendChip(label: 'Rashi', value: 'Kanya')),
         SizedBox(width: AppSpacing.space3),
-        const Expanded(
+        Expanded(
           child: _LegendChip(label: 'Nakshatra', value: 'Hasta'),
         ),
       ],
