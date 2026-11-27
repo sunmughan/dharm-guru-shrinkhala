@@ -1,18 +1,166 @@
 import 'package:dharm_guru_shrinkhala/core/navigation/app_shell.dart';
+import 'package:dharm_guru_shrinkhala/screens/auth_screen.dart';
 import 'package:dharm_guru_shrinkhala/screens/screens.dart';
+import 'package:dharm_guru_shrinkhala/services/auth_service.dart';
 import 'package:dharm_guru_shrinkhala/widgets/kundli_chart.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+/// Fake auth that never touches Firebase. The base constructor
+/// takes no real FirebaseAuth, and every member used here is
+/// overridden, so FirebaseAuth.instance is never reached.
+class _FakeAuthService extends AuthService {
+  _FakeAuthService({this.signedInValue = false});
+
+  final bool signedInValue;
+  String? lastResetEmail;
+  String? lastSignedInEmail;
+
+  @override
+  Stream<bool> get signedIn => Stream.value(signedInValue);
+
+  @override
+  Future<void> signInWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    lastSignedInEmail = email;
+  }
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    lastResetEmail = email;
+  }
+}
 
 void main() {
   testWidgets('App shows onboarding when splash is skipped',
       (WidgetTester tester) async {
     await tester.pumpWidget(
-      const DharmGuruApp(showSplash: false, firebaseReady: true),
+      DharmGuruApp(
+        showSplash: false,
+        firebaseReady: true,
+        authService: _FakeAuthService(signedInValue: true),
+      ),
     );
     await tester.pumpAndSettle();
     expect(find.text('Enter birth details'), findsOneWidget);
     expect(find.text('Welcome'), findsOneWidget);
+  });
+
+  testWidgets('Signed out app shows only the sign in screen',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      DharmGuruApp(
+        showSplash: false,
+        firebaseReady: true,
+        authService: _FakeAuthService(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('Welcome'), findsNothing);
+    expect(find.text('Enter birth details'), findsNothing);
+    expect(find.text('Home'), findsNothing);
+    expect(find.text('Kundli'), findsNothing);
+  });
+
+  testWidgets('Sign in rejects a bad email before calling auth',
+      (WidgetTester tester) async {
+    final _FakeAuthService fake = _FakeAuthService();
+    await tester.pumpWidget(
+      MaterialApp(home: AuthScreen(authService: fake)),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextField).at(0),
+      'not-an-email',
+    );
+    await tester.enterText(find.byType(TextField).at(1), '123456');
+    await tester.tap(find.text('Sign In'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Enter a valid email address, like name@example.com.'),
+      findsOneWidget,
+    );
+    expect(fake.lastSignedInEmail, isNull);
+  });
+
+  testWidgets('Sign in rejects a short password before calling auth',
+      (WidgetTester tester) async {
+    final _FakeAuthService fake = _FakeAuthService();
+    await tester.pumpWidget(
+      MaterialApp(home: AuthScreen(authService: fake)),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextField).at(0),
+      'a@b.com',
+    );
+    await tester.enterText(find.byType(TextField).at(1), '123');
+    await tester.tap(find.text('Sign In'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Password must be at least 6 characters.'),
+      findsOneWidget,
+    );
+    expect(fake.lastSignedInEmail, isNull);
+  });
+
+  testWidgets('Forgot password sends the reset email and confirms',
+      (WidgetTester tester) async {
+    final _FakeAuthService fake = _FakeAuthService();
+    await tester.pumpWidget(
+      MaterialApp(home: AuthScreen(authService: fake)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Forgot password?'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'a@b.com');
+    await tester.tap(find.text('Send reset link'));
+    await tester.pumpAndSettle();
+    expect(fake.lastResetEmail, 'a@b.com');
+    expect(
+      find.text(
+        'Reset link sent to a@b.com. Open your email, tap the link, and set a new password. Then sign in with the new password.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  test('Email validation accepts a plain address and rejects junk', () {
+    expect(validateEmail('a@b.com'), isNull);
+    expect(validateEmail('name@example.com'), isNull);
+    expect(validateEmail('no-at-sign'), isNotNull);
+    expect(validateEmail('a@b'), isNotNull);
+    expect(validateEmail(''), isNotNull);
+  });
+
+  test('Password validation needs at least 6 characters', () {
+    expect(validatePassword('12345'), isNotNull);
+    expect(validatePassword('123456'), isNull);
+  });
+
+  test('Auth errors map to plain words, never raw codes', () {
+    expect(
+      AuthService.plainError(
+        const FirebaseAuthException(code: 'invalid-credential'),
+      ),
+      'The email or password is wrong. Try again or reset your password.',
+    );
+    expect(
+      AuthService.plainError(
+        const FirebaseAuthException(code: 'email-already-in-use'),
+      ),
+      'An account already exists for that email. Sign in instead.',
+    );
+    expect(
+      AuthService.plainError(
+        const FirebaseAuthException(code: 'operation-not-allowed'),
+      ),
+      'Email sign in is not switched on yet. Ask the app team to enable it.',
+    );
   });
 
   testWidgets('Chart shows lagna rashi and all nine planets',

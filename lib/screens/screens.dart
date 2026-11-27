@@ -4,6 +4,7 @@ import '../core/theme/design_tokens.dart';
 import '../models/kundli.dart';
 import '../models/panchang.dart';
 import '../models/remedies.dart';
+import '../services/auth_service.dart';
 import '../widgets/kundli_chart.dart';
 import '../widgets/planet_details.dart';
 
@@ -1590,12 +1591,12 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           ElevatedButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Sign in is a later phase.')),
-              );
+            // Profile only opens signed in, so this is sign out.
+            // The auth gate takes the app back to sign in.
+            onPressed: () async {
+              await AuthService().signOut();
             },
-            child: const Text('Sign In'),
+            child: const Text('Sign Out'),
           ),
         ],
       ),

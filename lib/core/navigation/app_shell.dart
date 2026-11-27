@@ -1,7 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/design_tokens.dart';
+import '../../screens/auth_screen.dart';
 import '../../screens/screens.dart';
+import '../../services/auth_service.dart';
 
 /// Bottom tab navigation shell.
 /// Tabs in fixed order: Home, Kundli, Panchang, Consult, Profile.
@@ -63,17 +65,22 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
-/// Root widget. Shows splash, then onboarding, then the tab shell.
-/// Set showSplash false in tests to skip the splash screen.
+/// Root widget. Shows splash, then the auth gate, then onboarding,
+/// then the tab shell. Signed out users see only the sign in
+/// screen: no kundli, matching, remedies or any other screen opens
+/// without a signed in user. Set showSplash false in tests to skip
+/// the splash screen. Pass authService in tests to fake the stream.
 class DharmGuruApp extends StatefulWidget {
   const DharmGuruApp({
     super.key,
     this.firebaseReady = true,
     this.showSplash = true,
+    this.authService,
   });
 
   final bool firebaseReady;
   final bool showSplash;
+  final AuthService? authService;
 
   @override
   State<DharmGuruApp> createState() => _DharmGuruAppState();
@@ -82,6 +89,8 @@ class DharmGuruApp extends StatefulWidget {
 class _DharmGuruAppState extends State<DharmGuruApp> {
   bool _splashDone = false;
   bool _onboardingDone = false;
+  late final AuthService _auth = widget.authService ?? AuthService();
+  late final Stream<bool> _signedIn = _auth.signedIn;
 
   @override
   void initState() {
@@ -89,42 +98,50 @@ class _DharmGuruAppState extends State<DharmGuruApp> {
     _splashDone = !widget.showSplash;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (!widget.firebaseReady) {
-      return MaterialApp(
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.system,
-        home: const _FirebaseSetupNeededScreen(),
-      );
-    }
-    if (!_splashDone) {
-      return MaterialApp(
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.system,
-        home: SplashScreen(
-          onDone: () => setState(() => _splashDone = true),
-        ),
-      );
-    }
-    if (!_onboardingDone) {
-      return MaterialApp(
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.system,
-        home: OnboardingScreen(
-          onDone: () => setState(() => _onboardingDone = true),
-        ),
-      );
-    }
+  MaterialApp _app({required Widget home}) {
     return MaterialApp(
       title: 'Dharm Guru Shrinkhala',
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.system,
-      home: const AppShell(),
+      home: home,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.firebaseReady) {
+      return _app(home: const _FirebaseSetupNeededScreen());
+    }
+    if (!_splashDone) {
+      return _app(
+        home: SplashScreen(
+          onDone: () => setState(() => _splashDone = true),
+        ),
+      );
+    }
+    return StreamBuilder<bool>(
+      stream: _signedIn,
+      builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
+        if (!snapshot.hasData) {
+          return _app(
+            home: const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+        if (snapshot.data == false) {
+          return _app(home: AuthScreen(authService: _auth));
+        }
+        if (!_onboardingDone) {
+          return _app(
+            home: OnboardingScreen(
+              onDone: () => setState(() => _onboardingDone = true),
+            ),
+          );
+        }
+        return _app(home: const AppShell());
+      },
     );
   }
 }

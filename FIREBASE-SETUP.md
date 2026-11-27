@@ -31,9 +31,11 @@ Flutter app direct to Firebase, no backend. Follow these console steps in order.
 * Download `GoogleService-Info.plist` and place it in `ios/Runner/`
 * This file is gitignored. Never commit a real `GoogleService-Info.plist`
 
-## 4. Enable Authentication, phone and Google
+## 4. Enable Authentication, email, phone and Google
 
 * Open Authentication, then Sign in method
+* Enable Email/Password sign in, so sign up, sign in and the
+  forgot password reset email work
 * Enable Phone sign in
 * Enable Google sign in
 * Add the SHA fingerprint for the Android app when the console asks for it, so Google sign in works on Android
