@@ -14,6 +14,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // resValue is used for the per flavor launcher name, see below.
+    buildFeatures {
+        resValues = true
+    }
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.codeair.dharm_guru_shrinkhala"
