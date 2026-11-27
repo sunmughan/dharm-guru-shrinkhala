@@ -180,15 +180,17 @@ Map<String, String> divisionalChart(
   };
 }
 
-/// Dignity of a planet in a sign. Exaltation and debilitation
-/// use the whole sign, the classical software convention; the
-/// exaltation degree is named in the table comment for the
-/// reader. Moolatrikona needs the degree inside the sign.
+/// Dignity of a planet in a sign. Exaltation is the exact
+/// exaltation degree only, so the moolatrikona range that
+/// shares the exaltation sign still applies past that
+/// degree. Debilitation uses the whole sign. Moolatrikona
+/// needs the degree inside the sign.
 enum Dignity { exalted, debilitated, moolatrikona, ownSign, neutral }
 
 class _DignityRow {
   const _DignityRow({
     required this.exaltedSign,
+    required this.exaltedDegree,
     required this.debilitatedSign,
     required this.ownSigns,
     required this.moolatrikonaSign,
@@ -197,6 +199,7 @@ class _DignityRow {
   });
 
   final int exaltedSign;
+  final double exaltedDegree;
   final int debilitatedSign;
   final List<int> ownSigns;
   final int moolatrikonaSign;
@@ -213,6 +216,7 @@ const Map<String, _DignityRow> _dignityTable =
     <String, _DignityRow>{
   'Sun': _DignityRow(
     exaltedSign: 0,
+    exaltedDegree: 10,
     debilitatedSign: 6,
     ownSigns: <int>[4],
     moolatrikonaSign: 4,
@@ -221,6 +225,7 @@ const Map<String, _DignityRow> _dignityTable =
   ),
   'Moon': _DignityRow(
     exaltedSign: 1,
+    exaltedDegree: 3,
     debilitatedSign: 7,
     ownSigns: <int>[3],
     moolatrikonaSign: 1,
@@ -229,6 +234,7 @@ const Map<String, _DignityRow> _dignityTable =
   ),
   'Mars': _DignityRow(
     exaltedSign: 9,
+    exaltedDegree: 28,
     debilitatedSign: 3,
     ownSigns: <int>[0, 7],
     moolatrikonaSign: 0,
@@ -237,6 +243,7 @@ const Map<String, _DignityRow> _dignityTable =
   ),
   'Mercury': _DignityRow(
     exaltedSign: 5,
+    exaltedDegree: 15,
     debilitatedSign: 11,
     ownSigns: <int>[2, 5],
     moolatrikonaSign: 5,
@@ -245,6 +252,7 @@ const Map<String, _DignityRow> _dignityTable =
   ),
   'Jupiter': _DignityRow(
     exaltedSign: 3,
+    exaltedDegree: 5,
     debilitatedSign: 9,
     ownSigns: <int>[8, 11],
     moolatrikonaSign: 8,
@@ -253,6 +261,7 @@ const Map<String, _DignityRow> _dignityTable =
   ),
   'Venus': _DignityRow(
     exaltedSign: 11,
+    exaltedDegree: 27,
     debilitatedSign: 5,
     ownSigns: <int>[1, 6],
     moolatrikonaSign: 6,
@@ -261,6 +270,7 @@ const Map<String, _DignityRow> _dignityTable =
   ),
   'Saturn': _DignityRow(
     exaltedSign: 6,
+    exaltedDegree: 20,
     debilitatedSign: 0,
     ownSigns: <int>[9, 10],
     moolatrikonaSign: 10,
@@ -278,7 +288,9 @@ Dignity dignityOf(String planet, double siderealLongitude) {
   if (row == null) return Dignity.neutral;
   final int sign = _signIndex(siderealLongitude);
   final double within = _within(siderealLongitude);
-  if (sign == row.exaltedSign) return Dignity.exalted;
+  if (sign == row.exaltedSign && within == row.exaltedDegree) {
+    return Dignity.exalted;
+  }
   if (sign == row.debilitatedSign) return Dignity.debilitated;
   if (sign == row.moolatrikonaSign &&
       within >= row.moolatrikonaFrom &&

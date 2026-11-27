@@ -202,7 +202,7 @@ class CalculationEngine {
         'utcOffsetMinutes or use Asia/Kolkata.',
       );
     }
-    final DateTime utcInstant = input.localTime.subtract(offset);
+    final DateTime utcInstant = input.localTime.subtract(offset).toUtc();
     final double dayNumber = _dayNumberFor(utcInstant);
     final double ayan = ayanamshaFor(config.ayanamsha, dayNumber);
     final AstroPlace place = AstroPlace(
