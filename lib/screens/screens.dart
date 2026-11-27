@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -14,6 +16,8 @@ import '../services/auth_service.dart';
 import '../services/chat_service.dart';
 import '../services/firebase_service.dart';
 import '../services/firestore_service.dart';
+import '../services/kundli_pdf.dart';
+import '../services/kundli_report.dart';
 import '../services/library_content.dart';
 import '../services/matching.dart';
 import '../services/notification_schedule.dart';
@@ -1197,10 +1201,50 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
                 child: const Text('See Planet Details'),
               ),
             ),
+            const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => _downloadPdfReport(kundli),
+                child: const Text('Download PDF report'),
+              ),
+            ),
           ],
         ],
       ),
     );
+  }
+
+  /// Builds the PDF report from the chart on screen and shares
+  /// it: download on web, share sheet on native. A failure
+  /// shows a message, it never crashes the screen.
+  Future<void> _downloadPdfReport(KundliResult kundli) async {
+    try {
+      final KundliPdfFonts fonts = await KundliPdfFonts.load();
+      final KundliResult shown =
+          _showMoonChart ? kundli.moonChart : kundli;
+      final KundliReportData data = buildKundliReportData(
+        birth: widget.birth,
+        kundli: shown,
+        chartKind: _showMoonChart ? 'Moon Chart' : 'Lagna Chart',
+      );
+      final Uint8List bytes = await KundliPdfBuilder.build(data, fonts);
+      final String safeName = widget.birth.name.replaceAll(
+        RegExp(r'[^A-Za-z0-9]+'),
+        '_',
+      );
+      await Printing.sharePdf(
+        bytes: bytes,
+        filename: 'kundli_report_$safeName.pdf',
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('PDF report could not be made. Try again.'),
+        ),
+      );
+    }
   }
 }
 
