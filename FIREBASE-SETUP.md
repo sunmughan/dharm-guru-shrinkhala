@@ -9,27 +9,42 @@ Flutter app direct to Firebase, no backend. Follow these console steps in order.
 * Enable Google Analytics for the project when asked, Analytics is used by the app
 * Wait for project creation to finish
 
-## 2. Register the Android app
+## 2. Register the Android apps
 
-* In Project settings, add an Android app
-* Package name: `com.codeair.dharm_guru_shrinkhala`, the Android
-  applicationId from `android/app/build.gradle.kts` in this repo.
-  The `android/` directory is part of the Flutter project
-  scaffolding. If it is missing, create it with
-  `flutter create --platforms=android,ios,web .` in the repo root
-  before this step, and do not copy the generated `lib/` or
-  `pubspec.yaml` over the existing files.
+There are two Android apps in this project, one per flavor, so both
+can live side by side on one phone:
+
+* User app package name: `com.codeair.dharm_guru_shrinkhala`
+* Admin app package name: `com.codeair.dharm_guru_shrinkhala.admin`
+
+* In Project settings, add an Android app for each package name
+  above. The package names come from `android/app/build.gradle.kts`
+  in this repo.
 * Download `google-services.json` and place it in `android/app/`
 * This file is gitignored. Never commit a real `google-services.json`
+* The app itself starts from the values in
+  `lib/firebase_options.dart`, not from this file, so the file is
+  only needed for native Google sign in. The app builds on CI
+  without it. Do not add the google-services Gradle plugin: the
+  build on CI has no `google-services.json` to read, and the plugin
+  would fail the build.
 
-## 3. Register the iOS app
+## 3. Register the iOS apps
 
-* In Project settings, add an iOS app
-* Bundle id: `com.codeair.dharmgurushrinkhala`, the iOS bundle
-  id from the `ios/` project scaffolding in this repo. If the
-  `ios/` directory is missing, create it the same way as in step 2.
+There are two iOS apps in this project, one per flavor:
+
+* User app bundle id: `com.codeair.dharmgurushrinkhala`
+* Admin app bundle id: `com.codeair.dharmgurushrinkhala.admin`
+
+* In Project settings, add an iOS app for each bundle id above.
+  The bundle ids come from `ios/Runner.xcodeproj/project.pbxproj`
+  in this repo.
 * Download `GoogleService-Info.plist` and place it in `ios/Runner/`
 * This file is gitignored. Never commit a real `GoogleService-Info.plist`
+* Both flavors share the one `ios/Runner/Info.plist` in this repo.
+  After the admin iOS app is registered, its own reversed client id
+  belongs in a flavor specific Info.plist. Until then Google sign in
+  on the admin iOS build uses the user app client id.
 
 ## 4. Enable Authentication, email, phone and Google
 
@@ -38,7 +53,12 @@ Flutter app direct to Firebase, no backend. Follow these console steps in order.
   forgot password reset email work
 * Enable Phone sign in
 * Enable Google sign in
-* Add the SHA fingerprint for the Android app when the console asks for it, so Google sign in works on Android
+* Add the SHA fingerprint for EACH Android app when the console asks
+  for it, so Google sign in works on Android for both the user app
+  and the admin app. The user app SHA-1 is still owed, and the admin
+  app SHA-1 is owed too. Without a registered SHA-1 there is no
+  Android OAuth client, and Google sign in on Android fails even
+  though email sign in and phone OTP work.
 * Phone sign in needs no extra step in the console beyond enabling it
 
 ## 5. Enable Firestore
@@ -82,6 +102,19 @@ Flutter app direct to Firebase, no backend. Follow these console steps in order.
 * Run `flutterfire configure` in the repo root and select the project and the Android and iOS apps
 * This generates real values in `lib/firebase_options.dart`. Replace the placeholder values in that file only with the generated values
 * Verify the generated file has no placeholder text left, then run `flutter run`
+* The admin flavor currently reuses the user app registration in
+  `lib/firebase_options.dart`. After the admin Android and iOS apps
+  are registered in steps 2 and 3, add their app ids to that file
+  and select them per flavor. Do not invent the values.
+
+## 13. Build the two flavors
+
+* User APK: `flutter build apk --release --flavor user`
+* Admin APK: `flutter build apk --release --flavor admin -t lib/main_admin.dart`
+* User iOS: `flutter build ios --release --flavor user --no-codesign`
+* Admin iOS: `flutter build ios --release --flavor admin --no-codesign -t lib/main_admin.dart`
+* A plain `flutter build apk` with no flavor now fails. Always pass
+  a flavor.
 
 ## 11. Enable your own admin access
 
@@ -118,7 +151,10 @@ Publish) after any change to that file.
 
 * Project created, Analytics on
 * Android app registered, `google-services.json` in place, not committed
+* Admin Android app registered (`com.codeair.dharm_guru_shrinkhala.admin`)
 * iOS app registered, `GoogleService-Info.plist` in place, not committed
+* Admin iOS app registered (`com.codeair.dharmgurushrinkhala.admin`)
+* SHA-1 added for the user Android app and for the admin Android app
 * Auth phone enabled, Auth Google enabled
 * Firestore created, locked mode rules in place
 * Cloud Messaging reachable from the console composer

@@ -27,6 +27,24 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Launcher name. The admin flavor overrides this below so the
+        // two apps are easy to tell apart on one phone.
+        resValue("string", "app_name", "Dharm Guru Shrinkhala")
+    }
+
+    // User and admin are separate apps on one phone, so they need
+    // separate applicationIds. Build with --flavor user or --flavor
+    // admin. The user flavor keeps the original id.
+    flavorDimensions += "app"
+    productFlavors {
+        create("user") {
+            dimension = "app"
+        }
+        create("admin") {
+            dimension = "app"
+            applicationIdSuffix = ".admin"
+            resValue("string", "app_name", "Dharm Guru Admin")
+        }
     }
 
     buildTypes {

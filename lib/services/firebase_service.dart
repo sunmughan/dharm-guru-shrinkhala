@@ -8,8 +8,12 @@ import 'package:flutter/foundation.dart';
 import '../firebase_options.dart';
 
 /// Firebase bootstrap. Direct Flutter to Firebase, no backend.
-/// Call once from main before runApp. If Firebase is not yet
-/// configured, initialise throws and main shows the setup message.
+/// Call once from main before runApp. Only a failure of
+/// Firebase.initializeApp itself throws and shows the setup
+/// screen in main. Crashlytics, Remote Config and Messaging are
+/// optional steps: each runs on its own and a failure there only
+/// logs and continues, so a slow network on first launch no longer
+/// looks like a missing Firebase configuration.
 class FirebaseService {
   FirebaseService._();
 
@@ -19,9 +23,20 @@ class FirebaseService {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    await _configureCrashlytics();
-    await _configureRemoteConfig();
-    await _configureMessaging();
+    await _runOptional(_configureCrashlytics);
+    await _runOptional(_configureRemoteConfig);
+    await _runOptional(_configureMessaging);
+  }
+
+  // One optional step that must never kill the app. Remote Config
+  // fetch and the Messaging token both need the network, and both
+  // throw on a slow or missing connection.
+  static Future<void> _runOptional(Future<void> Function() step) async {
+    try {
+      await step();
+    } catch (error) {
+      debugPrint('Firebase optional setup failed: $error');
+    }
   }
 
   static Future<void> _configureCrashlytics() async {

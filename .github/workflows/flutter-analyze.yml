@@ -33,20 +33,44 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
       - name: Build user release APK
-        run: flutter build apk --release
-      - name: Move user APK aside
-        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-release-user.apk
+        run: flutter build apk --release --flavor user
       - name: Build admin release APK
-        run: flutter build apk --release -t lib/main_admin.dart
-      - name: Move admin APK aside
-        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-release-admin.apk
+        run: flutter build apk --release --flavor admin -t lib/main_admin.dart
+      - name: Verify APK package names differ
+        run: |
+          AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt | head -n 1)
+          "$AAPT" dump badging build/app/outputs/flutter-apk/user/release/app-user-release.apk | grep "package: name='com.codeair.dharm_guru_shrinkhala'"
+          "$AAPT" dump badging build/app/outputs/flutter-apk/admin/release/app-admin-release.apk | grep "package: name='com.codeair.dharm_guru_shrinkhala.admin'"
       - name: Upload user APK
         uses: actions/upload-artifact@v4
         with:
           name: dharm-guru-release-apk
-          path: build/app/outputs/flutter-apk/app-release-user.apk
+          path: build/app/outputs/flutter-apk/user/release/app-user-release.apk
       - name: Upload admin APK
         uses: actions/upload-artifact@v4
         with:
           name: dharm-guru-admin-release-apk
-          path: build/app/outputs/flutter-apk/app-release-admin.apk
+          path: build/app/outputs/flutter-apk/admin/release/app-admin-release.apk
+
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Build user iOS app
+        run: flutter build ios --release --flavor user --no-codesign
+      - name: Verify user bundle id
+        run: |
+          APP=$(find build/ios -name "Runner.app" -maxdepth 4 | head -n 1)
+          test "$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist")" = "com.codeair.dharmgurushrinkhala"
+          mv "$APP" build/ios/Runner-user.app
+      - name: Build admin iOS app
+        run: flutter build ios --release --flavor admin --no-codesign -t lib/main_admin.dart
+      - name: Verify admin bundle id
+        run: |
+          APP=$(find build/ios -name "Runner.app" -maxdepth 4 | head -n 1)
+          test "$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist")" = "com.codeair.dharmgurushrinkhala.admin"
