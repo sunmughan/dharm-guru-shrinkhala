@@ -15,11 +15,15 @@ import 'astro.dart';
 /// Sources for the rules: the Rahu Kaal, Yamaganda and
 /// Gulika weekday tables and the Choghadiya lord cycle are
 /// the standard Kala Velai tables used in Tamil and North
-/// Indian panchangs. The lunar month naming follows the
-/// Sun sign at the month Purnima: the month is named after
-/// the nakshatra of its full Moon, and the Sun sits opposite
-/// the Moon then, so Meena Sun means Chaitra, Mesha Sun
-/// means Vaishakha, and so on round the year.
+/// Indian panchangs. The lunar month is named by the
+/// sankranti inside it: the Sun ingress that falls strictly
+/// inside the lunar month names it, Mesha ingress meaning
+/// Chaitra and so on round the year. A month with no
+/// sankranti is Adhika and takes the following month name.
+/// Naming from the Sun sign at the Purnima alone is wrong:
+/// after an Adhik month it puts every later festival a
+/// month early, and when two Purnimas share one Sun sign
+/// it finds a festival twice.
 
 /// Which lunar month convention a result uses.
 enum LunarConvention { amanta, purnimanta }
@@ -231,18 +235,59 @@ int _sunSignAt(DateTime utc) {
   return (lon ~/ 30.0) % 12;
 }
 
-/// Lunar month name from the Sun sign at a Purnima: the
-/// full Moon sits in the nakshatra the month is named after,
-/// and the Sun sits opposite it.
+/// Lunar month name from the Sun sign at a Purnima. Used
+/// only to name an Adhika month, where the month takes the
+/// following month name: the Sun sign at the Purnima inside
+/// an Adhika month is the sign before the following month
+/// sankranti, so this gives the same name as the sankranti
+/// rule. Everywhere else the month comes from
+/// _amantaMonthAt below.
 String _monthFromSunSign(int sunSign) =>
     kLunarMonths[(sunSign + 1) % 12];
 
+/// Amanta month name for the lunar month holding a UTC
+/// moment: the sankranti (Sun ingress) that falls strictly
+/// inside the month names it, Mesha ingress meaning
+/// Chaitra and so on round the year. A month with no
+/// sankranti is Adhika and takes the following month name,
+/// so the search moves to the next month. A month with two
+/// sankrantis (Kshaya Masa) takes the first; Kshaya Masa is
+/// not otherwise handled.
+String _amantaMonthAt(DateTime moment) {
+  DateTime start = _phaseBefore(moment, 0);
+  DateTime end = _phaseAfter(moment, 0);
+  for (int i = 0; i < 3; i++) {
+    final List<DateTime> sankrantis =
+        sankrantiMoments(start, end).where(
+      (DateTime m) => m.isAfter(start) && m.isBefore(end),
+    ).toList();
+    if (sankrantis.isNotEmpty) {
+      final int sign = _sunSignAt(
+        sankrantis.first.add(const Duration(hours: 12)),
+      );
+      return kLunarMonths[sign];
+    }
+    start = end;
+    end = _phaseAfter(end.add(const Duration(days: 1)), 0);
+  }
+  throw StateError(
+    'No sankranti found in three lunar months from $moment',
+  );
+}
+
+/// Amanta month name for the lunar month holding a UTC
+/// moment. The festival scan reads the month at the
+/// festival own observance moment, so a tithi that starts
+/// just after sunrise still belongs to the month it starts
+/// in, and a Pratipada is never counted twice.
+String lunarMonthAtUtc(DateTime utc) => _amantaMonthAt(utc);
+
 /// Lunar month name for a date under a convention.
 ///
-/// Amanta: the month holds its Purnima in the middle, so a
-/// Shukla date reads the coming Purnima and a Krishna date
-/// reads the Purnima just passed. Purnimanta: the month
-/// ends on its Purnima, so every date reads the coming
+/// Amanta: the month holding local noon, named by the
+/// sankranti inside it. Purnimanta: the month ends on its
+/// Purnima, so the date reads the coming Purnima, and the
+/// month takes the Amanta name of the month holding that
 /// Purnima. The two agree in Shukla paksha and differ by
 /// one month in Krishna paksha.
 String lunarMonth(
@@ -254,18 +299,13 @@ String lunarMonth(
   final DateTime noonUtc = _utcFromIst(
     DateTime(day.year, day.month, day.day, 12),
   );
-  final bool shukla = tithiNumberAtUtc(noonUtc) <= 15;
-  DateTime purnima;
-  if (convention == LunarConvention.purnimanta || shukla) {
-    purnima = fullMoons == null
+  if (convention == LunarConvention.purnimanta) {
+    final DateTime purnima = fullMoons == null
         ? _phaseAfter(noonUtc, 180)
         : fullMoons.firstWhere((DateTime m) => m.isAfter(noonUtc));
-  } else {
-    purnima = fullMoons == null
-        ? _phaseBefore(noonUtc, 180)
-        : fullMoons.lastWhere((DateTime m) => !m.isAfter(noonUtc));
+    return _amantaMonthAt(purnima);
   }
-  return _monthFromSunSign(_sunSignAt(purnima));
+  return _amantaMonthAt(noonUtc);
 }
 
 /// Paksha for a date, from the tithi at local noon.
@@ -513,8 +553,13 @@ List<ChoghadiyaSegment> _choghadiya(
 /// ecliptic longitude, with the lunar latitude left out:
 /// that keeps the result within about 20 minutes of a full
 /// ephemeris, and the value is labelled approximate in the
-/// UI. shortcut: add the lunar latitude term when sub 10
-/// minute moonrise precision is ever needed.
+/// UI. The longitude is tropical: the right ascension and
+/// declination here are tropical, and they are compared
+/// with tropical local sidereal time, so a sidereal
+/// longitude would shift every rise and set by the
+/// ayanamsa, about an hour and a half. shortcut: add the
+/// lunar latitude term when sub 10 minute moonrise
+/// precision is ever needed.
 ({String? rise, String? set}) _moonRiseSet(
   DateTime day,
   AstroPlace place,
@@ -530,7 +575,7 @@ List<ChoghadiyaSegment> _choghadiya(
     final DateTime utc = _utcFromIst(
       midnightIst.add(Duration(minutes: i * 10)),
     );
-    final double moonLon = siderealLongitudes(utc)['Moon']!;
+    final double moonLon = tropicalLongitudes(utc)['Moon']!;
     final double lonR = moonLon * math.pi / 180.0;
     const double epsR = eps * math.pi / 180.0;
     final double dec = math.asin(math.sin(epsR) * math.sin(lonR));

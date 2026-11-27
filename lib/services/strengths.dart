@@ -348,8 +348,11 @@ class BhavaBalaResult {
 }
 
 /// Bhava Bala for all 12 houses of a chart. Simplified:
-/// the lord Sthana Bala plus 10 points per planet sitting
-/// in the house. Labelled as a simplified reading aid.
+/// the lord Sthana Bala plus 10 points per visible planet
+/// sitting in the house. Rahu and Ketu are left out, as in
+/// Shadbala and in the Kaal Sarp count: only the seven
+/// visible planets count here. Labelled as a simplified
+/// reading aid.
 List<BhavaBalaResult> bhavaBala(KundliResult kundli) {
   final int lagnaIndex = kRashis.indexOf(kundli.lagna);
   final List<BhavaBalaResult> out = <BhavaBalaResult>[];
@@ -359,7 +362,12 @@ List<BhavaBalaResult> bhavaBala(KundliResult kundli) {
     final String lord = kRashiLords[signIndex];
     final int lordStrength = sthanaBala(lord, sign);
     final int occupants = kundli.planets
-        .where((PlanetDetail p) => p.rashi == sign)
+        .where(
+          (PlanetDetail p) =>
+              p.rashi == sign &&
+              p.name != 'Rahu' &&
+              p.name != 'Ketu',
+        )
         .length;
     final int score = lordStrength + occupants * 10;
     final String band =

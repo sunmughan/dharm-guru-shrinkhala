@@ -79,7 +79,7 @@ void main() {
       final SadeSatiStatus status = sadeSatiOn(
         birthLocal: birth,
         placeText: 'Jaipur',
-        date: DateTime(2007, 1, 15),
+        date: DateTime(2007, 8, 15),
       );
       expect(status.phase, 'rising');
       expect(status.explanation, contains('rising'));

@@ -36,11 +36,26 @@ void main() {
   });
 
   group('mangalDosha', () {
-    test('Mars in Meena shows from lagna and Moon, then cancels', () {
+    test('Mars in Meena shows from lagna and Moon and is not cancelled', () {
       final MangalDoshaResult result = mangalDosha(kundli);
       expect(result.references, contains('lagna'));
       expect(result.references, contains('Moon'));
       expect(result.references, isNot(contains('Venus')));
+      // Meena is Jupiter sign, not a Mars own sign: Mars
+      // rules Mesha and Vrishchika and is exalted in
+      // Makara, so the dosha stands for this chart.
+      expect(result.cancelled, isFalse);
+      expect(result.present, isTrue);
+      expect(result.explanation, contains('Mangal Dosha'));
+    });
+
+    test('Mars in Vrishchika, its own sign, cancels the dosha', () {
+      final KundliResult other = KundliCalculator.calculate(
+        birthLocal: DateTime(1999, 9, 17, 12, 0),
+        placeText: 'Jaipur',
+      );
+      final MangalDoshaResult result = mangalDosha(other);
+      expect(result.references, contains('lagna'));
       expect(result.cancelled, isTrue);
       expect(result.present, isFalse);
       expect(result.explanation, contains('cancelled'));

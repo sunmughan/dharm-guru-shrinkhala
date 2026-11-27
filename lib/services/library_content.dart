@@ -69,14 +69,14 @@ List<FestivalDay> festivalDays({
         continue;
       }
       final int duplicateIndex = found.indexWhere(
-        (FestivalDay d) =>
-            d.date == named.date && d.observance == named.observance,
+        (FestivalDay d) => d.date == named.date,
       );
       if (duplicateIndex >= 0) {
         // The tithi scan already marked this day, for
         // example every Shukla Chaturthi is Ganesh
-        // Chaturthi. The named entry carries the rule, so
-        // it replaces the plain one.
+        // Chaturthi, and Diwali falls on a new moon day.
+        // One date holds one entry, so the named entry
+        // carries the rule and replaces the plain one.
         found[duplicateIndex] = named;
       } else {
         found.add(named);

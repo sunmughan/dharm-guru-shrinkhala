@@ -102,7 +102,7 @@ void main() {
     test('Amanta and Purnimanta agree in Shukla, differ in Krishna', () {
       expect(
         lunarMonth(DateTime(2026, 12, 10), kDefaultPlace),
-        'Pausha',
+        'Margashirsha',
       );
       expect(
         lunarMonth(
@@ -110,11 +110,11 @@ void main() {
           kDefaultPlace,
           convention: LunarConvention.purnimanta,
         ),
-        'Pausha',
+        'Margashirsha',
       );
       expect(
         lunarMonth(DateTime(2026, 12, 5), kDefaultPlace),
-        'Margashirsha',
+        'Kartika',
       );
       expect(
         lunarMonth(
@@ -122,7 +122,7 @@ void main() {
           kDefaultPlace,
           convention: LunarConvention.purnimanta,
         ),
-        'Pausha',
+        'Margashirsha',
       );
     });
   });

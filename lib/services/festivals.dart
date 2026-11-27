@@ -14,8 +14,13 @@ import 'panchang_extra.dart';
 /// festivals after it on its own.
 ///
 /// Rule sources: the tithi and month of each festival are
-/// the standard panchang rules (Diwali is Kartika Krishna
-/// Amavasya, Holi is Phalguna Shukla Purnima, and so on).
+/// the standard panchang rules (Diwali is Ashwin Krishna
+/// Amavasya in Amanta counting, Kartika Krishna Amavasya in
+/// Purnimanta counting; Holi is Phalguna Shukla Purnima, and
+/// so on). The month, the paksha and the tithi are all read
+/// at the festival own observance moment, so a tithi that
+/// starts just after sunrise belongs to the month it starts
+/// in and is never counted twice.
 /// The observance moment follows the usual practice: a
 /// festival is kept on the day its tithi prevails at
 /// sunrise, at noon, in the afternoon, at sunset, or at
@@ -69,12 +74,12 @@ class FestivalRule {
 const List<FestivalRule> kFestivalRules = <FestivalRule>[
   FestivalRule(
     name: 'Diwali',
-    lunarMonth: 'Kartika',
+    lunarMonth: 'Ashwin',
     paksha: 'Krishna',
     tithiNumber: 30,
     moment: 'sunset',
-    rule: 'Kartika Krishna Amavasya prevailing at sunset, Lakshmi Puja after sunset.',
-    source: 'Panchang tithi rule: Kartika Krishna Amavasya.',
+    rule: 'Ashwin Krishna Amavasya prevailing at sunset, Lakshmi Puja after sunset. In Purnimanta counting this is Kartika Krishna Amavasya.',
+    source: 'Panchang tithi rule: Ashwin Krishna Amavasya, Amanta month.',
   ),
   FestivalRule(
     name: 'Holi',
@@ -153,8 +158,8 @@ const List<FestivalRule> kFestivalRules = <FestivalRule>[
     lunarMonth: 'Chaitra',
     paksha: 'Shukla',
     tithiNumber: 1,
-    moment: 'sunrise',
-    rule: 'Chaitra Shukla Pratipada prevailing at sunrise.',
+    moment: 'sunset',
+    rule: 'Chaitra Shukla Pratipada prevailing at sunset.',
     source: 'Panchang tithi rule: Chaitra Shukla Pratipada.',
   ),
   FestivalRule(
@@ -162,8 +167,8 @@ const List<FestivalRule> kFestivalRules = <FestivalRule>[
     lunarMonth: 'Ashwin',
     paksha: 'Shukla',
     tithiNumber: 1,
-    moment: 'sunrise',
-    rule: 'Ashwin Shukla Pratipada prevailing at sunrise.',
+    moment: 'sunset',
+    rule: 'Ashwin Shukla Pratipada prevailing at sunset.',
     source: 'Panchang tithi rule: Ashwin Shukla Pratipada.',
   ),
 ];
@@ -176,27 +181,34 @@ List<FestivalDay> namedFestivals({
   required int year,
   AstroPlace place = kDefaultPlace,
 }) {
-  final List<DateTime> fullMoons = fullMoonMoments(year);
   final List<FestivalDay> found = <FestivalDay>[];
   DateTime day = DateTime(year, 1, 1);
   final DateTime last = DateTime(year, 12, 31);
   DateTime? prevNoonUtc;
   int prevSunSign = -1;
   while (!day.isAfter(last)) {
-    final String month = lunarMonth(
-      day,
-      place,
-      fullMoons: fullMoons,
-    );
-    final String paksha = pakshaFor(day);
-    final String pakshaName =
-        paksha == 'Shukla Paksha' ? 'Shukla' : 'Krishna';
+    // The month, the paksha and the tithi are all read at
+    // the rule own observance moment. Reading the paksha at
+    // noon while the tithi is read at sunrise loses a
+    // Purnima that falls between sunrise and noon, and
+    // reading the month at noon while the tithi is read at
+    // sunset counts a Pratipada twice: once on the first
+    // day of its month and once on the last day of the
+    // month before it. The month is computed once per
+    // distinct moment, not once per rule.
+    final Map<String, String> monthAtMoment = <String, String>{};
     for (final FestivalRule rule in kFestivalRules) {
-      if (rule.lunarMonth != month || rule.paksha != pakshaName) {
-        continue;
-      }
+      final String month = monthAtMoment.putIfAbsent(
+        rule.moment,
+        () => lunarMonthAtUtc(
+          observanceMoment(day, place, rule.moment),
+        ),
+      );
+      if (rule.lunarMonth != month) continue;
       final int tithi =
           tithiNumberAtMoment(day, place, rule.moment);
+      final String pakshaName = tithi <= 15 ? 'Shukla' : 'Krishna';
+      if (rule.paksha != pakshaName) continue;
       if (tithi != rule.tithiNumber) continue;
       found.add(
         FestivalDay(

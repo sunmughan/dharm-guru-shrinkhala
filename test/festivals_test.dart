@@ -116,7 +116,7 @@ void main() {
       (FestivalDay d) => d.observance == 'Diwali',
     );
     expect(diwali.date, DateTime(2026, 11, 8));
-    expect(diwali.rule, contains('Kartika Krishna Amavasya'));
+    expect(diwali.rule, contains('Ashwin Krishna Amavasya'));
     for (int i = 1; i < days.length; i++) {
       expect(days[i].date.isAfter(days[i - 1].date), isTrue);
     }

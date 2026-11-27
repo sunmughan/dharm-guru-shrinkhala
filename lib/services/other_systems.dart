@@ -61,7 +61,7 @@ List<SystemEvaluation> evaluateOtherSystems() =>
             'confirms the Jaimini school to follow.',
       ),
       SystemEvaluation(
-        name: 'KP (Krishnamurti Paddhati)',
+        name: 'KP',
         status: 'Evaluated only',
         needs:
             'Placidus house cusps, star lords and sub lords for every '

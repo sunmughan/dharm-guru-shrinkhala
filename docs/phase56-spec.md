@@ -32,16 +32,19 @@ and the UI says so.
 
 Tithi number is elongation divided by 12 plus 1, at local
 noon for paksha. 1 to 15 is Shukla, 16 to 30 is Krishna,
-30 is Amavasya. The lunar month is named from the Sun sign
-at the month Purnima: the full Moon sits in the nakshatra
-the month is named after, and the Sun sits opposite it, so
-Meena Sun means Chaitra, Mesha Sun means Vaishakha, and so
-on round the year. Amanta reads the Purnima in the middle
-of the month, so a Shukla date reads the coming Purnima
-and a Krishna date reads the Purnima just passed.
-Purnimanta ends the month on its Purnima, so every date
-reads the coming Purnima. The two agree in Shukla paksha
-and differ by one month in Krishna paksha. Configuration:
+30 is Amavasya. The lunar month is named by the sankranti
+inside it: the Sun ingress that falls strictly inside the
+lunar month names it, Mesha ingress meaning Chaitra and so
+on round the year. A month with no sankranti is Adhika and
+takes the following month name. Naming from the Sun sign
+at the Purnima alone is wrong: after an Adhik month it puts
+every later festival a month early, and when two Purnimas
+share one Sun sign it finds a festival twice. Amanta reads
+the month holding local noon. Purnimanta ends the month on
+its Purnima, so a date reads the coming Purnima, and the
+month takes the Amanta name of the month holding that
+Purnima. The two agree in Shukla paksha and differ by one
+month in Krishna paksha. Configuration:
 `PanchangSettings` with `LunarConvention.amanta` or
 `LunarConvention.purnimanta`; the app shows both names.
 
@@ -73,7 +76,14 @@ is Krishna Amavasya.
 A festival is a rule: lunar month, paksha, tithi number,
 and the moment of the day its tithi is read at. The scan
 walks every day of the year and keeps the days that match.
-Diwali is Kartika Krishna Amavasya at sunset. Holi is
+The month, the paksha and the tithi are all read at the
+rule own observance moment: reading the paksha at noon
+while the tithi is read at sunrise loses a Purnima that
+falls between sunrise and noon, and reading the month at
+noon while the tithi is read at sunset counts a Pratipada
+twice. Diwali is Ashwin Krishna Amavasya at sunset in
+Amanta counting, Kartika Krishna Amavasya in Purnimanta
+counting. Holi is
 Phalguna Shukla Purnima at sunrise. Raksha Bandhan is
 Shravana Shukla Purnima at sunrise. Janmashtami is Shravana
 Krishna Ashtami at midnight. Ram Navami is Chaitra Shukla
@@ -83,8 +93,8 @@ sunset; in Purnimanta counting this is Phalguna Krishna
 Chaturdashi. Ganesh Chaturthi is Bhadrapada Shukla
 Chaturthi at noon. Dussehra is Ashwin Shukla Dashami in the
 afternoon. Chaitra Navratri begins on Chaitra Shukla
-Pratipada at sunrise. Shardiya Navratri begins on Ashwin
-Shukla Pratipada at sunrise. Makar Sankranti is solar: the
+Pratipada at sunset. Shardiya Navratri begins on Ashwin
+Shukla Pratipada at sunset. Makar Sankranti is solar: the
 day the sidereal Sun enters Makara, from the bisected
 ingress moment. Every result carries its rule and source.
 
@@ -160,7 +170,7 @@ in the 4th or 8th sign from the Moon.
 `test/gochar_test.dart`. Saturn around the Kanya Moon gives
 rising, peak and setting; 4th and 8th give Dhaiya. On
 28 November 2026 Saturn transits Meena, Bhava 2 from
-Kumbha lagna, no Sade Sati. On 15 January 2007 Sade Sati
+Kumbha lagna, no Sade Sati. On 15 August 2007 Sade Sati
 is rising.
 
 ## 6. Strengths (`lib/services/strengths.dart`)
@@ -176,7 +186,8 @@ the bindu tables of Brihat Jataka IX.1 to IX.7, with the
 lagna as the eighth contributor. Fixed totals are Sun 48,
 Moon 49, Mars 39, Mercury 54, Jupiter 56, Venus 52,
 Saturn 39, sarvashtakavarga 337. Bhava Bala is simplified:
-lord Sthana Bala plus 10 per planet in the house.
+lord Sthana Bala plus 10 per visible planet in the house;
+Rahu and Ketu are left out, as in Shadbala.
 
 ### Test datasets
 
@@ -202,7 +213,9 @@ result states which planets and houses were checked.
 
 `test/yogas_doshas_test.dart`. Sample birth gives 3 Raj
 Yogas and no Dhana Yoga. Mangal Dosha shows from lagna and
-Moon and cancels because Mars is in Meena, its own sign.
+Moon and is not cancelled: Mars in Meena is in Jupiter
+sign, not a Mars own sign. A 17 September 1999 chart with
+Mars in Vrishchika, its own sign, cancels the dosha.
 No Kaal Sarp Dosha for the sample chart.
 
 ## 8. Other systems (`lib/services/other_systems.dart`)
