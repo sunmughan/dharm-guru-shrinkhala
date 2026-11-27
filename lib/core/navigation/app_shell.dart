@@ -137,7 +137,7 @@ class _FirebaseSetupNeededScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Dharm Guru Shrinkhala')),
       body: Padding(
-        padding: EdgeInsets.all(AppSpacing.screenPadding),
+        padding: const EdgeInsets.all(AppSpacing.screenPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -145,7 +145,7 @@ class _FirebaseSetupNeededScreen extends StatelessWidget {
               'Firebase is not configured yet.',
               style: AppTextStyles.themed(context, AppTextStyles.title),
             ),
-            SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.md),
             Text(
               'See FIREBASE-SETUP.md for the console steps, then run flutterfire configure.',
               style: AppTextStyles.themed(context, AppTextStyles.body),

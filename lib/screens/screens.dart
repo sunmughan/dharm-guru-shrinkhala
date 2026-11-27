@@ -775,14 +775,14 @@ class PlanetDetailsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          SampleDataBanner(),
-          SizedBox(height: AppSpacing.md),
+          const SampleDataBanner(),
+          const SizedBox(height: AppSpacing.md),
           Text(
             'Position, rashi, bhava and exact degree of every graha.',
             style: AppTextStyles.themed(context, AppTextStyles.body),
           ),
-          SizedBox(height: AppSpacing.md),
-          PlanetDetails(),
+          const SizedBox(height: AppSpacing.md),
+          const PlanetDetails(),
         ],
       ),
     );
@@ -1056,7 +1056,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
           const SizedBox(height: AppSpacing.md),
           Row(
             children: <Widget>[
-              Expanded(
+              const Expanded(
                 child: _PersonCard(
                   initial: 'A',
                   name: 'Aarav',
@@ -1070,7 +1070,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
               ),
               Expanded(
                 child: _secondPersonChosen
-                    ? _PersonCard(
+                    ? const _PersonCard(
                         initial: 'P',
                         name: 'Priya',
                         detail: 'Karka Lagna',
@@ -1133,12 +1133,12 @@ class _MatchingScreenState extends State<MatchingScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            Card(
+            const Card(
               child: Column(
                 children: <Widget>[
-                  _GunaRow(label: 'Varna', score: '1 / 1'),
-                  _GunaRow(label: 'Bhakoot', score: '7 / 7'),
-                  _GunaRow(label: 'Nadi', score: '8 / 8'),
+                  const _GunaRow(label: 'Varna', score: '1 / 1'),
+                  const _GunaRow(label: 'Bhakoot', score: '7 / 7'),
+                  const _GunaRow(label: 'Nadi', score: '8 / 8'),
                 ],
               ),
             ),
