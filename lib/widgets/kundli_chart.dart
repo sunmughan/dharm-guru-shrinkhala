@@ -1,8 +1,6 @@
 import 'dart:math' as math;
 
-// material.dart is deprecated in Flutter 3.50; migrate to package:material_ui as a separate task.
-// ignore: deprecated_member_use
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../core/theme/design_tokens.dart';
 import '../models/kundli.dart';
@@ -78,8 +76,19 @@ class KundliChart extends StatelessWidget {
       aspectRatio: 1,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardWhite,
-          border: Border.all(color: AppColors.deepInk, width: 1),
+          color: AppColors.resolve(
+            context,
+            AppColors.cardWhite,
+            AppColorsDark.surface,
+          ),
+          border: Border.all(
+            color: AppColors.resolve(
+              context,
+              AppColors.deepInk,
+              AppColorsDark.ink,
+            ),
+            width: 1,
+          ),
           borderRadius:
               BorderRadius.circular(AppSpacing.chartRadius),
         ),
@@ -174,7 +183,7 @@ class _RashiCell extends StatelessWidget {
           padding: const EdgeInsets.only(top: AppSpacing.xs),
           child: Text(
             label,
-            style: AppTextStyles.chartRashi,
+            style: AppTextStyles.themed(context, AppTextStyles.chartRashi),
             textAlign: TextAlign.center,
           ),
         ),
@@ -195,9 +204,9 @@ class _RashiCell extends StatelessWidget {
                 const SizedBox(width: AppSpacing.xs),
                 Text(
                   'Lagna',
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.themed(context, AppTextStyles.caption.copyWith(
                     color: AppColors.saffron2,
-                  ),
+                  )),
                 ),
               ],
             ),
@@ -210,13 +219,13 @@ class _RashiCell extends StatelessWidget {
                 alignment: WrapAlignment.center,
                 spacing: AppSpacing.xs,
                 children: shown.map((String abbr) {
-                  return Text(abbr, style: AppTextStyles.chartPlanet);
+                  return Text(abbr, style: AppTextStyles.themed(context, AppTextStyles.chartPlanet));
                 }).toList(),
               ),
               if (overflow > 0)
                 Text(
                   '+$overflow',
-                  style: AppTextStyles.caption,
+                  style: AppTextStyles.themed(context, AppTextStyles.caption),
                 ),
             ],
           ),
@@ -240,18 +249,18 @@ class _CenterCell extends StatelessWidget {
         children: <Widget>[
           Text(
             'Lagna ${SampleKundli.lagna}',
-            style: AppTextStyles.chartPlanet.copyWith(
+            style: AppTextStyles.themed(context, AppTextStyles.chartPlanet.copyWith(
               color: AppColors.deepSaffron,
-            ),
+            )),
           ),
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.xs),
             child: Text(
               birth.dateOfBirth,
-              style: AppTextStyles.chartDegree,
+              style: AppTextStyles.themed(context, AppTextStyles.chartDegree),
             ),
           ),
-          Text(birth.placeOfBirth, style: AppTextStyles.chartDegree),
+          Text(birth.placeOfBirth, style: AppTextStyles.themed(context, AppTextStyles.chartDegree)),
         ],
       ),
     );
@@ -272,12 +281,12 @@ class _NameCell extends StatelessWidget {
         children: <Widget>[
           Text(
             birth.name,
-            style: AppTextStyles.chartPlanet,
+            style: AppTextStyles.themed(context, AppTextStyles.chartPlanet),
             textAlign: TextAlign.center,
           ),
-          const Text(
+          Text(
             'Sample data',
-            style: AppTextStyles.caption,
+            style: AppTextStyles.themed(context, AppTextStyles.caption),
           ),
         ],
       ),
@@ -291,15 +300,27 @@ class _ChartLines extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(painter: _DiamondPainter());
+    return CustomPaint(
+      painter: _DiamondPainter(
+        AppColors.resolve(
+          context,
+          AppColors.deepInk,
+          AppColorsDark.ink,
+        ),
+      ),
+    );
   }
 }
 
 class _DiamondPainter extends CustomPainter {
+  _DiamondPainter(this.color);
+
+  final Color color;
+
   @override
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()
-      ..color = AppColors.deepInk
+      ..color = color
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
     final double w = size.width;

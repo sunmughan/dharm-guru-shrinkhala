@@ -1,6 +1,4 @@
-// material.dart is deprecated in Flutter 3.50; migrate to package:material_ui as a separate task.
-// ignore: deprecated_member_use
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../core/theme/design_tokens.dart';
 import '../models/kundli.dart';
@@ -25,15 +23,21 @@ class PlanetDetails extends StatelessWidget {
               2: FlexColumnWidth(2),
               3: FlexColumnWidth(3),
             },
-            border: const TableBorder(
+            border: TableBorder(
               horizontalInside: BorderSide(
-                color: AppColors.line,
+                color: AppColors.resolve(
+                  context,
+                  AppColors.line,
+                  AppColorsDark.line,
+                ),
                 width: 1,
               ),
             ),
             children: <TableRow>[
-              _headerRow(),
-              ...SampleKundli.planets.map(_planetRow),
+              _headerRow(context),
+              ...SampleKundli.planets.map(
+                (PlanetDetail planet) => _planetRow(context, planet),
+              ),
             ],
           ),
         ),
@@ -44,22 +48,25 @@ class PlanetDetails extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text(
+                Text(
                   'Swami notes',
-                  style: AppTextStyles.cardTitle,
+                  style: AppTextStyles.themed(context, AppTextStyles.cardTitle),
                 ),
                 const SizedBox(height: AppSpacing.space3),
                 _swamiRow(
+                  context,
                   'Lagna swami',
                   'Lagna swami is Jupiter.',
                 ),
                 const SizedBox(height: AppSpacing.space3),
                 _swamiRow(
+                  context,
                   'Rashi swami',
                   'Rashi swami is Mercury.',
                 ),
                 const SizedBox(height: AppSpacing.space3),
                 _swamiRow(
+                  context,
                   'Nakshatra swami',
                   'Nakshatra swami is Moon.',
                 ),
@@ -72,16 +79,20 @@ class PlanetDetails extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(AppSpacing.space3),
           decoration: BoxDecoration(
-            color: AppColors.surface2,
+            color: AppColors.resolve(
+              context,
+              AppColors.surface2,
+              AppColorsDark.surface2,
+            ),
             borderRadius: BorderRadius.circular(AppSpacing.smallRadius),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Text(
+              Text(
                 'Full planet detail is a premium feature. '
                 'Your basic chart stays free.',
-                style: AppTextStyles.bodySmall,
+                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
               ),
               Align(
                 alignment: Alignment.centerRight,
@@ -105,20 +116,24 @@ class PlanetDetails extends StatelessWidget {
     );
   }
 
-  TableRow _headerRow() {
+  TableRow _headerRow(BuildContext context) {
     return TableRow(
       children: <Widget>[
-        _headerCell('Planet', TextAlign.left),
-        _headerCell('Rashi', TextAlign.left),
-        _headerCell('Bhava', TextAlign.center),
-        _headerCell('Degree', TextAlign.right),
+        _headerCell(context, 'Planet', TextAlign.left),
+        _headerCell(context, 'Rashi', TextAlign.left),
+        _headerCell(context, 'Bhava', TextAlign.center),
+        _headerCell(context, 'Degree', TextAlign.right),
       ],
     );
   }
 
-  Widget _headerCell(String label, TextAlign align) {
+  Widget _headerCell(BuildContext context, String label, TextAlign align) {
     return Container(
-      color: AppColors.surface2,
+      color: AppColors.resolve(
+        context,
+        AppColors.surface2,
+        AppColorsDark.surface2,
+      ),
       height: 40,
       alignment: align == TextAlign.center
           ? Alignment.center
@@ -128,25 +143,25 @@ class PlanetDetails extends StatelessWidget {
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.space3,
       ),
-      child: Text(label, style: AppTextStyles.caption),
+      child: Text(label, style: AppTextStyles.themed(context, AppTextStyles.caption)),
     );
   }
 
-  TableRow _planetRow(PlanetDetail planet) {
+  TableRow _planetRow(BuildContext context, PlanetDetail planet) {
     return TableRow(
       children: <Widget>[
         _bodyCell(
-          Text(planet.name, style: AppTextStyles.listTitle),
+          Text(planet.name, style: AppTextStyles.themed(context, AppTextStyles.listTitle)),
           Alignment.centerLeft,
         ),
         _bodyCell(
-          Text(planet.rashi, style: AppTextStyles.body),
+          Text(planet.rashi, style: AppTextStyles.themed(context, AppTextStyles.body)),
           Alignment.centerLeft,
         ),
         _bodyCell(
           Text(
             planet.bhava,
-            style: AppTextStyles.body,
+            style: AppTextStyles.themed(context, AppTextStyles.body),
             textAlign: TextAlign.center,
           ),
           Alignment.center,
@@ -156,9 +171,9 @@ class PlanetDetails extends StatelessWidget {
             label: _spokenDegree(planet.degree),
             child: Text(
               planet.degree,
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.themed(context, AppTextStyles.body.copyWith(
                 fontWeight: FontWeight.w600,
-              ),
+              )),
               textAlign: TextAlign.right,
             ),
           ),
@@ -179,12 +194,12 @@ class PlanetDetails extends StatelessWidget {
     );
   }
 
-  Widget _swamiRow(String label, String value) {
+  Widget _swamiRow(BuildContext context, String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(label, style: AppTextStyles.caption),
-        Text(value, style: AppTextStyles.body),
+        Text(label, style: AppTextStyles.themed(context, AppTextStyles.caption)),
+        Text(value, style: AppTextStyles.themed(context, AppTextStyles.body)),
       ],
     );
   }
@@ -210,9 +225,9 @@ class SampleDataBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppSpacing.sm),
         border: Border.all(color: AppColors.saffron),
       ),
-      child: const Text(
+      child: Text(
         'Sample data only. No real prediction.',
-        style: AppTextStyles.caption,
+        style: AppTextStyles.themed(context, AppTextStyles.caption),
         textAlign: TextAlign.center,
       ),
     );

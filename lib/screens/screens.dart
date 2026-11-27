@@ -1,10 +1,9 @@
-// material.dart is deprecated in Flutter 3.50; migrate to package:material_ui as a separate task.
-// ignore: deprecated_member_use
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../core/theme/design_tokens.dart';
 import '../models/kundli.dart';
 import '../models/panchang.dart';
+import '../models/remedies.dart';
 import '../widgets/kundli_chart.dart';
 import '../widgets/planet_details.dart';
 
@@ -40,7 +39,6 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Column(
           children: <Widget>[
@@ -55,17 +53,17 @@ class _SplashScreenState extends State<SplashScreen> {
                       color: AppColors.saffron,
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    const Text(
+                    Text(
                       'Dharm Guru',
-                      style: AppTextStyles.display,
+                      style: AppTextStyles.themed(context, AppTextStyles.display),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       'Your kundli. Your guidance. Every single day.',
-                      style: AppTextStyles.body.copyWith(
+                      style: AppTextStyles.themed(context, AppTextStyles.body.copyWith(
                         color: AppColors.ink2,
-                      ),
+                      )),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: AppSpacing.space3),
@@ -124,9 +122,9 @@ class OnboardingScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
+            Text(
               'Your kundli, horoscope and panchang in one place.',
-              style: AppTextStyles.display,
+              style: AppTextStyles.themed(context, AppTextStyles.display),
             ),
             const SizedBox(height: AppSpacing.lg),
             const _OnboardingStep(
@@ -179,15 +177,15 @@ class _OnboardingStep extends StatelessWidget {
         children: <Widget>[
           CircleAvatar(
             backgroundColor: AppColors.saffron,
-            child: Text(number, style: AppTextStyles.button),
+            child: Text(number, style: AppTextStyles.themed(context, AppTextStyles.button)),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(title, style: AppTextStyles.subtitle),
-                Text(body, style: AppTextStyles.bodySmall),
+                Text(title, style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
+                Text(body, style: AppTextStyles.themed(context, AppTextStyles.bodySmall)),
               ],
             ),
           ),
@@ -213,10 +211,10 @@ class HomeScreen extends StatelessWidget {
         children: <Widget>[
           const SampleDataBanner(),
           const SizedBox(height: AppSpacing.md),
-          const Text('Namaste, Aarav Sharma', style: AppTextStyles.display),
-          const Text(
+          Text('Namaste, Aarav Sharma', style: AppTextStyles.themed(context, AppTextStyles.display)),
+          Text(
             'Birth 14 March 1998, 06:25 AM, Jaipur, Rajasthan. Lagna Meena, Rashi Kanya.',
-            style: AppTextStyles.bodySmall,
+            style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
           ),
           const SizedBox(height: AppSpacing.md),
           _HomeCard(
@@ -245,7 +243,7 @@ class HomeScreen extends StatelessWidget {
           ),
           _HomeCard(
             title: 'Kundli Matching',
-            body: 'Matching layout. Matching calculation is a later phase.',
+            body: 'Guna milan score with dosha check.',
             icon: Icons.favorite,
             onTap: () {
               Navigator.of(context).push(
@@ -257,7 +255,7 @@ class HomeScreen extends StatelessWidget {
           ),
           _HomeCard(
             title: 'Remedies',
-            body: 'Remedies list. Remedy content is published from the admin panel.',
+            body: 'Simple upay chosen from your kundli.',
             icon: Icons.spa,
             onTap: () {
               Navigator.of(context).push(
@@ -297,8 +295,8 @@ class _HomeCard extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: Icon(icon, color: AppColors.deepSaffron, size: 32),
-        title: Text(title, style: AppTextStyles.subtitle),
-        subtitle: Text(body, style: AppTextStyles.bodySmall),
+        title: Text(title, style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
+        subtitle: Text(body, style: AppTextStyles.themed(context, AppTextStyles.bodySmall)),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       ),
@@ -364,18 +362,44 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
           const SizedBox(height: AppSpacing.lg),
           ElevatedButton(
             onPressed: () {
+              final String name = _nameController.text.trim();
+              final String date = _dateController.text.trim();
+              final String time = _timeController.text.trim();
+              final String place = _placeController.text.trim();
+              if (name.isEmpty ||
+                  date.isEmpty ||
+                  time.isEmpty ||
+                  place.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Enter name, date, time and place of birth.',
+                    ),
+                  ),
+                );
+                return;
+              }
+              final BirthDetails entered = BirthDetails(
+                name: name,
+                dateOfBirth: date,
+                timeOfBirth: time,
+                placeOfBirth: place,
+                rashi: '',
+                nakshatra: '',
+                tithiAtBirth: '',
+              );
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => const KundliChartScreen(),
+                  builder: (_) => KundliChartScreen(birth: entered),
                 ),
               );
             },
             child: const Text('Show Kundli'),
           ),
           const SizedBox(height: AppSpacing.md),
-          const Text(
-            'Phase 1 shows the sample kundli. Real kundli calculation is a later phase.',
-            style: AppTextStyles.bodySmall,
+          Text(
+            'Only the sample kundli is ready in this version. Other birth details show a not ready state instead of a made up chart.',
+            style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
           ),
         ],
       ),
@@ -387,9 +411,17 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
 /// Lagna and Moon chart switcher, the summary chips and the
 /// planet summary list, per design/screens/05-kundli-chart.md.
 /// Moon Chart has no engine data in Phase 1, so it shows the
-/// not ready state and invents no values.
+/// not ready state and invents no values. The chart shown is
+/// the sample kundli when the entered birth details match the
+/// sample; any other birth details show the not ready state
+/// with the entered details, never a made up chart.
 class KundliChartScreen extends StatefulWidget {
-  const KundliChartScreen({super.key});
+  const KundliChartScreen({
+    super.key,
+    this.birth = SampleKundli.birth,
+  });
+
+  final BirthDetails birth;
 
   @override
   State<KundliChartScreen> createState() => _KundliChartScreenState();
@@ -397,9 +429,16 @@ class KundliChartScreen extends StatefulWidget {
 
 class _KundliChartScreenState extends State<KundliChartScreen> {
   bool _showMoonChart = false;
+  bool _viewingSample = false;
+
+  bool get _isSample =>
+      widget.birth.dateOfBirth == SampleKundli.birth.dateOfBirth &&
+      widget.birth.timeOfBirth == SampleKundli.birth.timeOfBirth &&
+      widget.birth.placeOfBirth == SampleKundli.birth.placeOfBirth;
 
   @override
   Widget build(BuildContext context) {
+    final bool showChart = _isSample || _viewingSample;
     return Scaffold(
       appBar: AppBar(title: const Text('Birth Kundli')),
       body: ListView(
@@ -407,39 +446,92 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
         children: <Widget>[
           const SampleDataBanner(),
           const SizedBox(height: AppSpacing.md),
-          _ChartSwitcher(
-            showMoon: _showMoonChart,
-            onChanged: (bool showMoon) {
-              setState(() {
-                _showMoonChart = showMoon;
-              });
-            },
-          ),
-          const SizedBox(height: AppSpacing.md),
-          if (_showMoonChart)
-            const _MoonChartNotReady()
-          else ...<Widget>[
-            const KundliChart(),
-            const SizedBox(height: AppSpacing.space3),
-            const _ChartLegend(),
+          if (!showChart) ...<Widget>[
+            _BirthNotReady(birth: widget.birth),
             const SizedBox(height: AppSpacing.md),
-            const _PlanetSummaryList(),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const PlanetDetailsScreen(),
-                  ),
-                );
-              },
-              child: const Text('See Planet Details'),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _viewingSample = true;
+                  });
+                },
+                child: const Text('View sample kundli'),
+              ),
             ),
-          ),
+          ] else ...<Widget>[
+            _ChartSwitcher(
+              showMoon: _showMoonChart,
+              onChanged: (bool showMoon) {
+                setState(() {
+                  _showMoonChart = showMoon;
+                });
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            if (_showMoonChart)
+              const _MoonChartNotReady()
+            else ...<Widget>[
+              const KundliChart(),
+              const SizedBox(height: AppSpacing.space3),
+              const _ChartLegend(),
+              const SizedBox(height: AppSpacing.md),
+              const _PlanetSummaryList(),
+            ],
+            const SizedBox(height: AppSpacing.lg),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const PlanetDetailsScreen(),
+                    ),
+                  );
+                },
+                child: const Text('See Planet Details'),
+              ),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// Honest not ready state for birth details with no chart
+/// engine data. Shows the entered details back so the user
+/// sees the form did something, and invents no chart.
+class _BirthNotReady extends StatelessWidget {
+  const _BirthNotReady({required this.birth});
+
+  final BirthDetails birth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              birth.name,
+              style: AppTextStyles.themed(context, AppTextStyles.title),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              '${birth.dateOfBirth}, ${birth.timeOfBirth}, ${birth.placeOfBirth}',
+              style: AppTextStyles.themed(context, AppTextStyles.body),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Kundli calculation for these birth details is not ready yet. No chart is shown for them.',
+              style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -463,13 +555,18 @@ class _ChartSwitcher extends StatelessWidget {
     return Container(
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.surface2,
+        color: AppColors.resolve(
+          context,
+          AppColors.surface2,
+          AppColorsDark.surface2,
+        ),
         borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
       ),
       child: Row(
         children: <Widget>[
           Expanded(
             child: _switcherSegment(
+              context,
               label: 'Lagna Chart',
               selected: !showMoon,
               onTap: () => onChanged(false),
@@ -477,6 +574,7 @@ class _ChartSwitcher extends StatelessWidget {
           ),
           Expanded(
             child: _switcherSegment(
+              context,
               label: 'Moon Chart',
               selected: showMoon,
               onTap: () => onChanged(true),
@@ -487,7 +585,8 @@ class _ChartSwitcher extends StatelessWidget {
     );
   }
 
-  Widget _switcherSegment({
+  Widget _switcherSegment(
+    BuildContext context, {
     required String label,
     required bool selected,
     required VoidCallback onTap,
@@ -498,18 +597,31 @@ class _ChartSwitcher extends StatelessWidget {
         height: 40,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? AppColors.surface : Colors.transparent,
+          color: selected
+              ? AppColors.resolve(
+                  context,
+                  AppColors.surface,
+                  AppColorsDark.surface,
+                )
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
           border: selected
-              ? Border.all(color: AppColors.line2, width: 1)
+              ? Border.all(
+                  color: AppColors.resolve(
+                    context,
+                    AppColors.line2,
+                    AppColorsDark.line2,
+                  ),
+                  width: 1,
+                )
               : null,
         ),
         child: Text(
           label,
-          style: AppTextStyles.bodySmall.copyWith(
+          style: AppTextStyles.themed(context, AppTextStyles.bodySmall.copyWith(
             fontWeight: FontWeight.w600,
             color: selected ? AppColors.saffron : AppColors.ink2,
-          ),
+          )),
         ),
       ),
     );
@@ -526,14 +638,25 @@ class _MoonChartNotReady extends StatelessWidget {
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: AppColors.cardWhite,
-          border: Border.all(color: AppColors.deepInk, width: 1),
+          color: AppColors.resolve(
+            context,
+            AppColors.cardWhite,
+            AppColorsDark.surface,
+          ),
+          border: Border.all(
+            color: AppColors.resolve(
+              context,
+              AppColors.deepInk,
+              AppColorsDark.ink,
+            ),
+            width: 1,
+          ),
           borderRadius:
               BorderRadius.circular(AppSpacing.chartRadius),
         ),
-        child: const Text(
+        child: Text(
           'Moon chart is not ready yet.',
-          style: AppTextStyles.body,
+          style: AppTextStyles.themed(context, AppTextStyles.body),
           textAlign: TextAlign.center,
         ),
       ),
@@ -578,8 +701,8 @@ class _LegendChip extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(label, style: AppTextStyles.caption),
-            Text(value, style: AppTextStyles.listTitle),
+            Text(label, style: AppTextStyles.themed(context, AppTextStyles.caption)),
+            Text(value, style: AppTextStyles.themed(context, AppTextStyles.listTitle)),
           ],
         ),
       ),
@@ -617,19 +740,19 @@ class _PlanetSummaryList extends StatelessWidget {
                 ),
                 child: Text(
                   abbr,
-                  style: AppTextStyles.chartPlanet,
+                  style: AppTextStyles.themed(context, AppTextStyles.chartPlanet),
                 ),
               ),
               const SizedBox(width: AppSpacing.space3),
               Expanded(
                 child: Text(
                   planet.name,
-                  style: AppTextStyles.listTitle,
+                  style: AppTextStyles.themed(context, AppTextStyles.listTitle),
                 ),
               ),
               Text(
                 '${planet.rashi}, ${planet.bhava}',
-                style: AppTextStyles.bodySmall,
+                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
               ),
             ],
           ),
@@ -651,12 +774,12 @@ class PlanetDetailsScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Planet Details')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
-        children: const <Widget>[
+        children: <Widget>[
           SampleDataBanner(),
           SizedBox(height: AppSpacing.md),
           Text(
             'Position, rashi, bhava and exact degree of every graha.',
-            style: AppTextStyles.body,
+            style: AppTextStyles.themed(context, AppTextStyles.body),
           ),
           SizedBox(height: AppSpacing.md),
           PlanetDetails(),
@@ -680,19 +803,19 @@ class HoroscopeScreen extends StatelessWidget {
         children: <Widget>[
           const SampleDataBanner(),
           const SizedBox(height: AppSpacing.md),
-          Text('Rashi: ${entry.rashi}', style: AppTextStyles.title),
-          Text(entry.date, style: AppTextStyles.bodySmall),
+          Text('Rashi: ${entry.rashi}', style: AppTextStyles.themed(context, AppTextStyles.title)),
+          Text(entry.date, style: AppTextStyles.themed(context, AppTextStyles.bodySmall)),
           const SizedBox(height: AppSpacing.md),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
-              child: Text(entry.summary, style: AppTextStyles.body),
+              child: Text(entry.summary, style: AppTextStyles.themed(context, AppTextStyles.body)),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          const Text(
+          Text(
             'No horoscope prediction is shown in Phase 1. Content is published from the admin panel in a later phase.',
-            style: AppTextStyles.bodySmall,
+            style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
           ),
         ],
       ),
@@ -727,10 +850,10 @@ class PanchangScreen extends StatelessWidget {
             icon: const Icon(Icons.keyboard_arrow_down, size: 20),
             label: Text(
               panchang.city,
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.themed(context, AppTextStyles.body.copyWith(
                 color: AppColors.saffron2,
                 fontWeight: FontWeight.w600,
-              ),
+              )),
             ),
           ),
         ],
@@ -742,9 +865,9 @@ class PanchangScreen extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(
             panchang.dateLine,
-            style: AppTextStyles.body.copyWith(
+            style: AppTextStyles.themed(context, AppTextStyles.body.copyWith(
               color: AppColors.ink2,
-            ),
+            )),
           ),
           const SizedBox(height: AppSpacing.md),
           GridView.count(
@@ -769,7 +892,11 @@ class PanchangScreen extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Card(
-            color: AppColors.surface2,
+            color: AppColors.resolve(
+              context,
+              AppColors.surface2,
+              AppColorsDark.surface2,
+            ),
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.space5),
               child: Column(
@@ -777,21 +904,21 @@ class PanchangScreen extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     'Shubh Muhurat',
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.themed(context, AppTextStyles.caption.copyWith(
                       color: AppColors.saffron2,
-                    ),
+                    )),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   ...muhuratWindows.map(
                     (String window) => Text(
                       window,
-                      style: AppTextStyles.subtitle,
+                      style: AppTextStyles.themed(context, AppTextStyles.subtitle),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  const Text(
+                  Text(
                     'Best for new beginnings.',
-                    style: AppTextStyles.bodySmall,
+                    style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
                   ),
                 ],
               ),
@@ -802,12 +929,23 @@ class PanchangScreen extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.space3),
             decoration: BoxDecoration(
-              color: AppColors.surface2,
+              color: AppColors.resolve(
+                context,
+                AppColors.surface2,
+                AppColorsDark.surface2,
+              ),
               borderRadius: BorderRadius.circular(
                 AppSpacing.smallRadius,
               ),
-              border: const Border(
-                left: BorderSide(color: AppColors.maroon, width: 3),
+              border: Border(
+                left: BorderSide(
+                  color: AppColors.resolve(
+                    context,
+                    AppColors.maroon,
+                    AppColorsDark.maroon,
+                  ),
+                  width: 3,
+                ),
               ),
             ),
             child: Column(
@@ -815,21 +953,21 @@ class PanchangScreen extends StatelessWidget {
               children: <Widget>[
                 Text(
                   'Rahu Kaal',
-                  style: AppTextStyles.caption.copyWith(
+                  style: AppTextStyles.themed(context, AppTextStyles.caption.copyWith(
                     color: AppColors.maroon,
-                  ),
+                  )),
                 ),
                 Text(
                   panchang.rahuKaal,
-                  style: AppTextStyles.bodySmall,
+                  style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
                 ),
               ],
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          const Text(
+          Text(
             'Panchang values are sample values in Phase 1. Real panchang calculation is a later phase.',
-            style: AppTextStyles.bodySmall,
+            style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
           ),
         ],
       ),
@@ -852,8 +990,8 @@ class _PanchangCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(label, style: AppTextStyles.caption),
-            Text(value, style: AppTextStyles.listTitle),
+            Text(label, style: AppTextStyles.themed(context, AppTextStyles.caption)),
+            Text(value, style: AppTextStyles.themed(context, AppTextStyles.listTitle)),
           ],
         ),
       ),
@@ -861,27 +999,285 @@ class _PanchangCard extends StatelessWidget {
   }
 }
 
-/// Kundli matching screen. Layout only in Phase 1.
-class MatchingScreen extends StatelessWidget {
+/// Kundli matching screen, per design/screens/09-kundli-matching.md.
+/// Sample persons Aarav and Priya with the sample score 28 / 36,
+/// three guna rows and the dosha value from the presentation.
+/// New match clears the second person; the empty card opens the
+/// birth details form. The full report is premium, so its button
+/// says so honestly instead of opening a fake report.
+class MatchingScreen extends StatefulWidget {
   const MatchingScreen({super.key});
+
+  @override
+  State<MatchingScreen> createState() => _MatchingScreenState();
+}
+
+class _MatchingScreenState extends State<MatchingScreen> {
+  bool _secondPersonChosen = true;
+
+  void _showPremiumNote() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Full milan report is premium. Pricing to be decided.',
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Kundli Matching')),
+      appBar: AppBar(
+        title: const Text('Kundli Matching'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _secondPersonChosen = false;
+              });
+            },
+            child: Text(
+              'New match',
+              style: AppTextStyles.themed(context, AppTextStyles.body),
+            ),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
-        children: const <Widget>[
-          SampleDataBanner(),
-          SizedBox(height: AppSpacing.md),
+        children: <Widget>[
+          const SampleDataBanner(),
+          const SizedBox(height: AppSpacing.md),
           Text(
-            'Enter birth details for both people to see matching.',
-            style: AppTextStyles.body,
+            'Milan for marriage and partnership.',
+            style: AppTextStyles.themed(context, AppTextStyles.body),
           ),
-          SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _PersonCard(
+                  initial: 'A',
+                  name: 'Aarav',
+                  detail: 'Meena Lagna',
+                  onTap: null,
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                child: Icon(Icons.diamond, size: 12),
+              ),
+              Expanded(
+                child: _secondPersonChosen
+                    ? _PersonCard(
+                        initial: 'P',
+                        name: 'Priya',
+                        detail: 'Karka Lagna',
+                        onTap: null,
+                      )
+                    : _PersonCard(
+                        initial: '+',
+                        name: 'Add second kundli',
+                        detail: '',
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const KundliInputScreen(),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+          if (_secondPersonChosen) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            Card(
+              color: AppColors.resolve(
+                context,
+                AppColors.surface2,
+                AppColorsDark.surface2,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.space5),
+                child: Column(
+                  children: <Widget>[
+                    Text(
+                      'Guna Milan Score',
+                      style: AppTextStyles.themed(
+                        context,
+                        AppTextStyles.caption.copyWith(
+                          color: AppColors.saffron2,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '28 / 36',
+                      style: AppTextStyles.themed(
+                        context,
+                        AppTextStyles.title,
+                      ),
+                    ),
+                    Text(
+                      'Very Good Match',
+                      style: AppTextStyles.themed(
+                        context,
+                        AppTextStyles.listTitle.copyWith(
+                          color: AppColors.good,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Card(
+              child: Column(
+                children: <Widget>[
+                  _GunaRow(label: 'Varna', score: '1 / 1'),
+                  _GunaRow(label: 'Bhakoot', score: '7 / 7'),
+                  _GunaRow(label: 'Nadi', score: '8 / 8'),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        'Mangal Dosha',
+                        style: AppTextStyles.themed(
+                          context,
+                          AppTextStyles.listTitle,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Balanced',
+                      style: AppTextStyles.themed(
+                        context,
+                        AppTextStyles.body.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.good,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _showPremiumNote,
+                child: const Text('View Full Milan Report'),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'One free matching each day. The next matching is free tomorrow.',
+              style: AppTextStyles.themed(context, AppTextStyles.caption),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PersonCard extends StatelessWidget {
+  const _PersonCard({
+    required this.initial,
+    required this.name,
+    required this.detail,
+    required this.onTap,
+  });
+
+  final String initial;
+  final String name;
+  final String detail;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            children: <Widget>[
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: AppColors.saffron,
+                child: Text(
+                  initial,
+                  style: AppTextStyles.themed(
+                    context,
+                    AppTextStyles.button,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                name,
+                style: AppTextStyles.themed(
+                  context,
+                  AppTextStyles.listTitle,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (detail.isNotEmpty)
+                Text(
+                  detail,
+                  style: AppTextStyles.themed(
+                    context,
+                    AppTextStyles.bodySmall,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GunaRow extends StatelessWidget {
+  const _GunaRow({required this.label, required this.score});
+
+  final String label;
+  final String score;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              label,
+              style: AppTextStyles.themed(
+                context,
+                AppTextStyles.listTitle,
+              ),
+            ),
+          ),
           Text(
-            'Matching calculation is a later phase. No score is shown in Phase 1.',
-            style: AppTextStyles.bodySmall,
+            score,
+            style: AppTextStyles.themed(
+              context,
+              AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -889,22 +1285,190 @@ class MatchingScreen extends StatelessWidget {
   }
 }
 
-/// Remedies screen. Content is published from the admin panel later.
-class RemediesScreen extends StatelessWidget {
+/// Remedies screen, per design/screens/10-remedies.md. The four
+/// cards are the presentation sample set for the sample kundli.
+/// Mark as done is a real daily habit check: it flips to Done
+/// today and resets the next morning. The gemstone question and
+/// the Ask About a Remedy button lead to live consult, which is
+/// premium, so they say so honestly instead of opening a fake
+/// chat.
+class RemediesScreen extends StatefulWidget {
   const RemediesScreen({super.key});
+
+  @override
+  State<RemediesScreen> createState() => _RemediesScreenState();
+}
+
+class _RemediesScreenState extends State<RemediesScreen> {
+  // shortcut: done state is in memory only and does not survive
+  // an app restart; persist it in Firestore when the remedies
+  // engine lands.
+  final Set<int> _done = <int>{};
+  DateTime? _doneDay;
+
+  bool _isDoneToday(int index) {
+    if (_doneDay == null || !_done.contains(index)) {
+      return false;
+    }
+    final DateTime now = DateTime.now();
+    return _doneDay!.year == now.year &&
+        _doneDay!.month == now.month &&
+        _doneDay!.day == now.day;
+  }
+
+  void _markDone(int index) {
+    final DateTime now = DateTime.now();
+    setState(() {
+      if (_doneDay == null ||
+          _doneDay!.year != now.year ||
+          _doneDay!.month != now.month ||
+          _doneDay!.day != now.day) {
+        _done.clear();
+        _doneDay = now;
+      }
+      _done.add(index);
+    });
+  }
+
+  void _showPremiumNote() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Live consult is premium. Pricing to be decided.',
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Remedies')),
+      appBar: AppBar(title: const Text('Your Remedies')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
-        children: const <Widget>[
-          SampleDataBanner(),
-          SizedBox(height: AppSpacing.md),
+        children: <Widget>[
+          const SampleDataBanner(),
+          const SizedBox(height: AppSpacing.md),
           Text(
-            'Remedy content will be published from the admin panel.',
-            style: AppTextStyles.body,
+            'Simple upay chosen from your own kundli.',
+            style: AppTextStyles.themed(context, AppTextStyles.body),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      'This is a general set. A personal plan from your own kundli is premium.',
+                      style: AppTextStyles.themed(
+                        context,
+                        AppTextStyles.bodySmall,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Premium pricing to be decided.',
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('View premium'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ...SampleRemedies.list.asMap().entries.map(
+            (MapEntry<int, Remedy> entry) {
+              final int index = entry.key;
+              final Remedy remedy = entry.value;
+              final bool done = _isDoneToday(index);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.space3),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          remedy.title,
+                          style: AppTextStyles.themed(
+                            context,
+                            AppTextStyles.cardTitle,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          remedy.body,
+                          style: AppTextStyles.themed(
+                            context,
+                            AppTextStyles.body,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.space3),
+                        if (done)
+                          Row(
+                            children: <Widget>[
+                              Icon(
+                                Icons.check_circle,
+                                color: AppColors.resolve(
+                                  context,
+                                  AppColors.good,
+                                  AppColorsDark.good,
+                                ),
+                                size: 20,
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                'Done today',
+                                style: AppTextStyles.themed(
+                                  context,
+                                  AppTextStyles.body.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.good,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        else if (remedy.action == 'done')
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () => _markDone(index),
+                              child: const Text('Mark as done'),
+                            ),
+                          )
+                        else
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: _showPremiumNote,
+                              child: const Text('Ask about this gemstone'),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _showPremiumNote,
+              child: const Text('Ask About a Remedy'),
+            ),
           ),
         ],
       ),
@@ -926,31 +1490,45 @@ class ConsultScreen extends StatelessWidget {
         children: <Widget>[
           const SampleDataBanner(),
           const SizedBox(height: AppSpacing.md),
-          const Text(
+          Text(
             'Chat and call with an astrologer.',
-            style: AppTextStyles.body,
+            style: AppTextStyles.themed(context, AppTextStyles.body),
           ),
           const SizedBox(height: AppSpacing.md),
           Card(
             child: ListTile(
               leading: const Icon(Icons.chat, color: AppColors.deepSaffron),
-              title: const Text('Chat', style: AppTextStyles.subtitle),
-              subtitle: const Text(
+              title: Text('Chat', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
+              subtitle: Text(
                 'Live chat is a later phase.',
-                style: AppTextStyles.bodySmall,
+                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
               ),
-              onTap: () {},
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Live chat is not ready yet.'),
+                  ),
+                );
+              },
             ),
           ),
           Card(
             child: ListTile(
               leading: const Icon(Icons.call, color: AppColors.deepSaffron),
-              title: const Text('Call', style: AppTextStyles.subtitle),
-              subtitle: const Text(
+              title: Text('Call', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
+              subtitle: Text(
                 'Live call is a later phase. Pricing to be decided.',
-                style: AppTextStyles.bodySmall,
+                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
               ),
-              onTap: () {},
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Live call is not ready yet. Pricing to be decided.',
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -976,37 +1554,37 @@ class ProfileScreen extends StatelessWidget {
             child: Icon(Icons.person, size: 40, color: Colors.white),
           ),
           const SizedBox(height: AppSpacing.md),
-          const Text(
+          Text(
             'Aarav Sharma',
-            style: AppTextStyles.title,
+            style: AppTextStyles.themed(context, AppTextStyles.title),
             textAlign: TextAlign.center,
           ),
-          const Text(
+          Text(
             'Birth 14 March 1998, 06:25 AM, Jaipur, Rajasthan',
-            style: AppTextStyles.bodySmall,
+            style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
             textAlign: TextAlign.center,
           ),
-          const Text(
+          Text(
             'Lagna Meena, Rashi Kanya, Nakshatra Hasta, Tithi at Birth Krishna Dwitiya',
-            style: AppTextStyles.bodySmall,
+            style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.md),
           const Card(
             child: ListTile(
-              title: Text('Plan', style: AppTextStyles.subtitle),
+              title: Text('Plan', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
               subtitle: Text(
                 'Free plan. Premium pricing to be decided.',
-                style: AppTextStyles.bodySmall,
+                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
               ),
             ),
           ),
           const Card(
             child: ListTile(
-              title: Text('Notifications', style: AppTextStyles.subtitle),
+              title: Text('Notifications', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
               subtitle: Text(
                 'Daily horoscope alert at 06:00 AM.',
-                style: AppTextStyles.bodySmall,
+                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
               ),
             ),
           ),

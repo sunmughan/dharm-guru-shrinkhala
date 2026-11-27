@@ -1,9 +1,7 @@
 import 'package:dharm_guru_shrinkhala/core/navigation/app_shell.dart';
 import 'package:dharm_guru_shrinkhala/screens/screens.dart';
 import 'package:dharm_guru_shrinkhala/widgets/kundli_chart.dart';
-// material.dart is deprecated in Flutter 3.50; migrate to package:material_ui as a separate task.
-// ignore: deprecated_member_use
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -60,5 +58,74 @@ void main() {
     expect(find.text('09:42 AM to 11:15 AM'), findsOneWidget);
     expect(find.text('04:30 PM to 06:05 PM'), findsOneWidget);
     expect(find.text('Rahu Kaal'), findsOneWidget);
+  });
+
+  testWidgets('Kundli form with other birth details shows not ready',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: KundliInputScreen()),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextField).at(1),
+      '1 January 2000',
+    );
+    await tester.tap(find.text('Show Kundli'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Kundli calculation for these birth details is not ready yet. No chart is shown for them.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('View sample kundli'), findsOneWidget);
+  });
+
+  testWidgets('Kundli form with sample details shows the sample chart',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: KundliInputScreen()),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Show Kundli'));
+    await tester.pumpAndSettle();
+    expect(find.text('Meena'), findsOneWidget);
+    expect(find.text('Lagna'), findsOneWidget);
+  });
+
+  testWidgets('Matching New match clears the second person',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: MatchingScreen()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('28 / 36'), findsOneWidget);
+    await tester.tap(find.text('New match'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add second kundli'), findsOneWidget);
+    expect(find.text('28 / 36'), findsNothing);
+  });
+
+  testWidgets('Remedies Mark as done flips to Done today',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: RemediesScreen()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('For weak Sun'), findsOneWidget);
+    await tester.tap(find.text('Mark as done').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Done today'), findsOneWidget);
+  });
+
+  testWidgets('Consult Chat tile says it is not ready yet',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: ConsultScreen()),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Chat'));
+    await tester.pump();
+    expect(find.text('Live chat is not ready yet.'), findsOneWidget);
   });
 }

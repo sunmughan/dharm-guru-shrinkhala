@@ -1,6 +1,4 @@
-// material.dart is deprecated in Flutter 3.50; migrate to package:material_ui as a separate task.
-// ignore: deprecated_member_use
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../theme/design_tokens.dart';
 import '../../screens/screens.dart';
@@ -97,7 +95,7 @@ class _DharmGuruAppState extends State<DharmGuruApp> {
       return MaterialApp(
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.light,
+        themeMode: ThemeMode.system,
         home: const _FirebaseSetupNeededScreen(),
       );
     }
@@ -105,7 +103,7 @@ class _DharmGuruAppState extends State<DharmGuruApp> {
       return MaterialApp(
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.light,
+        themeMode: ThemeMode.system,
         home: SplashScreen(
           onDone: () => setState(() => _splashDone = true),
         ),
@@ -115,7 +113,7 @@ class _DharmGuruAppState extends State<DharmGuruApp> {
       return MaterialApp(
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.light,
+        themeMode: ThemeMode.system,
         home: OnboardingScreen(
           onDone: () => setState(() => _onboardingDone = true),
         ),
@@ -125,7 +123,7 @@ class _DharmGuruAppState extends State<DharmGuruApp> {
       title: 'Dharm Guru Shrinkhala',
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.light,
+      themeMode: ThemeMode.system,
       home: const AppShell(),
     );
   }
@@ -138,19 +136,19 @@ class _FirebaseSetupNeededScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Dharm Guru Shrinkhala')),
-      body: const Padding(
+      body: Padding(
         padding: EdgeInsets.all(AppSpacing.screenPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
               'Firebase is not configured yet.',
-              style: AppTextStyles.title,
+              style: AppTextStyles.themed(context, AppTextStyles.title),
             ),
             SizedBox(height: AppSpacing.md),
             Text(
               'See FIREBASE-SETUP.md for the console steps, then run flutterfire configure.',
-              style: AppTextStyles.body,
+              style: AppTextStyles.themed(context, AppTextStyles.body),
             ),
           ],
         ),

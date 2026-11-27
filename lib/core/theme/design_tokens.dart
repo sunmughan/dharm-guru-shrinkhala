@@ -1,13 +1,11 @@
-// material.dart is deprecated in Flutter 3.50; migrate to package:material_ui as a separate task.
-// ignore: deprecated_member_use
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Design tokens for Dharm Guru Shrinkhala.
 /// Exact values from design/DESIGN-SYSTEM.md, which takes every
 /// token from the presentation. Use the token name in code,
 /// never a raw hex value in a screen file.
-/// Light tokens are the default. Dark tokens are listed for
-/// the system dark mode follow up in a later phase.
+/// Light tokens are the default. Dark tokens are the dark
+/// set, used when the system is in dark mode.
 class AppColors {
   AppColors._();
 
@@ -26,6 +24,13 @@ class AppColors {
   static const Color line2 = Color(0xFFDCC49A);
   static const Color good = Color(0xFF2F7D4F);
 
+  /// Pick the light or dark value for the current brightness.
+  /// Used for surfaces and borders set explicitly in build
+  /// methods instead of coming from the theme.
+  static Color resolve(BuildContext context, Color light, Color dark) {
+    return Theme.of(context).brightness == Brightness.dark ? dark : light;
+  }
+
   /// Short aliases kept for readability in older call sites.
   static const Color cream = bg;
   static const Color cardWhite = surface;
@@ -40,10 +45,8 @@ class AppColors {
 }
 
 /// Dark colour tokens from design/DESIGN-SYSTEM.md section 2.
-/// Same token names as the light set, dark values. Use these in
-/// AppTheme.dark. Dark mode follows the system setting once the
-/// text styles become brightness aware; until then themeMode
-/// stays light so text never renders unreadable.
+/// Same token names as the light set, dark values. Used by
+/// AppTheme.dark and by AppTextStyles.themed.
 class AppColorsDark {
   AppColorsDark._();
 
@@ -66,6 +69,54 @@ class AppColorsDark {
 
 class AppTextStyles {
   AppTextStyles._();
+
+  /// Resolve a text style for the current brightness. The const
+  /// styles below are the light set; in dark mode the style
+  /// colour is mapped to the matching dark token so text stays
+  /// readable. Every style use is wrapped in themed().
+  static TextStyle themed(BuildContext context, TextStyle style) {
+    if (Theme.of(context).brightness == Brightness.light) {
+      return style;
+    }
+    final Color? color = style.color;
+    if (color == null) {
+      return style;
+    }
+    return style.copyWith(color: _darkColor(color));
+  }
+
+  /// Map one light text colour to its dark token. Colours not
+  /// listed here are left unchanged.
+  static Color _darkColor(Color light) {
+    if (light == AppColors.textPrimary || light == AppColors.deepInk) {
+      return AppColorsDark.ink;
+    }
+    if (light == AppColors.textSecondary || light == AppColors.ink2) {
+      return AppColorsDark.ink2;
+    }
+    if (light == AppColors.ink3) {
+      return AppColorsDark.ink3;
+    }
+    if (light == AppColors.textOnSaffron) {
+      return AppColorsDark.bg;
+    }
+    if (light == AppColors.saffron || light == AppColors.deepSaffron) {
+      return AppColorsDark.saffron;
+    }
+    if (light == AppColors.saffron2) {
+      return AppColorsDark.saffron2;
+    }
+    if (light == AppColors.maroon) {
+      return AppColorsDark.maroon;
+    }
+    if (light == AppColors.gold) {
+      return AppColorsDark.gold;
+    }
+    if (light == AppColors.good) {
+      return AppColorsDark.good;
+    }
+    return light;
+  }
 
   /// Headings use a serif family, Georgia preferred.
   static const String serifFamily = 'Georgia';
@@ -251,9 +302,8 @@ class AppTheme {
   /// Dark theme from the spec dark tokens. Primary buttons use
   /// saffron #F59E0B fill with #14100C text, never white text,
   /// because white on #F59E0B is weak contrast.
-  /// NOTE: AppTextStyles is still the light set, so themeMode
-  /// stays light in the app until the text styles become
-  /// brightness aware. Do not switch themeMode to system yet.
+  /// Text styles are brightness aware through
+  /// AppTextStyles.themed, so themeMode follows the system.
   static ThemeData dark() {
     return ThemeData(
       useMaterial3: true,

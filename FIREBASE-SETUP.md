@@ -46,6 +46,7 @@ Flutter app direct to Firebase, no backend. Follow these console steps in order.
 * Choose a location close to the users
 * Collections planned in Phase 1: `users`, `horoscopes`, `astrologers`, `panchang`
 * Set security rules before any production use. The default locked mode is the safe starting point. Rules that open reads or writes are a later phase task with review.
+  The owner only rules for this app live in `firebase/firestore.rules` in this repo. Paste that file into the console rules editor and publish it. Do not invent wider rules.
 
 ## 6. Enable Cloud Messaging
 

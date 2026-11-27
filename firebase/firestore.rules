@@ -1,0 +1,24 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // A user reads and writes only their own profile document.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    // Horoscope, astrologer and panchang content is published
+    // from the admin side. Signed in users read it, nobody
+    // writes it from the app.
+    match /horoscopes/{doc} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /astrologers/{doc} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /panchang/{doc} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}
