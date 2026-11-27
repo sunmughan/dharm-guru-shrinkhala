@@ -1,10 +1,12 @@
 import 'package:dharm_guru_shrinkhala/core/build_info.dart';
 import 'package:dharm_guru_shrinkhala/core/navigation/app_shell.dart';
+import 'package:dharm_guru_shrinkhala/models/panchang.dart';
 import 'package:dharm_guru_shrinkhala/screens/admin_screens.dart';
 import 'package:dharm_guru_shrinkhala/screens/auth_screen.dart';
 import 'package:dharm_guru_shrinkhala/screens/profile_form_screen.dart';
 import 'package:dharm_guru_shrinkhala/screens/screens.dart';
 import 'package:dharm_guru_shrinkhala/services/admin_seed_service.dart';
+import 'package:dharm_guru_shrinkhala/services/astro.dart';
 import 'package:dharm_guru_shrinkhala/services/auth_service.dart';
 import 'package:dharm_guru_shrinkhala/services/firestore_service.dart';
 import 'package:dharm_guru_shrinkhala/widgets/kundli_chart.dart';
@@ -428,30 +430,35 @@ void main() {
     expect(find.text('+1'), findsOneWidget);
   });
 
-  testWidgets('Panchang shows the exact spec values on Saturday',
+  testWidgets('Panchang shows the real computed values for today',
       (WidgetTester tester) async {
+    final Panchang expected =
+        PanchangCalculator.forDate(DateTime.now(), kDefaultPlace);
     await tester.pumpWidget(
       const MaterialApp(home: PanchangScreen()),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Saturday, Jaipur'), findsOneWidget);
-    expect(find.text('Shukla Panchami'), findsOneWidget);
-    expect(find.text('Shanivaar'), findsOneWidget);
-    expect(find.text('Rohini till 04:12 PM'), findsOneWidget);
-    expect(find.text('Siddhi'), findsOneWidget);
-    expect(find.text('Bava'), findsOneWidget);
-    expect(find.text('06:48 AM'), findsOneWidget);
-    expect(find.text('05:52 PM'), findsOneWidget);
+    expect(find.text(expected.dateLine), findsOneWidget);
+    expect(find.text(expected.tithi), findsOneWidget);
+    expect(find.text(expected.vaar), findsOneWidget);
+    expect(find.text(expected.nakshatra), findsOneWidget);
+    expect(find.text(expected.yoga), findsOneWidget);
+    expect(find.text(expected.karana), findsOneWidget);
+    expect(find.text(expected.sunrise), findsOneWidget);
+    expect(find.text(expected.sunset), findsOneWidget);
     // The muhurat card sits below the fold, so the ListView only
     // builds it once scrolled into view.
     await tester.drag(find.byType(ListView), const Offset(0, -800));
     await tester.pumpAndSettle();
-    expect(find.text('09:42 AM to 11:15 AM'), findsOneWidget);
-    expect(find.text('04:30 PM to 06:05 PM'), findsOneWidget);
+    expect(find.text(expected.shubhMuhurat), findsOneWidget);
     expect(find.text('Rahu Kaal'), findsOneWidget);
+    expect(
+      find.text('Sample data only. No real prediction.'),
+      findsNothing,
+    );
   });
 
-  testWidgets('Kundli form with other birth details shows not ready',
+  testWidgets('Kundli form with other birth details shows a real chart',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(home: KundliInputScreen()),
@@ -463,13 +470,23 @@ void main() {
     );
     await tester.tap(find.text('Show Kundli'));
     await tester.pumpAndSettle();
+    // A real chart is calculated from the entered details:
+    // 1 January 2000, 06:25 AM, Jaipur is Lagna Dhanu,
+    // Moon in Tula. No not ready state, no sample banner.
+    expect(find.text('Lagna Dhanu'), findsOneWidget);
+    expect(find.text('Dhanu'), findsWidgets);
+    expect(find.text('Tula'), findsWidgets);
     expect(
       find.text(
         'Kundli calculation for these birth details is not ready yet. No chart is shown for them.',
       ),
-      findsOneWidget,
+      findsNothing,
     );
-    expect(find.text('View sample kundli'), findsOneWidget);
+    expect(find.text('View sample kundli'), findsNothing);
+    expect(
+      find.text('Sample data only. No real prediction.'),
+      findsNothing,
+    );
   });
 
   testWidgets('Kundli form with sample details shows the sample chart',
@@ -480,8 +497,17 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Show Kundli'));
     await tester.pumpAndSettle();
-    expect(find.text('Meena'), findsOneWidget);
+    // The chart is calculated from the sample birth details,
+    // so the real lagna for 14 March 1998, 06:25 AM, Jaipur
+    // is Kumbha, and the screen still marks it as sample
+    // because no profile is complete.
+    expect(find.text('Lagna Kumbha'), findsOneWidget);
+    expect(find.text('Meena'), findsWidgets);
     expect(find.text('Lagna'), findsOneWidget);
+    expect(
+      find.text('Sample data only. No real prediction.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Matching New match clears the second person',

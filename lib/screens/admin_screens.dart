@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:material_ui/material_ui.dart';
@@ -126,6 +128,21 @@ class _DharmGuruAdminAppState extends State<DharmGuruAdminApp> {
   late final FirestoreService _firestore =
       widget.firestoreService ?? FirestoreService();
 
+  /// The auth state stream, created once. Creating it inline in
+  /// build would resubscribe on every rebuild and restart the
+  /// gate below, which is how the admin app used to hang on a
+  /// spinner forever after Google sign in.
+  Stream<bool>? _signedInStream;
+
+  Stream<bool> get _signedIn => _signedInStream ??= _auth.signedIn;
+
+  /// The admin access check for the current uid, created once
+  /// per uid. Creating the future inline in build restarted the
+  /// Firestore check on every auth emission, so a slow read
+  /// could spin forever. Null means no check is running.
+  Future<bool>? _adminCheck;
+  String? _adminCheckUid;
+
   @override
   void initState() {
     super.initState();
@@ -138,17 +155,58 @@ class _DharmGuruAdminAppState extends State<DharmGuruAdminApp> {
   /// access. The default admin account passes through the
   /// seeded email check in isAdminUser. Everyone else needs an
   /// admins document with role owner.
+  ///
+  /// Failures are thrown, never swallowed: the gate shows an
+  /// honest error with a retry button instead of a spinner that
+  /// never ends. A failed owner record write used to be
+  /// swallowed here, which left a first time Google admin on
+  /// the denied screen with no way to know the write failed.
   Future<bool> _checkAdminAccess(String uid) async {
     final String? email = _auth.currentUserEmail;
     if (_auth.currentUserHasGoogleProvider) {
       try {
         await _firestore.ensureAdminDoc(uid, email ?? '');
-      } catch (_) {
-        // A failed write must not lock the owner out: the gate
-        // below still checks the document and the seeded email.
+      } catch (error) {
+        throw StateError(
+          'Could not create your admin record. Check your '
+          'connection and try again. ($error)',
+        );
       }
     }
-    return _firestore.isAdminUser(uid: uid, email: email);
+    try {
+      return await _firestore.isAdminUser(uid: uid, email: email);
+    } catch (error) {
+      throw StateError(
+        'Could not check your admin access. Check your '
+        'connection and try again. ($error)',
+      );
+    }
+  }
+
+  /// The cached access check for [uid]. Times out after 20
+  /// seconds so a stalled Firestore read can never hang the
+  /// app on a spinner: the gate shows the error screen instead.
+  Future<bool> _adminCheckFor(String uid) {
+    if (_adminCheckUid == uid && _adminCheck != null) {
+      return _adminCheck!;
+    }
+    _adminCheckUid = uid;
+    _adminCheck = _checkAdminAccess(uid).timeout(
+      const Duration(seconds: 20),
+      onTimeout: () => throw TimeoutException(
+        'Admin access check timed out after 20 seconds. Check '
+        'your connection and try again.',
+      ),
+    );
+    return _adminCheck!;
+  }
+
+  void _retryAdminCheck() {
+    setState(() {
+      _signedInStream = null;
+      _adminCheckUid = null;
+      _adminCheck = null;
+    });
   }
 
   MaterialApp _app({required Widget home}) {
@@ -177,8 +235,18 @@ class _DharmGuruAdminAppState extends State<DharmGuruAdminApp> {
       );
     }
     return StreamBuilder<bool>(
-      stream: _auth.signedIn,
+      stream: _signedIn,
       builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
+        if (snapshot.hasError) {
+          return _app(
+            home: _AdminCheckErrorScreen(
+              message: 'Could not read your sign in state. '
+                  '${_plainError(snapshot.error)}',
+              onRetry: _retryAdminCheck,
+              onSignOut: () => _auth.signOut(),
+            ),
+          );
+        }
         if (!snapshot.hasData) {
           return _app(
             home: const Scaffold(
@@ -194,8 +262,17 @@ class _DharmGuruAdminAppState extends State<DharmGuruAdminApp> {
           return _app(home: AuthScreen(authService: _auth));
         }
         return FutureBuilder<bool>(
-          future: _checkAdminAccess(uid),
+          future: _adminCheckFor(uid),
           builder: (BuildContext context, AsyncSnapshot<bool> adminSnap) {
+            if (adminSnap.hasError) {
+              return _app(
+                home: _AdminCheckErrorScreen(
+                  message: _plainError(adminSnap.error),
+                  onRetry: _retryAdminCheck,
+                  onSignOut: () => _auth.signOut(),
+                ),
+              );
+            }
             if (!adminSnap.hasData) {
               return _app(
                 home: const Scaffold(
@@ -223,6 +300,21 @@ class _DharmGuruAdminAppState extends State<DharmGuruAdminApp> {
       },
     );
   }
+}
+
+/// Strips the exception type prefix so the gate error screen
+/// shows the plain message, for example "Could not create
+/// your admin record..." instead of "Bad state: Could not...".
+String _plainError(Object? error) {
+  final String text = '$error';
+  for (final String prefix in <String>[
+    'Bad state: ',
+    'Exception: ',
+    'TimeoutException: ',
+  ]) {
+    if (text.startsWith(prefix)) return text.substring(prefix.length);
+  }
+  return text;
 }
 
 class _FirebaseSetupNeededScreen extends StatelessWidget {
@@ -306,6 +398,65 @@ class _AdminDeniedScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: onSignOut,
               child: const Text('Sign Out'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown when the admin gate itself fails: the auth state
+/// could not be read, the admin record could not be created,
+/// the access check failed, or it timed out. The app never
+/// hangs on a spinner: this screen says what failed and
+/// offers Try again and Sign out.
+class _AdminCheckErrorScreen extends StatelessWidget {
+  const _AdminCheckErrorScreen({
+    required this.message,
+    required this.onRetry,
+    required this.onSignOut,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+  final VoidCallback onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Dharm Guru Admin')),
+      body: Padding(
+        padding: const EdgeInsets.all(AppSpacing.screenPadding),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'Could not open the admin panel.',
+              style: AppTextStyles.themed(context, AppTextStyles.title),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              message,
+              style: AppTextStyles.themed(context, AppTextStyles.body),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: <Widget>[
+                Flexible(
+                  child: ElevatedButton(
+                    onPressed: onRetry,
+                    child: const Text('Try again'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Flexible(
+                  child: OutlinedButton(
+                    onPressed: onSignOut,
+                    child: const Text('Sign out'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

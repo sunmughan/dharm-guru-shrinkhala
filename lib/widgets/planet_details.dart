@@ -2,15 +2,41 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/theme/design_tokens.dart';
 import '../models/kundli.dart';
+import '../services/astro.dart';
 
 /// Planet details table with degrees, rashi, bhava and swami.
-/// Exact sample values from design/screens/06-planet-details.md.
-/// Sample data only.
+/// Renders any kundli it is given. The defaults are the old
+/// sample values, used only before the profile is complete.
 class PlanetDetails extends StatelessWidget {
-  const PlanetDetails({super.key});
+  /// Defaults are the sample values: Kanya rashi, Hasta
+  /// nakshatra, matching BirthDetails.sample.
+  const PlanetDetails({
+    super.key,
+    this.planets = SampleKundli.planets,
+    this.lagna = SampleKundli.lagna,
+    this.rashi = 'Kanya',
+    this.nakshatra = 'Hasta',
+  });
+
+  final List<PlanetDetail> planets;
+  final String lagna;
+  final String rashi;
+  final String nakshatra;
 
   @override
   Widget build(BuildContext context) {
+    final int lagnaIndex = kRashis.indexOf(lagna);
+    final int rashiIndex = kRashis.indexOf(rashi);
+    final int nakshatraIndex = kNakshatras.indexOf(nakshatra);
+    final String lagnaLord = lagnaIndex < 0
+        ? 'Jupiter'
+        : kRashiLords[lagnaIndex];
+    final String rashiLord = rashiIndex < 0
+        ? 'Mercury'
+        : kRashiLords[rashiIndex];
+    final String nakshatraLord = nakshatraIndex < 0
+        ? 'Moon'
+        : kNakshatraLords[nakshatraIndex];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -35,7 +61,7 @@ class PlanetDetails extends StatelessWidget {
             ),
             children: <TableRow>[
               _headerRow(context),
-              ...SampleKundli.planets.map(
+              ...planets.map(
                 (PlanetDetail planet) => _planetRow(context, planet),
               ),
             ],
@@ -56,19 +82,19 @@ class PlanetDetails extends StatelessWidget {
                 _swamiRow(
                   context,
                   'Lagna swami',
-                  'Lagna swami is Jupiter.',
+                  'Lagna swami is $lagnaLord.',
                 ),
                 const SizedBox(height: AppSpacing.space3),
                 _swamiRow(
                   context,
                   'Rashi swami',
-                  'Rashi swami is Mercury.',
+                  'Rashi swami is $rashiLord.',
                 ),
                 const SizedBox(height: AppSpacing.space3),
                 _swamiRow(
                   context,
                   'Nakshatra swami',
-                  'Nakshatra swami is Moon.',
+                  'Nakshatra swami is $nakshatraLord.',
                 ),
               ],
             ),

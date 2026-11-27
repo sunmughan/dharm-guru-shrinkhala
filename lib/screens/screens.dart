@@ -7,6 +7,7 @@ import '../core/theme/design_tokens.dart';
 import '../models/kundli.dart';
 import '../models/panchang.dart';
 import '../models/remedies.dart';
+import '../services/astro.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_service.dart';
 import '../services/firestore_service.dart';
@@ -543,8 +544,6 @@ class HomeScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          const SampleDataBanner(),
-          const SizedBox(height: AppSpacing.md),
           if (profileFuture == null)
             _HomeGreeting(profile: null, onOpenTab: onOpenTab)
           else
@@ -570,16 +569,12 @@ class HomeScreen extends StatelessWidget {
               },
             ),
           const SizedBox(height: AppSpacing.md),
-          _HomeCard(
-            title: 'Your Kundli',
-            body: 'North Indian chart. Surya in Meena lagna at 01° 24′.',
-            icon: Icons.grid_on,
+          _HomeKundliCard(
+            profileFuture: profileFuture,
             onTap: () => onOpenTab(1),
           ),
-          _HomeCard(
-            title: 'Daily Horoscope',
-            body: 'Horoscope content will be published from the admin panel.',
-            icon: Icons.wb_sunny,
+          _HomeHoroscopeCard(
+            firestore: firestore,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -604,7 +599,7 @@ class HomeScreen extends StatelessWidget {
             ),
           _HomeCard(
             title: 'Panchang',
-            body: 'Tithi, vaar, nakshatra and shubh muhurat.',
+            body: _todayPanchangLine(),
             icon: Icons.calendar_month,
             onTap: () => onOpenTab(2),
           ),
@@ -667,6 +662,139 @@ class _HomeCard extends StatelessWidget {
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       ),
+    );
+  }
+}
+
+/// Today's panchang line for the home card, computed from the
+/// real date, not stored text.
+String _todayPanchangLine() {
+  final Panchang panchang =
+      PanchangCalculator.forDate(DateTime.now(), kDefaultPlace);
+  return '${panchang.tithi}, ${panchang.vaar}, ${panchang.nakshatra}.';
+}
+
+/// Home kundli card. With a complete profile it shows the
+/// real lagna and rashi calculated from the birth details.
+/// Without one it asks the user to complete the profile,
+/// instead of showing a sample chart as if it were theirs.
+class _HomeKundliCard extends StatelessWidget {
+  const _HomeKundliCard({required this.profileFuture, required this.onTap});
+
+  final Future<Map<String, dynamic>?>? profileFuture;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (profileFuture == null) {
+      return _HomeCard(
+        title: 'Your Kundli',
+        body: 'Add your birth details to see your real kundli.',
+        icon: Icons.grid_on,
+        onTap: onTap,
+      );
+    }
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: profileFuture,
+      builder: (
+        BuildContext context,
+        AsyncSnapshot<Map<String, dynamic>?> snapshot,
+      ) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _HomeCard(
+            title: 'Your Kundli',
+            body: 'Loading your kundli...',
+            icon: Icons.grid_on,
+            onTap: onTap,
+          );
+        }
+        final AppUserProfile? profile = snapshot.data == null
+            ? null
+            : AppUserProfile.fromMap(snapshot.data!);
+        if (profile == null || !profile.isComplete) {
+          return _HomeCard(
+            title: 'Your Kundli',
+            body: 'Add your birth details to see your real kundli.',
+            icon: Icons.grid_on,
+            onTap: onTap,
+          );
+        }
+        final DateTime? birth = parseBirthDateTime(
+          AppUserProfile.displayDate(profile.dateOfBirth!),
+          profile.birthTimeUnknown || profile.timeOfBirth == null
+              ? '12:00 PM'
+              : AppUserProfile.displayTime(profile.timeOfBirth!),
+        );
+        if (birth == null) {
+          return _HomeCard(
+            title: 'Your Kundli',
+            body: 'Your birth details could not be read. '
+                'Check them in your profile.',
+            icon: Icons.grid_on,
+            onTap: onTap,
+          );
+        }
+        final KundliResult kundli = KundliCalculator.calculate(
+          birthLocal: birth,
+          placeText: profile.placeLine,
+          timeKnown: !profile.birthTimeUnknown,
+        );
+        return _HomeCard(
+          title: 'Your Kundli',
+          body: 'Lagna ${kundli.lagna} · Rashi ${kundli.moonRashi} · '
+              'Nakshatra ${kundli.moonNakshatra}.',
+          icon: Icons.grid_on,
+          onTap: onTap,
+        );
+      },
+    );
+  }
+}
+
+/// Home horoscope card. Shows whether a horoscope is
+/// published for today, from the admin panel. Never a dead
+/// placeholder line pretending the feature works.
+class _HomeHoroscopeCard extends StatelessWidget {
+  const _HomeHoroscopeCard({required this.firestore, required this.onTap});
+
+  final FirestoreService? firestore;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (firestore == null) {
+      return _HomeCard(
+        title: 'Daily Horoscope',
+        body: 'No horoscope published yet today.',
+        icon: Icons.wb_sunny,
+        onTap: onTap,
+      );
+    }
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: firestore!.watchDocs('horoscopes'),
+      builder: (
+        BuildContext context,
+        AsyncSnapshot<List<Map<String, dynamic>>> snap,
+      ) {
+        String body = 'No horoscope published yet today.';
+        if (snap.hasData) {
+          final List<Map<String, dynamic>> published = snap.data!
+              .where((Map<String, dynamic> d) => str(d, 'status') == 'published')
+              .toList();
+          if (published.isNotEmpty) {
+            published.sort((Map<String, dynamic> a, Map<String, dynamic> b) =>
+                str(b, 'date').compareTo(str(a, 'date')));
+            final Map<String, dynamic> doc = published.first;
+            body = "Today's horoscope for ${str(doc, 'rashi')} is ready.";
+          }
+        }
+        return _HomeCard(
+          title: 'Daily Horoscope',
+          body: body,
+          icon: Icons.wb_sunny,
+          onTap: onTap,
+        );
+      },
     );
   }
 }
@@ -761,6 +889,11 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
   final TextEditingController _placeController =
       TextEditingController(text: 'Jaipur, Rajasthan');
 
+  /// True when the form was prefilled from a saved profile.
+  /// The sample chart shows only when the form still holds the
+  /// prefilled sample details and no profile was loaded.
+  bool _fromProfile = false;
+
   @override
   void initState() {
     super.initState();
@@ -776,6 +909,7 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
           return;
         }
         setState(() {
+          _fromProfile = true;
           _nameController.text = profile.name;
           _dateController.text =
               AppUserProfile.displayDate(profile.dateOfBirth!);
@@ -805,8 +939,6 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          const SampleDataBanner(),
-          const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _nameController,
             decoration: const InputDecoration(labelText: 'Name'),
@@ -855,9 +987,29 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
                 nakshatra: '',
                 tithiAtBirth: '',
               );
+              final DateTime? birth =
+                  parseBirthDateTime(date, time);
+              if (birth == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Enter a valid date and time, for example '
+                      '14 March 1998 and 06:25 AM.',
+                    ),
+                  ),
+                );
+                return;
+              }
+              final bool isSample = !_fromProfile &&
+                  date == SampleKundli.birth.dateOfBirth &&
+                  time == SampleKundli.birth.timeOfBirth &&
+                  place == SampleKundli.birth.placeOfBirth;
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => KundliChartScreen(birth: entered),
+                  builder: (_) => KundliChartScreen(
+                    birth: entered,
+                    isSample: isSample,
+                  ),
                 ),
               );
             },
@@ -865,7 +1017,8 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Only the sample kundli is ready in this version. Other birth details show a not ready state instead of a made up chart.',
+            'Your kundli is calculated from your birth date, time and place. '
+            'The sample chart shows only until your profile is complete.',
             style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
           ),
         ],
@@ -877,18 +1030,24 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
 /// Kundli chart screen with the North Indian chart, the
 /// Lagna and Moon chart switcher, the summary chips and the
 /// planet summary list, per design/screens/05-kundli-chart.md.
-/// Moon Chart has no engine data in Phase 1, so it shows the
-/// not ready state and invents no values. The chart shown is
-/// the sample kundli when the entered birth details match the
-/// sample; any other birth details show the not ready state
-/// with the entered details, never a made up chart.
+/// The chart is calculated from the entered birth details
+/// with the real engine: lagna, planets, rashi and nakshatra
+/// are all computed, for any birth date, time and place. The
+/// Moon chart counts bhavas from the Moon sign. The sample
+/// chart shows only before the profile is complete, and the
+/// screen says so.
 class KundliChartScreen extends StatefulWidget {
   const KundliChartScreen({
     super.key,
     this.birth = SampleKundli.birth,
+    this.isSample = true,
   });
 
   final BirthDetails birth;
+
+  /// True when the shown chart is the sample, before the
+  /// profile is complete. The chart is then marked as sample.
+  final bool isSample;
 
   @override
   State<KundliChartScreen> createState() => _KundliChartScreenState();
@@ -896,35 +1055,68 @@ class KundliChartScreen extends StatefulWidget {
 
 class _KundliChartScreenState extends State<KundliChartScreen> {
   bool _showMoonChart = false;
-  bool _viewingSample = false;
 
-  bool get _isSample =>
-      widget.birth.dateOfBirth == SampleKundli.birth.dateOfBirth &&
-      widget.birth.timeOfBirth == SampleKundli.birth.timeOfBirth &&
-      widget.birth.placeOfBirth == SampleKundli.birth.placeOfBirth;
+  /// The real kundli for the entered birth details. Null
+  /// only when the date or time text does not parse, which
+  /// the input screen already rejects.
+  KundliResult? get _kundli {
+    final DateTime? birth = parseBirthDateTime(
+      widget.birth.dateOfBirth,
+      widget.birth.timeOfBirth,
+    );
+    if (birth == null) return null;
+    return KundliCalculator.calculate(
+      birthLocal: birth,
+      placeText: widget.birth.placeOfBirth,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final bool showChart = _isSample || _viewingSample;
+    final KundliResult? kundli = _kundli;
     return Scaffold(
       appBar: AppBar(title: const Text('Birth Kundli')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          const SampleDataBanner(),
-          const SizedBox(height: AppSpacing.md),
-          if (!showChart) ...<Widget>[
-            _BirthNotReady(birth: widget.birth),
+          if (widget.isSample) ...<Widget>[
+            const SampleDataBanner(),
             const SizedBox(height: AppSpacing.md),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _viewingSample = true;
-                  });
-                },
-                child: const Text('View sample kundli'),
+          ],
+          if (kundli == null) ...<Widget>[
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      widget.birth.name,
+                      style: AppTextStyles.themed(
+                        context,
+                        AppTextStyles.title,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      '${widget.birth.dateOfBirth}, ${widget.birth.timeOfBirth}, ${widget.birth.placeOfBirth}',
+                      style: AppTextStyles.themed(
+                        context,
+                        AppTextStyles.body,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'These birth details could not be read. '
+                      'Enter a valid date and time, for example '
+                      '14 March 1998 and 06:25 AM.',
+                      style: AppTextStyles.themed(
+                        context,
+                        AppTextStyles.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ] else ...<Widget>[
@@ -937,14 +1129,36 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
               },
             ),
             const SizedBox(height: AppSpacing.md),
-            if (_showMoonChart)
-              const _MoonChartNotReady()
-            else ...<Widget>[
-              const KundliChart(),
+            if (_showMoonChart) ...<Widget>[
+              KundliChart(
+                birth: widget.birth,
+                planets: kundli.moonChart.planets,
+                lagna: kundli.moonChart.lagna,
+                isSample: widget.isSample,
+              ),
               const SizedBox(height: AppSpacing.space3),
-              const _ChartLegend(),
+              _ChartLegend(
+                lagna: kundli.moonChart.lagna,
+                rashi: kundli.moonRashi,
+                nakshatra: kundli.moonNakshatra,
+              ),
               const SizedBox(height: AppSpacing.md),
-              const _PlanetSummaryList(),
+              _PlanetSummaryList(planets: kundli.moonChart.planets),
+            ] else ...<Widget>[
+              KundliChart(
+                birth: widget.birth,
+                planets: kundli.planets,
+                lagna: kundli.lagna,
+                isSample: widget.isSample,
+              ),
+              const SizedBox(height: AppSpacing.space3),
+              _ChartLegend(
+                lagna: kundli.lagna,
+                rashi: kundli.moonRashi,
+                nakshatra: kundli.moonNakshatra,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _PlanetSummaryList(planets: kundli.planets),
             ],
             const SizedBox(height: AppSpacing.lg),
             SizedBox(
@@ -953,7 +1167,7 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => const PlanetDetailsScreen(),
+                      builder: (_) => PlanetDetailsScreen(kundli: kundli),
                     ),
                   );
                 },
@@ -962,43 +1176,6 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-/// Honest not ready state for birth details with no chart
-/// engine data. Shows the entered details back so the user
-/// sees the form did something, and invents no chart.
-class _BirthNotReady extends StatelessWidget {
-  const _BirthNotReady({required this.birth});
-
-  final BirthDetails birth;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              birth.name,
-              style: AppTextStyles.themed(context, AppTextStyles.title),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              '${birth.dateOfBirth}, ${birth.timeOfBirth}, ${birth.placeOfBirth}',
-              style: AppTextStyles.themed(context, AppTextStyles.body),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'Kundli calculation for these birth details is not ready yet. No chart is shown for them.',
-              style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1095,59 +1272,31 @@ class _ChartSwitcher extends StatelessWidget {
   }
 }
 
-class _MoonChartNotReady extends StatelessWidget {
-  const _MoonChartNotReady();
-
-  @override
-  Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 1,
-      child: Container(
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.resolve(
-            context,
-            AppColors.cardWhite,
-            AppColorsDark.surface,
-          ),
-          border: Border.all(
-            color: AppColors.resolve(
-              context,
-              AppColors.deepInk,
-              AppColorsDark.ink,
-            ),
-            width: 1,
-          ),
-          borderRadius:
-              BorderRadius.circular(AppSpacing.chartRadius),
-        ),
-        child: Text(
-          'Moon chart is not ready yet.',
-          style: AppTextStyles.themed(context, AppTextStyles.body),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
-}
-
 /// Three summary chips below the chart: Lagna, Rashi,
 /// Nakshatra. Each is a small card with the label in Caption
 /// 12 ink3 above the value in Title 17 ink. Tapping a chip
 /// does nothing. They are a summary, not buttons.
 class _ChartLegend extends StatelessWidget {
-  const _ChartLegend();
+  const _ChartLegend({
+    required this.lagna,
+    required this.rashi,
+    required this.nakshatra,
+  });
+
+  final String lagna;
+  final String rashi;
+  final String nakshatra;
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: <Widget>[
-        Expanded(child: _LegendChip(label: 'Lagna', value: 'Meena')),
-        SizedBox(width: AppSpacing.space3),
-        Expanded(child: _LegendChip(label: 'Rashi', value: 'Kanya')),
-        SizedBox(width: AppSpacing.space3),
+        Expanded(child: _LegendChip(label: 'Lagna', value: lagna)),
+        const SizedBox(width: AppSpacing.space3),
+        Expanded(child: _LegendChip(label: 'Rashi', value: rashi)),
+        const SizedBox(width: AppSpacing.space3),
         Expanded(
-          child: _LegendChip(label: 'Nakshatra', value: 'Hasta'),
+          child: _LegendChip(label: 'Nakshatra', value: nakshatra),
         ),
       ],
     );
@@ -1181,13 +1330,15 @@ class _LegendChip extends StatelessWidget {
 /// the chart, in the same order as the planet details table.
 /// This list is the text equivalent of the chart figure.
 class _PlanetSummaryList extends StatelessWidget {
-  const _PlanetSummaryList();
+  const _PlanetSummaryList({required this.planets});
+
+  final List<PlanetDetail> planets;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: SampleKundli.planets.map((PlanetDetail planet) {
+      children: planets.map((PlanetDetail planet) {
         final String abbr =
             SampleKundli.abbreviations[planet.name] ?? '';
         return Padding(
@@ -1231,35 +1382,50 @@ class _PlanetSummaryList extends StatelessWidget {
 
 /// Planet details screen: full table with exact degrees,
 /// swami notes and the premium note, per
-/// design/screens/06-planet-details.md.
+/// design/screens/06-planet-details.md. Shows the computed
+/// kundli when given one; without one it shows the sample,
+/// honestly marked.
 class PlanetDetailsScreen extends StatelessWidget {
-  const PlanetDetailsScreen({super.key});
+  const PlanetDetailsScreen({super.key, this.kundli});
+
+  final KundliResult? kundli;
 
   @override
   Widget build(BuildContext context) {
+    final KundliResult? kundli = this.kundli;
     return Scaffold(
       appBar: AppBar(title: const Text('Planet Details')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          const SampleDataBanner(),
-          const SizedBox(height: AppSpacing.md),
+          if (kundli == null) ...<Widget>[
+            const SampleDataBanner(),
+            const SizedBox(height: AppSpacing.md),
+          ],
           Text(
             'Position, rashi, bhava and exact degree of every graha.',
             style: AppTextStyles.themed(context, AppTextStyles.body),
           ),
           const SizedBox(height: AppSpacing.md),
-          const PlanetDetails(),
+          if (kundli == null)
+            const PlanetDetails()
+          else
+            PlanetDetails(
+              planets: kundli.planets,
+              lagna: kundli.lagna,
+              rashi: kundli.moonRashi,
+              nakshatra: kundli.moonNakshatra,
+            ),
         ],
       ),
     );
   }
 }
 
-/// Daily horoscope screen. With a Firestore service, it shows the
-/// latest published horoscope from the admin panel. Without one
-/// (tests, or before any content is published) it shows the sample
-/// state, honestly marked as sample.
+/// Daily horoscope screen. Shows the latest published
+/// horoscope from the admin panel. When nothing is published
+/// yet, or the read fails, it says so honestly instead of
+/// showing a sample prediction as if it were real.
 class HoroscopeScreen extends StatelessWidget {
   const HoroscopeScreen({super.key, this.firestore});
 
@@ -1268,7 +1434,7 @@ class HoroscopeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (firestore == null) {
-      return const _HoroscopeView(entry: HoroscopeEntry.sample);
+      return const _HoroscopeNotReady();
     }
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: firestore!.watchDocs('horoscopes'),
@@ -1277,7 +1443,7 @@ class HoroscopeScreen extends StatelessWidget {
         AsyncSnapshot<List<Map<String, dynamic>>> snap,
       ) {
         if (snap.hasError) {
-          return const _HoroscopeView(entry: HoroscopeEntry.sample);
+          return const _HoroscopeNotReady();
         }
         if (!snap.hasData) {
           return const Scaffold(
@@ -1288,7 +1454,7 @@ class HoroscopeScreen extends StatelessWidget {
             .where((Map<String, dynamic> d) => str(d, 'status') == 'published')
             .toList();
         if (published.isEmpty) {
-          return const _HoroscopeView(entry: HoroscopeEntry.sample);
+          return const _HoroscopeNotReady();
         }
         published.sort((Map<String, dynamic> a, Map<String, dynamic> b) =>
             str(b, 'date').compareTo(str(a, 'date')));
@@ -1350,8 +1516,6 @@ class _HoroscopeView extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          if (!isLive) const SampleDataBanner(),
-          if (!isLive) const SizedBox(height: AppSpacing.md),
           Text('Rashi: ${entry.rashi}', style: AppTextStyles.themed(context, AppTextStyles.title)),
           Text(entry.date, style: AppTextStyles.themed(context, AppTextStyles.bodySmall)),
           const SizedBox(height: AppSpacing.md),
@@ -1373,13 +1537,33 @@ class _HoroscopeView extends StatelessWidget {
               style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
             ),
           ],
-          if (!isLive) ...<Widget>[
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'No horoscope prediction is shown in Phase 1. Content is published from the admin panel in a later phase.',
-              style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
-            ),
-          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Honest state when no horoscope has been published yet.
+/// Never a sample prediction presented as real content.
+class _HoroscopeNotReady extends StatelessWidget {
+  const _HoroscopeNotReady();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Daily Horoscope')),
+      body: ListView(
+        padding: const EdgeInsets.all(AppSpacing.screenPadding),
+        children: <Widget>[
+          Text(
+            'No horoscope published yet.',
+            style: AppTextStyles.themed(context, AppTextStyles.title),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'The daily horoscope appears here once it is published from the admin panel. Check back later today.',
+            style: AppTextStyles.themed(context, AppTextStyles.body),
+          ),
         ],
       ),
     );
@@ -1424,9 +1608,10 @@ class _HoroscopeArea extends StatelessWidget {
 
 /// Panchang screen: tithi, vaar, nakshatra, yoga, karana,
 /// sunrise, sunset, shubh muhurat and rahu kaal, per
-/// design/screens/08-panchang.md. With a Firestore service, it
-/// shows the latest panchang published from the admin panel.
-/// Without one it shows the sample values, honestly marked.
+/// design/screens/08-panchang.md. When the admin panel has
+/// published a panchang, that is shown. Otherwise the panchang
+/// is computed from the real date, so the screen always shows
+/// real values and never static sample text.
 class PanchangScreen extends StatelessWidget {
   const PanchangScreen({super.key, this.firestore});
 
@@ -1435,7 +1620,10 @@ class PanchangScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (firestore == null) {
-      return const _PanchangBody(panchang: Panchang.sample);
+      return _PanchangBody(
+        panchang: PanchangCalculator.forDate(DateTime.now(), kDefaultPlace),
+        isLive: true,
+      );
     }
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: firestore!.watchDocs('panchang'),
@@ -1444,7 +1632,11 @@ class PanchangScreen extends StatelessWidget {
         AsyncSnapshot<List<Map<String, dynamic>>> snap,
       ) {
         if (snap.hasError) {
-          return const _PanchangBody(panchang: Panchang.sample);
+          return _PanchangBody(
+            panchang:
+                PanchangCalculator.forDate(DateTime.now(), kDefaultPlace),
+            isLive: true,
+          );
         }
         if (!snap.hasData) {
           return const Scaffold(
@@ -1453,7 +1645,11 @@ class PanchangScreen extends StatelessWidget {
         }
         final List<Map<String, dynamic>> docs = snap.data!;
         if (docs.isEmpty) {
-          return const _PanchangBody(panchang: Panchang.sample);
+          return _PanchangBody(
+            panchang:
+                PanchangCalculator.forDate(DateTime.now(), kDefaultPlace),
+            isLive: true,
+          );
         }
         docs.sort((Map<String, dynamic> a, Map<String, dynamic> b) =>
             str(b, 'date').compareTo(str(a, 'date')));

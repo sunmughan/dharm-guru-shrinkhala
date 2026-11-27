@@ -8,26 +8,34 @@ import '../models/kundli.dart';
 /// North Indian square kundli chart.
 ///
 /// Rashi order runs anticlockwise from lagna, per
-/// design/screens/05-kundli-chart.md. Lagna Meena sits in the
-/// top centre cell. Bhava 2 Mesha is top left of lagna, bhava 3
-/// Vrishabha is the top left corner, and the order continues
-/// down the left side, along the bottom, and up the right side
-/// back to bhava 12 Kumbha at the top right.
+/// design/screens/05-kundli-chart.md. Lagna sits in the top
+/// centre cell. Bhava 2 is top left of lagna, bhava 3 is the
+/// top left corner, and the order continues down the left
+/// side, along the bottom, and up the right side back to
+/// bhava 12 at the top right.
 ///
-/// Planet placement is the presentation sample chart:
-/// Bhava 1 Meena holds As, Su, Me, Sa; Bhava 2 Mesha holds Ma;
-/// Bhava 6 Simha holds Ra; Bhava 7 Kanya holds Mo; Bhava 11
-/// Makara holds Ve; Bhava 12 Kumbha holds Ju, Ke. All other
-/// bhavas are empty. Sample data only.
+/// The chart renders any kundli it is given: lagna and
+/// planets come from the real calculation. The defaults are
+/// the old sample chart, used only before the profile is
+/// complete, and the chart is then marked as sample.
 class KundliChart extends StatelessWidget {
   const KundliChart({
     super.key,
     this.birth = SampleKundli.birth,
     this.planets = SampleKundli.planets,
+    this.lagna = 'Meena',
+    this.isSample = true,
   });
 
   final BirthDetails birth;
   final List<PlanetDetail> planets;
+
+  /// Lagna rashi name, the rashi in bhava 1.
+  final String lagna;
+
+  /// True when the chart is the sample shown before the
+  /// profile is complete. The centre cell then says so.
+  final bool isSample;
 
   /// Bhava number for each cell, row by row, left to right.
   /// Top row: 3, 2, 1, 12. Middle rows: 4 and 11, then 5 and 10.
@@ -39,20 +47,28 @@ class KundliChart extends StatelessWidget {
     <int>[6, 7, 8, 9],
   ];
 
-  static const Map<int, String> _rashiByBhava = <int, String>{
-    1: 'Meena',
-    2: 'Mesha',
-    3: 'Vrishabha',
-    4: 'Mithuna',
-    5: 'Karka',
-    6: 'Simha',
-    7: 'Kanya',
-    8: 'Tula',
-    9: 'Vrishchika',
-    10: 'Dhanu',
-    11: 'Makara',
-    12: 'Kumbha',
-  };
+  /// Rashi order, anticlockwise from Mesha.
+  static const List<String> _rashiOrder = <String>[
+    'Mesha',
+    'Vrishabha',
+    'Mithuna',
+    'Karka',
+    'Simha',
+    'Kanya',
+    'Tula',
+    'Vrishchika',
+    'Dhanu',
+    'Makara',
+    'Kumbha',
+    'Meena',
+  ];
+
+  /// Rashi in a bhava, counted anticlockwise from lagna.
+  String _rashiForBhava(int bhava) {
+    final int lagnaIndex = _rashiOrder.indexOf(lagna);
+    final int start = lagnaIndex < 0 ? 11 : lagnaIndex;
+    return _rashiOrder[(start + bhava - 1) % 12];
+  }
 
   List<String> _planetsInBhava(int bhava) {
     final List<String> found = <String>[];
@@ -108,7 +124,7 @@ class KundliChart extends StatelessWidget {
                       ),
                       Expanded(
                         flex: 2,
-                        child: _CenterCell(birth: birth),
+                        child: _CenterCell(birth: birth, lagna: lagna),
                       ),
                       Expanded(
                         child: _cellForBhava(_bhavaGrid[1][1]),
@@ -124,7 +140,7 @@ class KundliChart extends StatelessWidget {
                       ),
                       Expanded(
                         flex: 2,
-                        child: _NameCell(birth: birth),
+                        child: _NameCell(birth: birth, isSample: isSample),
                       ),
                       Expanded(
                         child: _cellForBhava(_bhavaGrid[2][1]),
@@ -153,7 +169,7 @@ class KundliChart extends StatelessWidget {
 
   Widget _cellForBhava(int bhava) {
     return _RashiCell(
-      label: _rashiByBhava[bhava]!,
+      label: _rashiForBhava(bhava),
       planets: _planetsInBhava(bhava),
       isLagna: bhava == 1,
     );
@@ -236,9 +252,10 @@ class _RashiCell extends StatelessWidget {
 }
 
 class _CenterCell extends StatelessWidget {
-  const _CenterCell({required this.birth});
+  const _CenterCell({required this.birth, required this.lagna});
 
   final BirthDetails birth;
+  final String lagna;
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +265,7 @@ class _CenterCell extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
           Text(
-            'Lagna ${SampleKundli.lagna}',
+            'Lagna $lagna',
             style: AppTextStyles.themed(context, AppTextStyles.chartPlanet.copyWith(
               color: AppColors.deepSaffron,
             )),
@@ -268,9 +285,10 @@ class _CenterCell extends StatelessWidget {
 }
 
 class _NameCell extends StatelessWidget {
-  const _NameCell({required this.birth});
+  const _NameCell({required this.birth, required this.isSample});
 
   final BirthDetails birth;
+  final bool isSample;
 
   @override
   Widget build(BuildContext context) {
@@ -284,10 +302,11 @@ class _NameCell extends StatelessWidget {
             style: AppTextStyles.themed(context, AppTextStyles.chartPlanet),
             textAlign: TextAlign.center,
           ),
-          Text(
-            'Sample data',
-            style: AppTextStyles.themed(context, AppTextStyles.caption),
-          ),
+          if (isSample)
+            Text(
+              'Sample data',
+              style: AppTextStyles.themed(context, AppTextStyles.caption),
+            ),
         ],
       ),
     );
