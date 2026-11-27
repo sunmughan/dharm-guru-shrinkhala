@@ -554,6 +554,34 @@ void main() {
     );
   });
 
+  testWidgets('Kundli form without a birth time uses noon and says so',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: KundliInputScreen()),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'Test User');
+    await tester.enterText(
+      find.byType(TextField).at(1),
+      '1 January 2000',
+    );
+    await tester.enterText(
+      find.byType(TextField).at(3),
+      'Jaipur, Rajasthan',
+    );
+    await tester.tap(find.text('Show Kundli'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Birth time not known, so noon is used and the lagna is approximate.',
+      ),
+      findsOneWidget,
+    );
+    await tester.drag(find.byType(ListView), const Offset(0, -1200));
+    await tester.pumpAndSettle();
+    expect(find.text('See Planet Details'), findsOneWidget);
+  });
+
   testWidgets('Kundli form with other birth details shows a real chart',
       (WidgetTester tester) async {
     await tester.pumpWidget(

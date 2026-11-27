@@ -598,8 +598,10 @@ class HomeScreen extends StatelessWidget {
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) =>
-                        NotificationsScreen(firestore: firestore!),
+                    builder: (_) => NotificationsScreen(
+                      firestore: firestore!,
+                      authService: authService,
+                    ),
                   ),
                 );
               },
@@ -979,12 +981,11 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
               final String place = _placeController.text.trim();
               if (name.isEmpty ||
                   date.isEmpty ||
-                  time.isEmpty ||
                   place.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(
-                      'Enter name, date, time and place of birth.',
+                      'Enter name, date and place of birth.',
                     ),
                   ),
                 );
@@ -999,8 +1000,10 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
                 nakshatra: '',
                 tithiAtBirth: '',
               );
-              final DateTime? birth =
-                  parseBirthDateTime(date, time);
+              final DateTime? birth = parseBirthDateTime(
+                date,
+                time.isEmpty ? '12:00 PM' : time,
+              );
               if (birth == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -1060,12 +1063,15 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
   KundliResult? get _kundli {
     final DateTime? birth = parseBirthDateTime(
       widget.birth.dateOfBirth,
-      widget.birth.timeOfBirth,
+      widget.birth.timeOfBirth.isEmpty
+          ? '12:00 PM'
+          : widget.birth.timeOfBirth,
     );
     if (birth == null) return null;
     return KundliCalculator.calculate(
       birthLocal: birth,
       placeText: widget.birth.placeOfBirth,
+      timeKnown: widget.birth.timeOfBirth.isNotEmpty,
     );
   }
 
@@ -1121,6 +1127,16 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
                 });
               },
             ),
+            if (widget.birth.timeOfBirth.isEmpty) ...<Widget>[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Birth time not known, so noon is used and the lagna is approximate.',
+                style: AppTextStyles.themed(
+                  context,
+                  AppTextStyles.bodySmall,
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.md),
             if (_showMoonChart) ...<Widget>[
               KundliChart(
@@ -3411,9 +3427,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 /// or scheduled, in real time. Tapping one opens the screen the
 /// admin chose for it.
 class NotificationsScreen extends StatelessWidget {
-  const NotificationsScreen({super.key, required this.firestore});
+  const NotificationsScreen({
+    super.key,
+    required this.firestore,
+    this.authService,
+  });
 
   final FirestoreService firestore;
+  final AuthService? authService;
 
   @override
   Widget build(BuildContext context) {
@@ -3475,7 +3496,10 @@ class NotificationsScreen extends StatelessWidget {
                             : open == 'Panchang'
                                 ? PanchangScreen(firestore: firestore)
                                 : open == 'Consult'
-                                    ? ConsultScreen(firestore: firestore)
+                                    ? ConsultScreen(
+                                        firestore: firestore,
+                                        authService: authService,
+                                      )
                                     : null;
                         if (target != null) {
                           Navigator.of(context).push(
