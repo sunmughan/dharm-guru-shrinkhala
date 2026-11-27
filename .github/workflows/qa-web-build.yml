@@ -1,0 +1,29 @@
+name: QA Web Build Admin
+
+# QA only. Builds the admin entrypoint for Flutter web so the Phase 16
+# browser QA agent can serve it locally and test it headless. Runs
+# only on manual dispatch from a branch. Never runs on main push.
+# No secrets are used. No deploy happens. The build uses the repo
+# firebase_options.dart as committed, so web Firebase stays a
+# placeholder until a web app is registered in the console.
+on:
+  workflow_dispatch:
+
+jobs:
+  build-web-admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Build admin web
+        run: flutter build web --release -t lib/main_admin.dart
+      - name: Upload admin web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dharm-guru-admin-web-qa
+          path: build/web
+          retention-days: 7
