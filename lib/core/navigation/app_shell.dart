@@ -16,7 +16,12 @@ const String kOnboardingSeenKey = 'onboarding_seen';
 /// Tabs in fixed order: Home, Kundli, Panchang, Consult, Profile.
 /// Kundli tab opens the birth details form first, then the chart.
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  const AppShell({super.key, this.firestoreService});
+
+  /// Firestore service for the tabs. Null in production, where a
+  /// real one is created. Tests pass a fake so no Firebase call
+  /// runs while the app is pumped without Firebase initialised.
+  final FirestoreService? firestoreService;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -27,7 +32,8 @@ class _AppShellState extends State<AppShell> {
   // One shared Firestore service for every tab, so the admin
   // published content reaches Home, Panchang, Consult and Profile
   // through the same live streams.
-  final FirestoreService _firestore = FirestoreService();
+  late final FirestoreService _firestore =
+      widget.firestoreService ?? FirestoreService();
 
   void _goToTab(int index) {
     setState(() {
@@ -84,6 +90,8 @@ class _AppShellState extends State<AppShell> {
 /// on the sign in screen, and the tab shell still needs a
 /// signed in user. Set showSplash false in tests to skip the
 /// splash screen. Pass authService in tests to fake the stream.
+/// Pass firestoreService in tests to fake Firestore, so the tab
+/// shell never touches real Firebase while it is pumped.
 /// Pass onboardingSeen in tests to skip the SharedPreferences
 /// read.
 class DharmGuruApp extends StatefulWidget {
@@ -93,6 +101,7 @@ class DharmGuruApp extends StatefulWidget {
     this.firebaseError,
     this.showSplash = true,
     this.authService,
+    this.firestoreService,
     this.onboardingSeen,
   });
 
@@ -103,6 +112,7 @@ class DharmGuruApp extends StatefulWidget {
   final String? firebaseError;
   final bool showSplash;
   final AuthService? authService;
+  final FirestoreService? firestoreService;
 
   /// First launch flag. Null in production, where it is read
   /// from SharedPreferences. Tests pass it in directly.
@@ -196,7 +206,9 @@ class _DharmGuruAppState extends State<DharmGuruApp> {
         if (snapshot.data == false) {
           return _app(home: AuthScreen(authService: _auth));
         }
-        return _app(home: const AppShell());
+        return _app(
+          home: AppShell(firestoreService: widget.firestoreService),
+        );
       },
     );
   }

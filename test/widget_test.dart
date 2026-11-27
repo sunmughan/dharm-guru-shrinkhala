@@ -57,6 +57,7 @@ void main() {
         showSplash: false,
         firebaseReady: true,
         authService: _FakeAuthService(signedInValue: true),
+        firestoreService: _FakeFirestore(),
         onboardingSeen: false,
       ),
     );
