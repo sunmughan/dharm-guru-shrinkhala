@@ -354,7 +354,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Guru Dev'), findsOneWidget);
     expect(find.text('New Guru'), findsOneWidget);
+    // Approve lives in the detail dialog, not in the list row.
+    await tester.tap(find.text('View').last);
+    await tester.pumpAndSettle();
     expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('New Guru'), findsWidgets);
   });
 
   testWidgets('Admin daily content shows empty states with no docs',

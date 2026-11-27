@@ -659,7 +659,7 @@ class AdminDashboardScreen extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: AppSpacing.md,
               crossAxisSpacing: AppSpacing.md,
-              childAspectRatio: 1.6,
+              childAspectRatio: 1.2,
               children: <Widget>[
                 _CountStat(
                   label: 'Users',
@@ -946,31 +946,34 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        Row(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Expanded(
-              child: TextField(
-                onChanged: (String value) =>
-                    setState(() => _query = value.toLowerCase()),
-                decoration: const InputDecoration(
-                  hintText: 'Search by name',
-                  border: OutlineInputBorder(),
-                ),
+            TextField(
+              onChanged: (String value) =>
+                  setState(() => _query = value.toLowerCase()),
+              decoration: const InputDecoration(
+                hintText: 'Search by name',
+                border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(width: AppSpacing.md),
-            SegmentedButton<String>(
-              segments: const <ButtonSegment<String>>[
-                ButtonSegment<String>(value: 'All', label: Text('All')),
-                ButtonSegment<String>(value: 'Online', label: Text('Online')),
-                ButtonSegment<String>(
-                    value: 'Offline', label: Text('Offline')),
-                ButtonSegment<String>(
-                    value: 'waiting', label: Text('Waiting approval')),
-              ],
-              selected: <String>{_filter},
-              onSelectionChanged: (Set<String> value) =>
-                  setState(() => _filter = value.first),
+            const SizedBox(height: AppSpacing.md),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SegmentedButton<String>(
+                segments: const <ButtonSegment<String>>[
+                  ButtonSegment<String>(value: 'All', label: Text('All')),
+                  ButtonSegment<String>(
+                      value: 'Online', label: Text('Online')),
+                  ButtonSegment<String>(
+                      value: 'Offline', label: Text('Offline')),
+                  ButtonSegment<String>(
+                      value: 'waiting', label: Text('Waiting approval')),
+                ],
+                selected: <String>{_filter},
+                onSelectionChanged: (Set<String> value) =>
+                    setState(() => _filter = value.first),
+              ),
             ),
           ],
         ),
@@ -1387,7 +1390,7 @@ class _HoroscopeGrid extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: AppSpacing.md,
               crossAxisSpacing: AppSpacing.md,
-              childAspectRatio: 1.4,
+              childAspectRatio: 1.0,
               children: kRashis.map((String rashi) {
                 final Map<String, dynamic>? doc = byRashi[rashi];
                 final String status = doc == null
@@ -2155,7 +2158,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   physics: const NeverScrollableScrollPhysics(),
                   mainAxisSpacing: AppSpacing.md,
                   crossAxisSpacing: AppSpacing.md,
-                  childAspectRatio: 1.6,
+                  childAspectRatio: 1.2,
                   children: <Widget>[
                     _StatCard(
                       label: 'Daily users',
