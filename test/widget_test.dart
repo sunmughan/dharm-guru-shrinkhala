@@ -784,6 +784,13 @@ void main() {
 
   testWidgets('Profile form saves the entered details',
       (WidgetTester tester) async {
+    // The form is taller than the default test viewport, so
+    // make the surface tall enough that every field and the
+    // Save button are built at once, with no scrolling.
+    tester.view.physicalSize = const Size(800, 2200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final _FakeFirestore firestore = _FakeFirestore();
     await tester.pumpWidget(
       MaterialApp(
@@ -841,7 +848,13 @@ void main() {
     );
     expect(find.text('Link Google account'), findsOneWidget);
     expect(find.text('Change email'), findsOneWidget);
-    expect(find.text('Change password'), findsOneWidget);
+    // 'Change password' is both the section title and the
+    // button that submits the change.
+    expect(find.text('Change password'), findsNWidgets(2));
+    expect(
+      find.widgetWithText(ElevatedButton, 'Change password'),
+      findsOneWidget,
+    );
     expect(find.text('Current password'), findsWidgets);
   });
 
