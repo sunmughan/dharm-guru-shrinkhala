@@ -61,8 +61,11 @@ so the report reads the same on any reader.
 
 `flutter test` builds the report from the real birth 14
 March 1998 06:25 Jaipur and asserts the PDF header, the
-page count, the embedded font build, and the content with
-the standard font build. `flutter build web` and the APK
+page count, the embedded font build, and the content by
+decoding the UTF-16BE hex strings of the embedded font
+build. Standard Helvetica has no Unicode support and writes
+no readable text, so the report always builds with the
+embedded Roboto fonts. `flutter build web` and the APK
 and iOS jobs in CI prove the `printing` plugin compiles on
 web, Android and iOS. Real device download and print are
 still open: they need the phone proof step, like every

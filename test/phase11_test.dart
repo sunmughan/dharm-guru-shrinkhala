@@ -124,17 +124,43 @@ void main() {
   });
 
   group('Kundli PDF', () {
-    test('embedded font build is a real PDF with 2 or more pages', () async {
+    Future<Uint8List> realPdfBytes() async {
       final Uint8List regular =
           await File('assets/fonts/Roboto-Regular.ttf').readAsBytes();
       final Uint8List bold =
           await File('assets/fonts/Roboto-Bold.ttf').readAsBytes();
       final KundliPdfFonts fonts = KundliPdfFonts.fromBytes(regular, bold);
-      final Uint8List bytes = await KundliPdfBuilder.build(
+      return KundliPdfBuilder.build(
         realReport(),
         fonts: fonts,
         compress: false,
       );
+    }
+
+    /// Plain text of a PDF built with embedded TrueType fonts.
+    /// The text lives in the content streams as UTF-16BE hex
+    /// strings, so this decodes every hex string and joins
+    /// them. Standard Helvetica has no Unicode support and
+    /// writes no readable text, which is why the report always
+    /// builds with the embedded fonts.
+    String pdfText(Uint8List bytes) {
+      final String raw = latin1.decode(bytes);
+      final StringBuffer out = StringBuffer();
+      for (final RegExpMatch match
+          in RegExp(r'<([0-9A-Fa-f\s]+)>').allMatches(raw)) {
+        final String hex =
+            match.group(1)!.replaceAll(RegExp(r'\s'), '');
+        for (int i = 0; i + 4 <= hex.length; i += 4) {
+          out.writeCharCode(
+            int.parse(hex.substring(i, i + 4), radix: 16),
+          );
+        }
+      }
+      return out.toString();
+    }
+
+    test('embedded font build is a real PDF with 2 or more pages', () async {
+      final Uint8List bytes = await realPdfBytes();
       // ignore: avoid_print
       print('PDF bytes ${bytes.length}');
       expect(bytes.sublist(0, 4), <int>[0x25, 0x50, 0x44, 0x46]);
@@ -144,12 +170,9 @@ void main() {
       expect(pages, greaterThanOrEqualTo(2));
     });
 
-    test('standard font build carries the real content as text', () async {
-      final Uint8List bytes = await KundliPdfBuilder.build(
-        realReport(),
-        compress: false,
-      );
-      final String text = latin1.decode(bytes);
+    test('embedded font build carries the real content as text', () async {
+      final Uint8List bytes = await realPdfBytes();
+      final String text = pdfText(bytes);
       expect(text, contains('Test User'));
       expect(text, contains('Kumbha'));
       expect(text, contains('Report v1.0'));
