@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -348,7 +346,7 @@ class KundliPdfBuilder {
     pw.TextStyle bodyStyle,
     pw.TextStyle headStyle,
   ) {
-    return pw.Table.fromTextArray(
+    return pw.TableHelper.fromTextArray(
       headers: <String>['Planet', 'Rashi', 'Bhava', 'Degree', 'Lord'],
       data: data.kundli.planets
           .map(
