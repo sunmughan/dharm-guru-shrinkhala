@@ -85,6 +85,54 @@ jobs:
           AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt | head -n 1)
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-user-release.apk | grep "package: name='com.codeair.dharm_guru_shrinkhala'"
           "$AAPT" dump badging build/app/outputs/flutter-apk/app-admin-release.apk | grep "package: name='com.codeair.dharm_guru_shrinkhala.admin'"
+      - name: Verify Firebase classes survived shrinking
+        # Release 5 shipped a dex missing FirebaseApp and the
+        # FlutterFire plugin classes, so Firebase init failed on
+        # the phone. This gate fails the build if any required
+        # Firebase class is missing from either APK, or if any
+        # Crashlytics class is still present (the dependency was
+        # removed, so its classes must be gone).
+        run: |
+          python3 - <<'PYEOF'
+          import sys, zipfile
+          required = [
+              'Lcom/google/firebase/FirebaseApp;',
+              'Lcom/google/firebase/FirebaseOptions;',
+              'Lcom/google/firebase/components/ComponentRuntime;',
+              'Lcom/google/firebase/installations/FirebaseInstallations;',
+              'Lcom/google/firebase/remoteconfig/FirebaseRemoteConfig;',
+              'Lcom/google/firebase/auth/FirebaseAuth;',
+              'Lcom/google/firebase/firestore/FirebaseFirestore;',
+              'Lcom/google/firebase/messaging/FirebaseMessaging;',
+              'Lio/flutter/plugins/firebase/core/FlutterFirebaseCorePlugin;',
+          ]
+          forbidden = [
+              'Lcom/google/firebase/crashlytics/FirebaseCrashlytics;',
+              'Lio/flutter/plugins/firebase/crashlytics/FlutterFirebaseCrashlyticsPlugin;',
+          ]
+          apks = [
+              'build/app/outputs/flutter-apk/app-user-release.apk',
+              'build/app/outputs/flutter-apk/app-admin-release.apk',
+          ]
+          failed = False
+          for apk in apks:
+              dex = b''
+              with zipfile.ZipFile(apk) as z:
+                  for name in z.namelist():
+                      if name.startswith('classes') and name.endswith('.dex'):
+                          dex += z.read(name)
+              for desc in required:
+                  if desc.encode() not in dex:
+                      print(f'MISSING in {apk}: {desc}')
+                      failed = True
+              for desc in forbidden:
+                  if desc.encode() in dex:
+                      print(f'UNEXPECTED in {apk}: {desc}')
+                      failed = True
+          if failed:
+              sys.exit(1)
+          print('Firebase dex check passed for both APKs.')
+          PYEOF
       - name: Upload user APK
         uses: actions/upload-artifact@v4
         with:

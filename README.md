@@ -33,7 +33,7 @@ No real horoscope prediction is shown. No astrologer names are used. Planet rows
 * `lib/core/navigation/app_shell.dart` bottom tab shell and root widget
 * `lib/models/kundli.dart` birth details and sample planet data
 * `lib/models/panchang.dart` panchang and horoscope models
-* `lib/services/firebase_service.dart` Firebase bootstrap, Crashlytics, Remote Config, Messaging
+* `lib/services/firebase_service.dart` Firebase bootstrap, Remote Config, Messaging
 * `lib/services/auth_service.dart` phone sign in and Google sign in
 * `lib/services/firestore_service.dart` Firestore collections
 * `lib/services/notification_service.dart` Cloud Messaging setup
@@ -56,7 +56,7 @@ Requirements: Flutter SDK 3.22 or later, Dart 3.4 or later, a Firebase project. 
 
 See FIREBASE-SETUP.md for the full console steps.
 
-Services to enable: Auth with phone and Google, Firestore, Cloud Messaging, Remote Config, Crashlytics, Analytics.
+Services to enable: Auth with phone and Google, Firestore, Cloud Messaging, Remote Config, Analytics. Crashlytics is removed, see FIREBASE-SETUP.md section 8.
 
 Do not invent API keys or config values. Run `flutterfire configure` and use the generated values in `lib/firebase_options.dart`. The placeholder file in this repo is committed on purpose so the structure is visible; replace its placeholder values only with generated values.
 

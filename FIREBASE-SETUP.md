@@ -84,12 +84,15 @@ There are two iOS apps in this project, one per flavor:
   * `live_consult_enabled`, boolean, default false
 * Publish the config. The app fetches and activates it on start, see `lib/services/firebase_service.dart`
 
-## 8. Enable Crashlytics
+## 8. Crashlytics is removed, do not re-enable it
 
-* Open Crashlytics in the Firebase console
-* Follow the console prompt to enable it for the Android and iOS apps
-* The app records fatal Flutter errors to Crashlytics on start, see `lib/services/firebase_service.dart`
-* A test crash is a later phase task, not part of Phase 1
+* Crashlytics was removed from the app in release 6 (0.1.0+4).
+  Its component broke Firebase init on the phone: the release
+  build shipped without the Crashlytics component and init threw
+  a missing component error, so the app showed the setup screen.
+* Do not add the firebase_crashlytics dependency back and do not
+  enable Crashlytics in the console. Fatal Flutter errors are
+  logged by the app instead of being sent to Crashlytics.
 
 ## 9. Confirm Analytics
 
@@ -161,5 +164,5 @@ Publish) after any change to that file.
 * Remote Config parameters published
 * `admins/{your uid}` document created with role `owner`
 * `firebase/firestore.rules` published in the console
-* Crashlytics enabled
+* Crashlytics removed from the app, do not re-enable it (section 8)
 * `lib/firebase_options.dart` holds generated values only

@@ -57,6 +57,20 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // Release shrinking (R8) is on. The keep rules in
+            // proguard-rules.pro protect the Firebase and
+            // FlutterFire implementation classes: without them R8
+            // removed FirebaseApp, FirebaseInstallations,
+            // FirebaseRemoteConfig and the FlutterFire plugin
+            // classes from the dex and Firebase init failed on the
+            // phone. Resource shrinking stays off so the Firebase
+            // config string resources are never stripped.
+            isMinifyEnabled = true
+            isShrinkResources = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
