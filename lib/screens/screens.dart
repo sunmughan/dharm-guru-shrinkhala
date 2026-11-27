@@ -10,6 +10,9 @@ import '../models/kundli.dart';
 import '../models/panchang.dart';
 import '../models/remedies.dart';
 import '../services/astro.dart';
+import '../services/divisional.dart';
+import '../services/horoscope_periods.dart';
+import '../services/notification_prefs.dart';
 import '../services/auth_service.dart';
 import '../services/chat_service.dart';
 import '../services/firebase_service.dart';
@@ -24,6 +27,9 @@ import '../widgets/brand_mark.dart';
 import '../widgets/kundli_chart.dart';
 import '../widgets/planet_details.dart';
 import 'profile_form_screen.dart';
+import 'user_modules.dart';
+import '../services/birth_profile.dart';
+import '../services/consult_booking.dart';
 
 /// Splash screen. Logo, wordmark and tagline, with a calm
 /// entrance: the logo fades and settles in, a gold rays ring
@@ -586,7 +592,10 @@ class HomeScreen extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => HoroscopeScreen(firestore: firestore),
+                  builder: (_) => HoroscopeScreen(
+                  firestore: firestore,
+                  authService: authService,
+                ),
                 ),
               );
             },
@@ -636,6 +645,66 @@ class HomeScreen extends StatelessWidget {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => RemediesScreen(
+                    firestore: firestore,
+                    authService: authService,
+                  ),
+                ),
+              );
+            },
+          ),
+          _HomeCard(
+            title: 'Numerology',
+            body: 'Life Path and Destiny numbers from your name and birth date.',
+            icon: Icons.calculate,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => NumerologyScreen(
+                    firestore: firestore,
+                    authService: authService,
+                  ),
+                ),
+              );
+            },
+          ),
+          _HomeCard(
+            title: 'Dasha and Gochar',
+            body: 'Current dasha, transits today and Sade Sati.',
+            icon: Icons.timeline,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => GocharScreen(
+                    firestore: firestore,
+                    authService: authService,
+                  ),
+                ),
+              );
+            },
+          ),
+          _HomeCard(
+            title: 'Reports',
+            body: 'Kundli and panchang reports you saved.',
+            icon: Icons.description,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ReportsScreen(
+                    firestore: firestore,
+                    authService: authService,
+                  ),
+                ),
+              );
+            },
+          ),
+          _HomeCard(
+            title: 'Birth Profiles',
+            body: 'Birth details for family members.',
+            icon: Icons.group,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => BirthProfilesScreen(
                     firestore: firestore,
                     authService: authService,
                   ),
@@ -1071,7 +1140,7 @@ class KundliChartScreen extends StatefulWidget {
 }
 
 class _KundliChartScreenState extends State<KundliChartScreen> {
-  bool _showMoonChart = false;
+  int _chartMode = 0;
 
   /// The real kundli for the entered birth details. Null
   /// only when the date or time text does not parse, which
@@ -1136,10 +1205,10 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
             ),
           ] else ...<Widget>[
             _ChartSwitcher(
-              showMoon: _showMoonChart,
-              onChanged: (bool showMoon) {
+              mode: _chartMode,
+              onChanged: (int mode) {
                 setState(() {
-                  _showMoonChart = showMoon;
+                  _chartMode = mode;
                 });
               },
             ),
@@ -1154,7 +1223,23 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
               ),
             ],
             const SizedBox(height: AppSpacing.md),
-            if (_showMoonChart) ...<Widget>[
+            if (_chartMode == 2) ...<Widget>[
+              KundliChart(
+                birth: widget.birth,
+                planets: Divisional.navamsaChart(kundli).planets,
+                lagna: Divisional.navamsaChart(kundli).lagna,
+              ),
+              const SizedBox(height: AppSpacing.space3),
+              _ChartLegend(
+                lagna: Divisional.navamsaChart(kundli).lagna,
+                rashi: Divisional.navamsaChart(kundli).moonRashi,
+                nakshatra: kundli.moonNakshatra,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _PlanetSummaryList(
+                planets: Divisional.navamsaChart(kundli).planets,
+              ),
+            ] else if (_chartMode == 1) ...<Widget>[
               KundliChart(
                 birth: widget.birth,
                 planets: kundli.moonChart.planets,
@@ -1204,18 +1289,18 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
   }
 }
 
-/// Segmented control for Lagna Chart and Moon Chart, per the
-/// design system section 10.3. Pill container in surface2,
-/// selected segment in surface with a line2 border and saffron
-/// text, unselected segment in ink2 text. Height 40.
+/// Segmented control for Lagna Chart, Moon Chart and
+/// Navamsa (D9). D9 is computed from the real longitudes by
+/// lib/services/divisional.dart. The other divisional charts
+/// are not computed yet and are not offered here.
 class _ChartSwitcher extends StatelessWidget {
   const _ChartSwitcher({
-    required this.showMoon,
+    required this.mode,
     required this.onChanged,
   });
 
-  final bool showMoon;
-  final void Function(bool showMoon) onChanged;
+  final int mode;
+  final void Function(int mode) onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1234,17 +1319,25 @@ class _ChartSwitcher extends StatelessWidget {
           Expanded(
             child: _switcherSegment(
               context,
-              label: 'Lagna Chart',
-              selected: !showMoon,
-              onTap: () => onChanged(false),
+              label: 'Lagna',
+              selected: mode == 0,
+              onTap: () => onChanged(0),
             ),
           ),
           Expanded(
             child: _switcherSegment(
               context,
-              label: 'Moon Chart',
-              selected: showMoon,
-              onTap: () => onChanged(true),
+              label: 'Moon',
+              selected: mode == 1,
+              onTap: () => onChanged(1),
+            ),
+          ),
+          Expanded(
+            child: _switcherSegment(
+              context,
+              label: 'Navamsa',
+              selected: mode == 2,
+              onTap: () => onChanged(2),
             ),
           ),
         ],
@@ -1440,18 +1533,60 @@ class PlanetDetailsScreen extends StatelessWidget {
 /// horoscope from the admin panel. When nothing is published
 /// yet, or the read fails, it says so honestly instead of
 /// showing a sample prediction as if it were real.
-class HoroscopeScreen extends StatelessWidget {
-  const HoroscopeScreen({super.key, this.firestore});
+/// Daily horoscope is published content only. Weekly,
+/// monthly and yearly views are rule based from the users
+/// own Moon rashi and current dasha lord, and they say so.
+class HoroscopeScreen extends StatefulWidget {
+  const HoroscopeScreen({super.key, this.firestore, this.authService});
 
   final FirestoreService? firestore;
+  final AuthService? authService;
+
+  @override
+  State<HoroscopeScreen> createState() => _HoroscopeScreenState();
+}
+
+class _HoroscopeScreenState extends State<HoroscopeScreen> {
+  String _period = 'daily';
+  Future<Map<String, dynamic>?>? _profileFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    final String? uid = widget.authService?.currentUserId;
+    _profileFuture = widget.firestore != null && uid != null
+        ? widget.firestore!.getUserProfile(uid)
+        : Future<Map<String, dynamic>?>.value(null);
+  }
+
+  String _periodText(AppUserProfile? profile) {
+    if (_period == 'daily') return '';
+    if (profile == null || !profile.isComplete) {
+      return 'Complete your profile first, so the weekly, monthly and yearly views can use your real birth details.';
+    }
+    final DateTime? birth = parseBirthDateTime(
+      AppUserProfile.displayDate(profile.dateOfBirth!),
+      profile.birthTimeUnknown || profile.timeOfBirth == null
+          ? '12:00 PM'
+          : AppUserProfile.displayTime(profile.timeOfBirth!),
+    );
+    if (birth == null) return 'Your birth details could not be read.';
+    return HoroscopePeriods.forBirth(
+      period: _period,
+      birthLocal: birth,
+      placeText: profile.placeLine,
+      asOf: DateTime.now(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final FirestoreService? firestore = widget.firestore;
     if (firestore == null) {
       return const _HoroscopeNotReady();
     }
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: firestore!.watchDocs('horoscopes'),
+      stream: firestore.watchDocs('horoscopes'),
       builder: (
         BuildContext context,
         AsyncSnapshot<List<Map<String, dynamic>>> snap,
@@ -1473,19 +1608,31 @@ class HoroscopeScreen extends StatelessWidget {
         published.sort((Map<String, dynamic> a, Map<String, dynamic> b) =>
             str(b, 'date').compareTo(str(a, 'date')));
         final Map<String, dynamic> doc = published.first;
-        return _HoroscopeView(
-          entry: HoroscopeEntry(
-            rashi: str(doc, 'rashi'),
-            date: str(doc, 'date'),
-            summary: str(doc, 'summary'),
-          ),
-          career: str(doc, 'career'),
-          money: str(doc, 'money'),
-          health: str(doc, 'health'),
-          love: str(doc, 'love'),
-          luckyNumber: str(doc, 'luckyNumber'),
-          luckyColour: str(doc, 'luckyColour'),
-          isLive: true,
+        return FutureBuilder<Map<String, dynamic>?>(
+          future: _profileFuture,
+          builder: (BuildContext context, AsyncSnapshot<Map<String, dynamic>?> psnap) {
+            final AppUserProfile? profile =
+                psnap.data == null ? null : AppUserProfile.fromMap(psnap.data!);
+            return _HoroscopeView(
+              entry: HoroscopeEntry(
+                rashi: str(doc, 'rashi'),
+                date: str(doc, 'date'),
+                summary: str(doc, 'summary'),
+              ),
+              career: str(doc, 'career'),
+              money: str(doc, 'money'),
+              health: str(doc, 'health'),
+              love: str(doc, 'love'),
+              luckyNumber: str(doc, 'luckyNumber'),
+              luckyColour: str(doc, 'luckyColour'),
+              isLive: true,
+              period: _period,
+              onPeriodChanged: (String period) {
+                setState(() => _period = period);
+              },
+              periodText: _periodText(profile),
+            );
+          },
         );
       },
     );
@@ -1521,6 +1668,9 @@ class _HoroscopeView extends StatelessWidget {
     this.luckyNumber = '',
     this.luckyColour = '',
     this.isLive = false,
+    this.period = 'daily',
+    this.onPeriodChanged,
+    this.periodText = '',
   });
 
   final HoroscopeEntry entry;
@@ -1531,6 +1681,9 @@ class _HoroscopeView extends StatelessWidget {
   final String luckyNumber;
   final String luckyColour;
   final bool isLive;
+  final String period;
+  final void Function(String period)? onPeriodChanged;
+  final String periodText;
 
   @override
   Widget build(BuildContext context) {
@@ -1542,13 +1695,40 @@ class _HoroscopeView extends StatelessWidget {
           Text('Rashi: ${entry.rashi}', style: AppTextStyles.themed(context, AppTextStyles.title)),
           Text(entry.date, style: AppTextStyles.themed(context, AppTextStyles.bodySmall)),
           const SizedBox(height: AppSpacing.md),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Text(entry.summary, style: AppTextStyles.themed(context, AppTextStyles.body)),
-            ),
+          Wrap(
+            spacing: AppSpacing.sm,
+            children: <String>['daily', 'weekly', 'monthly', 'yearly']
+                .map(
+                  (String value) => ChoiceChip(
+                    label: Text(value),
+                    selected: period == value,
+                    onSelected: (_) => onPeriodChanged?.call(value),
+                  ),
+                )
+                .toList(),
           ),
-          if (isLive) ...<Widget>[
+          const SizedBox(height: AppSpacing.md),
+          if (period != 'daily') ...<Widget>[
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Text(
+                  periodText,
+                  style: AppTextStyles.themed(context, AppTextStyles.body),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+          if (period == 'daily') ...<Widget>[] else const SizedBox.shrink(),
+          if (period == 'daily')
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Text(entry.summary, style: AppTextStyles.themed(context, AppTextStyles.body)),
+              ),
+            ),
+          if (isLive && period == 'daily') ...<Widget>[
             const SizedBox(height: AppSpacing.md),
             _HoroscopeArea(label: 'Career', value: career),
             _HoroscopeArea(label: 'Money', value: money),
@@ -1758,6 +1938,14 @@ String _formatLongDate(DateTime date) {
   return '${date.day} ${months[date.month - 1]} ${date.year}';
 }
 
+/// Festival days in the calendar month of [date], computed
+/// by the Panchang engine day by day.
+List<FestivalDay> _monthFestivals(DateTime date) {
+  final DateTime first = DateTime(date.year, date.month, 1);
+  final int days = DateTime(date.year, date.month + 1, 0).day;
+  return festivalDays(from: first, days: days);
+}
+
 class _PanchangBody extends StatelessWidget {
   const _PanchangBody({
     required this.panchang,
@@ -1868,6 +2056,21 @@ class _PanchangBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.space3),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Festivals this month',
+            style: AppTextStyles.themed(context, AppTextStyles.title),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ..._monthFestivals(date).map(
+            (FestivalDay f) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Text(
+                '${formatDay(f.date)}: ${f.tithi}, ${f.observance}.',
+                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+              ),
+            ),
+          ),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.space3),
@@ -2078,6 +2281,30 @@ class _MatchingScreenState extends State<MatchingScreen> {
       _name2Shown =
           _name2.text.trim().isEmpty ? 'Second person' : _name2.text.trim();
     });
+  }
+
+  Future<void> _saveResult() async {
+    final MatchingResult? result = _result;
+    final FirestoreService? firestore = widget.firestore;
+    final String? uid = widget.authService?.currentUserId;
+    if (result == null || firestore == null || uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to save this result.')),
+      );
+      return;
+    }
+    await firestore.addDoc(savedResultsPath(uid), <String, Object?>{
+      'kind': 'matching',
+      'firstName': _name1Shown,
+      'secondName': _name2Shown,
+      'total': result.total,
+      'verdict': result.verdict,
+      'createdAt': DateTime.now().toIso8601String(),
+    });
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Matching result saved.')),
+    );
   }
 
   void _showFullReport() {
@@ -2314,6 +2541,14 @@ class _MatchingScreenState extends State<MatchingScreen> {
                 child: const Text('View Full Milan Report'),
               ),
             ),
+            const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _saveResult,
+                child: const Text('Save matching result'),
+              ),
+            ),
           ],
         ],
       ),
@@ -2504,6 +2739,27 @@ class _RemediesScreenState extends State<RemediesScreen> {
     );
     if (!mounted) return;
     setState(() => _doneToday = done);
+  }
+
+  Future<void> _saveRemedies() async {
+    final List<Remedy>? remedies = _remedies;
+    final FirestoreService? firestore = widget.firestore;
+    final String? uid = widget.authService?.currentUserId;
+    if (remedies == null || firestore == null || uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to save remedies.')),
+      );
+      return;
+    }
+    await firestore.addDoc(savedResultsPath(uid), <String, Object?>{
+      'kind': 'remedies',
+      'titles': remedies.map((Remedy r) => r.title).toList(),
+      'createdAt': DateTime.now().toIso8601String(),
+    });
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Remedies saved.')),
+    );
   }
 
   void _openConsult() {
@@ -2706,6 +2962,16 @@ class _RemediesScreenState extends State<RemediesScreen> {
               },
             ),
             const SizedBox(height: AppSpacing.lg),
+          ],
+          if (_remedies != null) ...<Widget>[
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _saveRemedies,
+                child: const Text('Save these remedies'),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
           ],
           SizedBox(
             width: double.infinity,
@@ -3150,6 +3416,47 @@ class ConsultScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _bookAstrologer(
+    BuildContext context,
+    Map<String, dynamic> doc,
+  ) async {
+    final String? uid = authService?.currentUserId;
+    if (uid == null || firestore == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to book.')),
+      );
+      return;
+    }
+    final Map<String, String>? result =
+        await showDialog<Map<String, String>>(
+      context: context,
+      builder: (BuildContext context) => BookConsultDialog(
+        astrologerId: str(doc, 'id'),
+        astrologerName: str(doc, 'name'),
+      ),
+    );
+    if (result == null || !context.mounted) return;
+    await firestore!.addDoc(
+      'bookings',
+      ConsultBooking.payload(
+        userId: uid,
+        astrologerId: str(doc, 'id'),
+        astrologerName: str(doc, 'name'),
+        mode: result['mode'] ?? 'chat',
+        date: result['date'] ?? '',
+        time: result['time'] ?? '',
+        note: result['note'],
+      ),
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Booking requested. The admin confirms it.'),
+        ),
+      );
+    }
+  }
+
   Future<void> _callAstrologer(
     BuildContext context,
     Map<String, dynamic> doc,
@@ -3214,82 +3521,179 @@ class ConsultScreen extends StatelessWidget {
               style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
             )
           else
-            StreamBuilder<List<Map<String, dynamic>>>(
-              stream: firestore!.watchDocs('astrologers'),
-              builder: (
-                BuildContext context,
-                AsyncSnapshot<List<Map<String, dynamic>>> snap,
-              ) {
-                if (snap.hasError) {
-                  return Text(
-                    'Astrologers could not be loaded.',
-                    style: AppTextStyles.themed(context, AppTextStyles.body),
-                  );
-                }
-                if (!snap.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final List<Map<String, dynamic>> approved = snap.data!
-                    .where((Map<String, dynamic> d) =>
-                        str(d, 'status') == 'approved')
-                    .toList();
-                if (approved.isEmpty) {
-                  return Text(
-                    'No astrologers yet. Astrologers appear here once the admin adds and approves them.',
-                    style:
-                        AppTextStyles.themed(context, AppTextStyles.bodySmall),
-                  );
-                }
-                return Column(
-                  children: approved
-                      .map(
-                        (Map<String, dynamic> doc) => Card(
-                          child: ListTile(
-                            leading: const Icon(
-                              Icons.person,
-                              color: AppColors.deepSaffron,
-                            ),
-                            title: Text(
-                              str(doc, 'name'),
-                              style: AppTextStyles.themed(
-                                context,
-                                AppTextStyles.subtitle,
-                              ),
-                            ),
-                            subtitle: Text(
-                              str(doc, 'languages'),
-                              style: AppTextStyles.themed(
-                                context,
-                                AppTextStyles.bodySmall,
-                              ),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                if (doc['chatAvailable'] == true)
-                                  IconButton(
-                                    icon: const Icon(Icons.chat),
-                                    onPressed: () =>
-                                        _openAstrologerChat(context, doc),
-                                  ),
-                                if (doc['callAvailable'] == true)
-                                  IconButton(
-                                    icon: const Icon(Icons.call),
-                                    onPressed: () =>
-                                        _callAstrologer(context, doc),
-                                  ),
-                              ],
-                            ),
-                            onTap: () => _openAstrologerChat(context, doc),
-                          ),
-                        ),
-                      )
-                      .toList(),
+            _AstrologerList(
+              firestore: firestore!,
+              onChat: (Map<String, dynamic> doc) =>
+                  _openAstrologerChat(context, doc),
+              onCall: (Map<String, dynamic> doc) =>
+                  _callAstrologer(context, doc),
+              onBook: (Map<String, dynamic> doc) =>
+                  _bookAstrologer(context, doc),
+            ),
+          const SizedBox(height: AppSpacing.md),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.event, color: AppColors.deepSaffron),
+              title: Text(
+                'My Bookings',
+                style: AppTextStyles.themed(context, AppTextStyles.subtitle),
+              ),
+              subtitle: Text(
+                'Bookings you requested, and reviews.',
+                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => MyBookingsScreen(
+                      firestore: firestore,
+                      authService: authService,
+                    ),
+                  ),
                 );
               },
             ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// Astrologer directory with search and a verified only
+/// filter. Only approved astrologers from Firestore are
+/// shown. No astrologer is invented: an empty list says so.
+/// Reviews for an astrologer are shown from the reviews
+/// collection when any exist.
+class _AstrologerList extends StatefulWidget {
+  const _AstrologerList({
+    required this.firestore,
+    required this.onChat,
+    required this.onCall,
+    required this.onBook,
+  });
+
+  final FirestoreService firestore;
+  final void Function(Map<String, dynamic> doc) onChat;
+  final void Function(Map<String, dynamic> doc) onCall;
+  final void Function(Map<String, dynamic> doc) onBook;
+
+  @override
+  State<_AstrologerList> createState() => _AstrologerListState();
+}
+
+class _AstrologerListState extends State<_AstrologerList> {
+  final TextEditingController _search = TextEditingController();
+  bool _verifiedOnly = false;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        TextField(
+          controller: _search,
+          decoration: const InputDecoration(
+            labelText: 'Search astrologers',
+            hintText: 'Name or language',
+            prefixIcon: Icon(Icons.search),
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: <Widget>[
+            ChoiceChip(
+              label: const Text('All'),
+              selected: !_verifiedOnly,
+              onSelected: (_) => setState(() => _verifiedOnly = false),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            ChoiceChip(
+              label: const Text('Verified only'),
+              selected: _verifiedOnly,
+              onSelected: (_) => setState(() => _verifiedOnly = true),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        StreamBuilder<List<Map<String, dynamic>>>(
+          stream: widget.firestore.watchDocs('astrologers'),
+          builder: (BuildContext context, AsyncSnapshot<List<Map<String, dynamic>>> snap) {
+            if (snap.hasError) {
+              return Text(
+                'Astrologers could not be loaded.',
+                style: AppTextStyles.themed(context, AppTextStyles.body),
+              );
+            }
+            if (!snap.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final String query = _search.text.trim().toLowerCase();
+            final List<Map<String, dynamic>> approved = snap.data!
+                .where((Map<String, dynamic> d) => str(d, 'status') == 'approved')
+                .where((Map<String, dynamic> d) =>
+                    !_verifiedOnly || d['verified'] == true)
+                .where((Map<String, dynamic> d) {
+                  if (query.isEmpty) return true;
+                  final String hay =
+                      '${str(d, 'name')} ${str(d, 'languages')}'.toLowerCase();
+                  return hay.contains(query);
+                })
+                .toList();
+            if (approved.isEmpty) {
+              return Text(
+                'No astrologers yet. Astrologers appear here once the admin adds and approves them.',
+                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+              );
+            }
+            return Column(
+              children: approved.map((Map<String, dynamic> doc) {
+                final bool verified = doc['verified'] == true;
+                return Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.person, color: AppColors.deepSaffron),
+                    title: Text(
+                      str(doc, 'name'),
+                      style: AppTextStyles.themed(context, AppTextStyles.subtitle),
+                    ),
+                    subtitle: Text(
+                      '${str(doc, 'languages')}${verified ? '  •  Verified astrologer' : ''}${str(doc, 'speciality').isEmpty ? '' : '  •  ${str(doc, 'speciality')}'}',
+                      style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        if (doc['chatAvailable'] == true)
+                          IconButton(
+                            icon: const Icon(Icons.chat),
+                            onPressed: () => widget.onChat(doc),
+                          ),
+                        if (doc['callAvailable'] == true)
+                          IconButton(
+                            icon: const Icon(Icons.call),
+                            onPressed: () => widget.onCall(doc),
+                          ),
+                        IconButton(
+                          icon: const Icon(Icons.event),
+                          onPressed: () => widget.onBook(doc),
+                        ),
+                      ],
+                    ),
+                    onTap: () => widget.onChat(doc),
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
     );
   }
 }
@@ -3781,6 +4185,76 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
             ),
           ),
+          Card(
+            child: ListTile(
+              title: Text('Birth Profiles', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
+              subtitle: Text('Birth details for family members.', style: AppTextStyles.themed(context, AppTextStyles.bodySmall)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => BirthProfilesScreen(firestore: _firestore, authService: _auth),
+                  ),
+                );
+              },
+            ),
+          ),
+          Card(
+            child: ListTile(
+              title: Text('My Bookings', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
+              subtitle: Text('Consult bookings and reviews.', style: AppTextStyles.themed(context, AppTextStyles.bodySmall)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => MyBookingsScreen(firestore: _firestore, authService: _auth),
+                  ),
+                );
+              },
+            ),
+          ),
+          Card(
+            child: ListTile(
+              title: Text('Reports', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
+              subtitle: Text('Saved kundli and panchang reports.', style: AppTextStyles.themed(context, AppTextStyles.bodySmall)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => ReportsScreen(firestore: _firestore, authService: _auth),
+                  ),
+                );
+              },
+            ),
+          ),
+          Card(
+            child: ListTile(
+              title: Text('Subscription', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
+              subtitle: Text('Plan, entitlement and payment history.', style: AppTextStyles.themed(context, AppTextStyles.bodySmall)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => SubscriptionScreen(firestore: _firestore),
+                  ),
+                );
+              },
+            ),
+          ),
+          Card(
+            child: ListTile(
+              title: Text('Settings', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
+              subtitle: Text('Language, notifications, account and data.', style: AppTextStyles.themed(context, AppTextStyles.bodySmall)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => SettingsScreen(firestore: _firestore, authService: _auth),
+                  ),
+                );
+              },
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
           ElevatedButton(
             // Profile only opens signed in, so this is sign out.
@@ -3797,9 +4271,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 }
 
 /// Notifications inbox. Shows the notifications the admin sent
-/// or scheduled, in real time. Tapping one opens the screen the
-/// admin chose for it.
-class NotificationsScreen extends StatelessWidget {
+/// or scheduled, in real time. Tapping one marks it read and
+/// opens the screen the admin chose for it. Read state lives
+/// on the phone, so unread counts are real for this user.
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({
     super.key,
     required this.firestore,
@@ -3810,89 +4285,150 @@ class NotificationsScreen extends StatelessWidget {
   final AuthService? authService;
 
   @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  Set<String> _read = <String>{};
+  bool _unreadOnly = false;
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationPrefs.readIds().then((Set<String> ids) {
+      if (!mounted) return;
+      setState(() => _read = ids);
+    });
+  }
+
+  Future<void> _markRead(String id) async {
+    await NotificationPrefs.markRead(id);
+    if (!mounted) return;
+    setState(() => _read = <String>{..._read, id});
+  }
+
+  void _openDoc(BuildContext context, Map<String, dynamic> doc) {
+    final String id = str(doc, 'id');
+    if (id.isNotEmpty) _markRead(id);
+    final String open = str(doc, 'openScreen');
+    final Widget? target = open == 'Daily Horoscope'
+        ? HoroscopeScreen(firestore: widget.firestore)
+        : open == 'Panchang'
+            ? PanchangScreen(firestore: widget.firestore)
+            : open == 'Consult'
+                ? ConsultScreen(
+                    firestore: widget.firestore,
+                    authService: widget.authService,
+                  )
+                : null;
+    if (target != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => target),
+      );
+    } else if (open == 'Home') {
+      Navigator.of(context).popUntil((Route<dynamic> route) => route.isFirst);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
+      appBar: AppBar(
+        title: const Text('Notifications'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () async {
+              await NotificationPrefs.markAllRead(_allIds);
+              if (!mounted) return;
+              setState(() => _read = <String>{..._read, ..._allIds});
+            },
+            child: const Text('Mark all read'),
+          ),
+        ],
+      ),
       body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: firestore.watchDocs('notifications'),
-        builder: (
-          BuildContext context,
-          AsyncSnapshot<List<Map<String, dynamic>>> snap,
-        ) {
+        stream: widget.firestore.watchDocs('notifications'),
+        builder: (BuildContext context, AsyncSnapshot<List<Map<String, dynamic>>> snap) {
           if (snap.hasError) {
-            return const Center(
-              child: Text('Notifications could not be loaded.'),
-            );
+            return const Center(child: Text('Notifications could not be loaded.'));
           }
           if (!snap.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
           final List<Map<String, dynamic>> visible = snap.data!
               .where((Map<String, dynamic> d) =>
-                  str(d, 'status') == 'sent' ||
-                  str(d, 'status') == 'scheduled')
+                  str(d, 'status') == 'sent' || str(d, 'status') == 'scheduled')
               .toList();
+          _allIds = visible.map((Map<String, dynamic> d) => str(d, 'id')).toList();
+          final List<Map<String, dynamic>> shown = _unreadOnly
+              ? visible.where((Map<String, dynamic> d) => !_read.contains(str(d, 'id'))).toList()
+              : visible;
+          final int unread = NotificationPrefs.unreadIds(
+            visible.map((Map<String, dynamic> d) => str(d, 'id')).toList(),
+            _read,
+          ).length;
           if (visible.isEmpty) {
-            return const Center(
-              child: Text('No notifications yet.'),
-            );
+            return const Center(child: Text('No notifications yet.'));
           }
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.screenPadding),
-            children: visible
-                .map(
-                  (Map<String, dynamic> doc) => Card(
-                    child: ListTile(
-                      leading: const Icon(
-                        Icons.notifications,
-                        color: AppColors.deepSaffron,
-                      ),
-                      title: Text(
-                        str(doc, 'title'),
-                        style: AppTextStyles.themed(
-                          context,
-                          AppTextStyles.subtitle,
-                        ),
-                      ),
-                      subtitle: Text(
-                        '${str(doc, 'message')}\n${str(doc, 'audience')}  •  ${str(doc, 'type')}',
-                        style: AppTextStyles.themed(
-                          context,
-                          AppTextStyles.bodySmall,
-                        ),
-                      ),
-                      isThreeLine: true,
-                      onTap: () {
-                        final String open = str(doc, 'openScreen');
-                        final Widget? target = open == 'Daily Horoscope'
-                            ? HoroscopeScreen(firestore: firestore)
-                            : open == 'Panchang'
-                                ? PanchangScreen(firestore: firestore)
-                                : open == 'Consult'
-                                    ? ConsultScreen(
-                                        firestore: firestore,
-                                        authService: authService,
-                                      )
-                                    : null;
-                        if (target != null) {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => target,
-                            ),
-                          );
-                        } else if (open == 'Home') {
-                          Navigator.of(context).popUntil(
-                            (Route<dynamic> route) => route.isFirst,
-                          );
-                        }
-                      },
-                    ),
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  ChoiceChip(
+                    label: const Text('All'),
+                    selected: !_unreadOnly,
+                    onSelected: (_) => setState(() => _unreadOnly = false),
                   ),
+                  const SizedBox(width: AppSpacing.sm),
+                  ChoiceChip(
+                    label: Text('Unread ($unread)'),
+                    selected: _unreadOnly,
+                    onSelected: (_) => setState(() => _unreadOnly = true),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              if (shown.isEmpty)
+                Text(
+                  'No unread notifications.',
+                  style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
                 )
-                .toList(),
+              else
+                ...shown.map(
+                  (Map<String, dynamic> doc) {
+                    final bool read = _read.contains(str(doc, 'id'));
+                    return Card(
+                      child: ListTile(
+                        leading: Icon(
+                          read ? Icons.notifications_none : Icons.notifications,
+                          color: AppColors.deepSaffron,
+                        ),
+                        title: Text(
+                          str(doc, 'title'),
+                          style: AppTextStyles.themed(
+                            context,
+                            AppTextStyles.subtitle.copyWith(
+                              fontWeight: read ? FontWeight.w400 : FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${str(doc, 'message')}\n${str(doc, 'audience')}  •  ${str(doc, 'type')}',
+                          style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+                        ),
+                        isThreeLine: true,
+                        onTap: () => _openDoc(context, doc),
+                      ),
+                    );
+                  },
+                ),
+            ],
           );
         },
       ),
     );
   }
+
+  List<String> _allIds = <String>[];
 }

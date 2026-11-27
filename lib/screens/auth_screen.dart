@@ -31,7 +31,7 @@ String? validatePasswordMatch(String password, String confirm) {
   return null;
 }
 
-enum _AuthMode { signIn, signUp, forgot }
+enum _AuthMode { signIn, signUp, forgot, phone }
 
 /// Sign in gate screen. Email and password sign in, sign up with
 /// email and password, forgot password by reset email, and Google
@@ -51,11 +51,15 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _codeController = TextEditingController();
 
   _AuthMode _mode = _AuthMode.signIn;
   String? _error;
   String? _notice;
   String? _resetSentTo;
+  String? _verificationId;
+  bool _codeSent = false;
   bool _busy = false;
 
   AuthService get _auth => widget.authService ?? AuthService();
@@ -65,6 +69,8 @@ class _AuthScreenState extends State<AuthScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
+    _phoneController.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
@@ -74,6 +80,8 @@ class _AuthScreenState extends State<AuthScreen> {
       _error = null;
       _notice = null;
       _resetSentTo = null;
+      _codeSent = false;
+      _verificationId = null;
     });
   }
 
@@ -157,6 +165,81 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  Future<void> _submitPhone() async {
+    if (!_codeSent) {
+      final String phone = _phoneController.text.trim();
+      if (!phone.startsWith('+') || phone.length < 10) {
+        setState(() => _error = 'Enter your phone number with country code, for example +91 98765 43210.');
+        return;
+      }
+      setState(() {
+        _busy = true;
+        _error = null;
+      });
+      try {
+        await _auth.verifyPhoneNumber(
+          phoneNumber: phone,
+          onAutoVerified: (credential) async {
+            await _auth.signInWithPhoneCredential(credential);
+          },
+          onFailed: (error) {
+            if (mounted) {
+              setState(() => _error = AuthService.plainError(error));
+            }
+          },
+          onCodeSent: (String verificationId, int? resendToken) {
+            if (mounted) {
+              setState(() => _verificationId = verificationId);
+            }
+          },
+        );
+        if (mounted) {
+          setState(() {
+            _codeSent = _verificationId != null;
+            if (_codeSent) {
+              _notice = 'Code sent. Enter the 6 digit code.';
+            } else {
+              _error = 'Could not send the code. Check the number and try again.';
+            }
+          });
+        }
+      } catch (error) {
+        if (mounted) {
+          setState(() => _error = AuthService.plainError(error));
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _busy = false);
+        }
+      }
+      return;
+    }
+    final String code = _codeController.text.trim();
+    final String? verificationId = _verificationId;
+    if (code.length < 6 || verificationId == null) {
+      setState(() => _error = 'Enter the 6 digit code sent to your phone.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await _auth.signInWithSmsCode(
+        verificationId: verificationId,
+        smsCode: code,
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = AuthService.plainError(error));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
   Future<void> _submitGoogle() async {
     setState(() {
       _busy = true;
@@ -197,11 +280,13 @@ class _AuthScreenState extends State<AuthScreen> {
       _AuthMode.signIn => 'Sign in',
       _AuthMode.signUp => 'Create account',
       _AuthMode.forgot => 'Forgot password',
+      _AuthMode.phone => 'Sign in with phone',
     };
     final String submitLabel = switch (_mode) {
       _AuthMode.signIn => 'Sign In',
       _AuthMode.signUp => 'Create Account',
       _AuthMode.forgot => 'Send reset link',
+      _AuthMode.phone => _codeSent ? 'Verify code' : 'Send code',
     };
     return Scaffold(
       appBar: AppBar(title: const Text('Dharm Guru Shrinkhala')),
@@ -213,7 +298,43 @@ class _AuthScreenState extends State<AuthScreen> {
             style: AppTextStyles.themed(context, AppTextStyles.title),
           ),
           const SizedBox(height: AppSpacing.md),
-          if (_mode == _AuthMode.forgot && _resetSentTo != null)
+          if (_mode == _AuthMode.phone) ...<Widget>[
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Phone number',
+                hintText: '+91 98765 43210',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            if (_codeSent)
+              TextField(
+                controller: _codeController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'SMS code'),
+              ),
+            if (_codeSent) const SizedBox(height: AppSpacing.md),
+            if (_error != null) ...<Widget>[
+              Text(
+                _error!,
+                style: AppTextStyles.themed(context, AppTextStyles.body)
+                    .copyWith(color: Theme.of(context).colorScheme.error),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            if (_notice != null) ...<Widget>[
+              Text(
+                _notice!,
+                style: AppTextStyles.themed(context, AppTextStyles.body),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            ElevatedButton(
+              onPressed: _busy ? null : _submitPhone,
+              child: Text(submitLabel),
+            ),
+          ] else if (_mode == _AuthMode.forgot && _resetSentTo != null)
             Text(
               'Reset link sent to $_resetSentTo. Open your email, tap the link, and set a new password. Then sign in with the new password.',
               style: AppTextStyles.themed(context, AppTextStyles.body),
@@ -266,7 +387,7 @@ class _AuthScreenState extends State<AuthScreen> {
           // Google sign in is on sign in and on create account
           // both, so a new user can start with Google and an
           // existing user can link it from either screen.
-          if (_mode != _AuthMode.forgot) ...<Widget>[
+          if (_mode != _AuthMode.forgot && _mode != _AuthMode.phone) ...<Widget>[
             OutlinedButton(
               onPressed: _busy ? null : _submitGoogle,
               child: const Text('Continue with Google'),
@@ -311,6 +432,11 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                 ),
               ],
+            ),
+          if (_mode == _AuthMode.signIn)
+            TextButton(
+              onPressed: _busy ? null : () => _showMode(_AuthMode.phone),
+              child: const Text('Sign in with phone instead'),
             ),
           if (_mode != _AuthMode.signIn)
             TextButton(
