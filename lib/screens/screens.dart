@@ -89,7 +89,6 @@ class _SplashScreenState extends State<SplashScreen>
         child: AnimatedBuilder(
           animation: _controller,
           builder: (BuildContext context, Widget? child) {
-            final double t = _controller.value;
             return Opacity(
               opacity: _exitFade.value,
               child: child,

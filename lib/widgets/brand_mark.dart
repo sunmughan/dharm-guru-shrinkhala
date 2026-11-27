@@ -80,7 +80,7 @@ class SplashRaysRing extends StatelessWidget {
         size: Size(size, size),
         painter: RaysRingPainter(
           color: (dark ? AppColorsDark.gold : AppColors.gold)
-              .withOpacity(0.55),
+              .withValues(alpha: 0.55),
         ),
       ),
     );
