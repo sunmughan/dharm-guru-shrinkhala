@@ -53,6 +53,10 @@ void main() {
     expect(find.text('Bava'), findsOneWidget);
     expect(find.text('06:48 AM'), findsOneWidget);
     expect(find.text('05:52 PM'), findsOneWidget);
+    // The muhurat card sits below the fold, so the ListView only
+    // builds it once scrolled into view.
+    await tester.drag(find.byType(ListView), const Offset(0, -800));
+    await tester.pumpAndSettle();
     expect(find.text('09:42 AM to 11:15 AM'), findsOneWidget);
     expect(find.text('04:30 PM to 06:05 PM'), findsOneWidget);
     expect(find.text('Rahu Kaal'), findsOneWidget);
