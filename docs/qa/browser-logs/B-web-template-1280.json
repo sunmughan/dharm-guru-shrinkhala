@@ -1,0 +1,20 @@
+{
+  "name": "B-web-template-1280",
+  "url": "http://127.0.0.1:8901/",
+  "viewport": "1280x800",
+  "title": "dharm_guru_shrinkhala",
+  "loadError": null,
+  "bodyText": "",
+  "consoleLines": [
+    "error: Failed to load resource: the server responded with a status of 404 (File not found)"
+  ],
+  "pageErrors": [],
+  "failedReqs": [
+    "http://127.0.0.1:8901/flutter_bootstrap.js :: net::ERR_ABORTED"
+  ],
+  "responses": [
+    "200 http://127.0.0.1:8901/",
+    "404 http://127.0.0.1:8901/flutter_bootstrap.js",
+    "200 http://127.0.0.1:8901/favicon.png"
+  ]
+}
