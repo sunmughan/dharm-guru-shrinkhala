@@ -250,7 +250,7 @@ void main() {
         (WidgetTester tester) async {
       final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
       final FirestoreService service = FirestoreService(firestore: fake);
-      await _pump(tester, LibraryScreen(firestore: service));
+      await _pump(tester, AdminLibraryScreen(firestore: service));
       expect(find.text('No library entries yet'), findsOneWidget);
       await tester.tap(find.text('New entry'));
       await tester.pumpAndSettle();
@@ -281,7 +281,7 @@ void main() {
           'status': 'draft',
         },
       );
-      await _pump(tester, LibraryScreen(firestore: service));
+      await _pump(tester, AdminLibraryScreen(firestore: service));
       await tester.tap(find.text('Shani Sade Sati'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Publish'));

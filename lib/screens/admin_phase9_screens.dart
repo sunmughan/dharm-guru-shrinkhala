@@ -758,16 +758,16 @@ class _AdminTeamScreenState extends State<AdminTeamScreen> {
 /// remedies, mantras, gemstones, numerology rules, and matching
 /// rules, each with a category, a source, and a reference. The
 /// owner writes the content; nothing is prefilled.
-class LibraryScreen extends StatefulWidget {
-  const LibraryScreen({super.key, required this.firestore});
+class AdminLibraryScreen extends StatefulWidget {
+  const AdminLibraryScreen({super.key, required this.firestore});
 
   final FirestoreService firestore;
 
   @override
-  State<LibraryScreen> createState() => _LibraryScreenState();
+  State<AdminLibraryScreen> createState() => _AdminLibraryScreenState();
 }
 
-class _LibraryScreenState extends State<LibraryScreen> {
+class _AdminLibraryScreenState extends State<AdminLibraryScreen> {
   static const List<String> _types = <String>[
     'Interpretation',
     'Yoga',
@@ -1717,7 +1717,6 @@ class _ConsultationsScreenState extends State<ConsultationsScreen> {
   }
 
   Future<void> _changeStatus(
-    BuildContext context,
     Map<String, dynamic> doc,
     String status,
     Map<String, Object?> extra,
@@ -1849,7 +1848,6 @@ class _ConsultationsScreenState extends State<ConsultationsScreen> {
                         );
                         if (!ok) return;
                         await _changeStatus(
-                          context,
                           doc,
                           'cancelled',
                           <String, Object?>{},
@@ -1863,7 +1861,7 @@ class _ConsultationsScreenState extends State<ConsultationsScreen> {
                     ),
                     TextButton(
                       onPressed: () async {
-                        await _changeStatus(context, doc, 'disputed',
+                        await _changeStatus(doc, 'disputed',
                             <String, Object?>{});
                         if (context.mounted) {
                           Navigator.of(context).pop();
@@ -1877,7 +1875,6 @@ class _ConsultationsScreenState extends State<ConsultationsScreen> {
                         final int mins =
                             int.tryParse(minutes.text.trim()) ?? 0;
                         await _changeStatus(
-                          context,
                           doc,
                           astrologer.isEmpty ? 'booked' : 'assigned',
                           <String, Object?>{

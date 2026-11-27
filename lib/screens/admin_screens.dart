@@ -726,7 +726,7 @@ class _AdminShellState extends State<AdminShell> {
       7 => ModerationScreen(firestore: widget.firestore),
       8 => UsersScreen(firestore: widget.firestore),
       9 => AdminTeamScreen(firestore: widget.firestore),
-      10 => LibraryScreen(firestore: widget.firestore),
+      10 => AdminLibraryScreen(firestore: widget.firestore),
       11 => CalcConfigScreen(firestore: widget.firestore),
       12 => ContentManagerScreen(firestore: widget.firestore),
       13 => ConsultationsScreen(firestore: widget.firestore),
