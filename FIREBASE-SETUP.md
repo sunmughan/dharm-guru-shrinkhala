@@ -25,7 +25,7 @@ Flutter app direct to Firebase, no backend. Follow these console steps in order.
 ## 3. Register the iOS app
 
 * In Project settings, add an iOS app
-* Bundle id: `com.codeair.dharm_guru_shrinkhala`, the iOS bundle
+* Bundle id: `com.codeair.dharmgurushrinkhala`, the iOS bundle
   id from the `ios/` project scaffolding in this repo. If the
   `ios/` directory is missing, create it the same way as in step 2.
 * Download `GoogleService-Info.plist` and place it in `ios/Runner/`
