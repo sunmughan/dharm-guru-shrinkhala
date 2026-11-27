@@ -435,11 +435,11 @@ Duration indiaUtcOffset({
   required DateTime local,
   required double longitude,
 }) {
-  if (local.isAfter(DateTime(1942, 5, 14)) &&
+  if (!local.isBefore(DateTime(1942, 5, 15)) &&
       local.isBefore(DateTime(1945, 10, 16))) {
     return const Duration(hours: 6, minutes: 30);
   }
-  if (local.isAfter(DateTime(1905, 12, 31))) {
+  if (!local.isBefore(DateTime(1906, 1, 1))) {
     return const Duration(hours: 5, minutes: 30);
   }
   return Duration(minutes: (longitude * 4.0).round());

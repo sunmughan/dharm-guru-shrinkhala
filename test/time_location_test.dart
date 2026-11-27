@@ -74,6 +74,22 @@ void main() {
         indiaUtcOffset(local: DateTime(1905, 12, 31), longitude: 75.7873),
         const Duration(minutes: 303),
       );
+      // Noon on the last pre IST day is still local mean time.
+      expect(
+        indiaUtcOffset(
+          local: DateTime(1905, 12, 31, 12),
+          longitude: 75.7873,
+        ),
+        const Duration(minutes: 303),
+      );
+      // Noon on the last pre DST day is still IST.
+      expect(
+        indiaUtcOffset(
+          local: DateTime(1942, 5, 14, 12),
+          longitude: 75.7873,
+        ),
+        ist,
+      );
     });
   });
 
