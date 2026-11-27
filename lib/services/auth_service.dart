@@ -4,7 +4,9 @@ import 'package:google_sign_in/google_sign_in.dart';
 /// Auth service: email and password, phone sign in and Google sign in.
 /// Phone verification uses Firebase Auth. No custom backend.
 class AuthService {
-  AuthService({FirebaseAuth? auth}) : _auth = auth;
+  // Private initializing formal: only AuthService() with no argument
+  // is ever called, from any library, so no caller passes _auth.
+  AuthService({this._auth});
 
   // Nullable on purpose: tests subclass AuthService and override the
   // stream and methods below, so FirebaseAuth.instance is never
