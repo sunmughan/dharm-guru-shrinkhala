@@ -16,4 +16,16 @@ class Remedy {
   /// 'done' shows a Mark as done button, 'ask' opens live
   /// consult for a question about the remedy.
   final String action;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+        'title': title,
+        'body': body,
+        'action': action,
+      };
+
+  static Remedy fromJson(Map<String, dynamic> json) => Remedy(
+        title: json['title'] as String? ?? '',
+        body: json['body'] as String? ?? '',
+        action: json['action'] as String? ?? '',
+      );
 }

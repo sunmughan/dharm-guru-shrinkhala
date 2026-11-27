@@ -129,6 +129,41 @@ class FirestoreService {
     );
   }
 
+  /// One page of documents, newest first by createdAt, at most
+  /// [limit] documents. Pass the [lastId] returned by the
+  /// previous page to fetch the next page. This is the paged
+  /// read admin lists must use: watchDocs streams the whole
+  /// collection with no limit, which grows without bound as
+  /// users, chats and payments accumulate.
+  Future<({List<Map<String, dynamic>> docs, String? lastId})>
+  getDocsPaged(
+    String collection, {
+    int limit = 25,
+    String? startAfterId,
+  }) async {
+    Query<Map<String, dynamic>> query = _db
+        .collection(collection)
+        .orderBy('createdAt', descending: true)
+        .limit(limit);
+    if (startAfterId != null) {
+      final DocumentSnapshot<Map<String, dynamic>> cursor =
+          await _db.collection(collection).doc(startAfterId).get();
+      if (cursor.exists) {
+        query = query.startAfterDocument(cursor);
+      }
+    }
+    final QuerySnapshot<Map<String, dynamic>> snap =
+        await query.get();
+    final List<Map<String, dynamic>> docs =
+        snap.docs.map((QueryDocumentSnapshot<Map<String, dynamic>> d) {
+      return <String, dynamic>{'id': d.id, ...d.data()};
+    }).toList();
+    return (
+      docs: docs,
+      lastId: docs.isEmpty ? null : docs.last['id'] as String?,
+    );
+  }
+
   /// One document by id, or null when it does not exist.
   /// The map carries its document id under 'id'.
   Future<Map<String, dynamic>?> getDoc(

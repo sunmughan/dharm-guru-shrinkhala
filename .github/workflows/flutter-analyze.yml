@@ -2,9 +2,17 @@ name: Flutter Analyze
 
 # All verification for this repo runs here, on the runner, never
 # locally. See the ALL WORK VIA GITHUB ACTIONS order.
+# Phase 21 CI: every job below is mandatory for a release.
+# The release-gate job at the end only passes when all of them
+# pass. A missing required secret or a missing functions
+# directory BLOCKS the run with exit 1, it is never silently
+# skipped. No service account JSON, private key, password,
+# access token or Firebase credential is ever committed; the
+# Android config and the release keystore come only from
+# GitHub Actions Secrets, exactly as before.
 on:
   push:
-    branches: [main]
+    branches: [main, 'phase*']
   pull_request:
     branches: [main]
 
@@ -20,8 +28,138 @@ jobs:
         run: flutter pub get
       - name: Analyze
         run: flutter analyze
-      - name: Test
-        run: flutter test
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      # Only the files this quality phase added or changed are
+      # format gated. Pre-existing formatting debt in the rest
+      # of lib is a P3 in docs/qa/PERFORMANCE_REPORT.md, not a
+      # gate, so an old file can never turn a new change red.
+      - name: Verify formatting of phase 12 and 18 files
+        run: |
+          dart format --output=none --set-exit-if-changed \
+            lib/core/input_validation.dart \
+            lib/core/performance.dart \
+            lib/core/app_logger.dart \
+            lib/services/astro.dart \
+            lib/services/firestore_service.dart \
+            lib/models/kundli.dart \
+            lib/models/panchang.dart \
+            lib/models/remedies.dart \
+            test/input_validation_test.dart \
+            test/retry_test.dart \
+            test/app_logger_test.dart \
+            test/model_serialization_test.dart \
+            test/pagination_test.dart \
+            test/performance_cache_test.dart \
+            test/security_rules_test.dart \
+            test/negative_admin_test.dart
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Unit, widget and calculation tests with coverage
+        run: flutter test --coverage
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-coverage
+          path: coverage/lcov.info
+          if-no-files-found: error
+
+  rules-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Firestore and Storage rules must never allow all
+        run: |
+          if grep -q 'allow read, write: if true' firebase/firestore.rules firebase/storage.rules; then
+            echo "BLOCKED: an open allow rule is present."
+            exit 1
+          fi
+          if grep -q 'allow read: if true' firebase/firestore.rules firebase/storage.rules; then
+            echo "BLOCKED: an open read allow is present."
+            exit 1
+          fi
+          echo "No open allow rules found."
+      - name: Firebase config files must be valid JSON
+        run: |
+          python3 -c "import json; json.load(open('firebase.json')); json.load(open('firebase/firestore.indexes.json')); print('firebase.json and firestore.indexes.json are valid JSON.')"
+      - name: Rules files must exist
+        run: test -f firebase/firestore.rules && test -f firebase/storage.rules && test -f firebase/firestore.indexes.json
+
+  cloud-functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # BLOCKED by design until the Cloud Functions phase lands
+      # a functions/ directory with package.json and tests.
+      # This job fails loudly instead of skipping, and the
+      # release-gate job needs it, so no release can go green
+      # while Functions tests do not exist.
+      - name: Cloud Functions tests
+        run: |
+          if [ ! -f functions/package.json ]; then
+            echo "BLOCKED: functions/ does not exist yet. No Cloud Functions tests can run."
+            exit 1
+          fi
+          cd functions && npm ci && npm test
+
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Build user web app
+        run: flutter build web --release -t lib/main.dart
+      - name: Keep user web output
+        run: mv build/web build/web-user
+      - name: Build admin web app
+        run: flutter build web --release -t lib/main_admin.dart
+      - name: Keep admin web output
+        run: mv build/web build/web-admin
+      - name: Upload user web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dharm-guru-web-user
+          path: build/web-user
+      - name: Upload admin web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dharm-guru-web-admin
+          path: build/web-admin
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Install dependencies
+        run: flutter pub get
+      # Widget tests in a real headless Chrome, where the CI
+      # runner allows it. This is a smoke run only: full user
+      # and admin browser workflows stay in docs/qa as
+      # BT-USER and BT-ADMIN IDs until a browser agent runs
+      # them against the built web apps.
+      - name: Widget tests on Chrome
+        run: flutter test --platform chrome test/widget_test.dart test/admin_gate_test.dart
 
   build-apk:
     runs-on: ubuntu-latest
@@ -82,14 +220,16 @@ jobs:
         # Permanent release signing key, so the SHA-1 fingerprint
         # registered in the Firebase console stays valid for
         # every build. The keystore is a PKCS12 file, never
-        # committed. Without this step the build falls back to
-        # the debug key, whose fingerprint changes every run.
+        # committed. Phase 21 gate change: a missing keystore
+        # secret now BLOCKS the build instead of silently
+        # falling back to a debug key. A release build must
+        # never ship debug signed.
         env:
           DHARM_GURU_KEYSTORE_BASE64: ${{ secrets.DHARM_GURU_KEYSTORE_BASE64 }}
         run: |
           if [ -z "$DHARM_GURU_KEYSTORE_BASE64" ]; then
-            echo "DHARM_GURU_KEYSTORE_BASE64 secret is not set; release builds will sign with the debug key."
-            exit 0
+            echo "BLOCKED: DHARM_GURU_KEYSTORE_BASE64 secret is not set. Release builds must use the permanent release key."
+            exit 1
           fi
           printf '%s' "$DHARM_GURU_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
           echo "Release keystore restored."
@@ -236,3 +376,12 @@ jobs:
         run: |
           APP=$(find build/ios -name "Runner.app" -maxdepth 4 | head -n 1)
           test "$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist")" = "com.codeair.dharmgurushrinkhala.admin"
+
+  release-gate:
+    runs-on: ubuntu-latest
+    needs: [analyze, format, test, rules-gate, cloud-functions, build-web, browser-smoke, build-apk, build-ios]
+    steps:
+      - name: Release gate
+        run: |
+          echo "Release gate passed: analyze, format, unit and widget tests, rules gate, Cloud Functions tests, web builds, browser smoke, APK builds and iOS builds all passed."
+          echo "Until the Cloud Functions phase lands functions/ with tests, the cloud-functions job fails BLOCKED and this gate stays red. That is the gate working, not a failure to fix by weakening it."

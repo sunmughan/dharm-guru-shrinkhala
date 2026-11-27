@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../core/performance.dart';
 import '../models/kundli.dart';
 import '../models/panchang.dart';
 
@@ -623,11 +624,26 @@ class KundliResult {
 class KundliCalculator {
   KundliCalculator._();
 
+  /// Bounded memo cache: the calculation is pure, so the same
+  /// birth inputs always give the same chart. The key carries
+  /// only date, time, place text and the time known flag, never
+  /// a name or any other personal data.
+  static final MemoCache<String, KundliResult> _cache =
+      MemoCache<String, KundliResult>(maxEntries: 64);
+
+  /// Clears the calculation cache. Tests use this so one test
+  /// never sees another test's cached chart.
+  static void clearCache() => _cache.clear();
+
   static KundliResult calculate({
     required DateTime birthLocal,
     required String placeText,
     bool timeKnown = true,
   }) {
+    final String key =
+        '${birthLocal.toIso8601String()}|$placeText|$timeKnown';
+    final KundliResult? cached = _cache.get(key);
+    if (cached != null) return cached;
     final AstroPlace? found = placeFor(placeText);
     final AstroPlace place = found ?? kDefaultPlace;
     final DateTime local = timeKnown
@@ -681,7 +697,7 @@ class KundliCalculator {
       planet('Ketu', _norm(rahuTropical + 180.0)),
     ];
     final double elongation = _norm(moonSidereal - sunSidereal);
-    return KundliResult(
+    final KundliResult result = KundliResult(
       lagna: lagna,
       lagnaDegree: formatDegree(lagnaSidereal),
       moonRashi: kRashis[_rashiIndex(moonSidereal)],
@@ -692,6 +708,8 @@ class KundliCalculator {
       placeApproximate: found == null,
       timeApproximate: !timeKnown,
     );
+    _cache.put(key, result);
+    return result;
   }
 }
 
@@ -723,7 +741,19 @@ String _formatClock(double hours) {
 class PanchangCalculator {
   PanchangCalculator._();
 
+  /// Same bounded memo cache as KundliCalculator. The key
+  /// carries only the date and the place name.
+  static final MemoCache<String, Panchang> _cache =
+      MemoCache<String, Panchang>(maxEntries: 64);
+
+  /// Clears the calculation cache. Tests use this so one test
+  /// never sees another test's cached panchang.
+  static void clearCache() => _cache.clear();
+
   static Panchang forDate(DateTime day, AstroPlace place) {
+    final String key = '${day.year}-${day.month}-${day.day}|${place.name}';
+    final Panchang? cached = _cache.get(key);
+    if (cached != null) return cached;
     final DateTime noon =
         DateTime(day.year, day.month, day.day, 12);
     final DateTime utcNoon = noon.subtract(
@@ -793,7 +823,7 @@ class PanchangCalculator {
       nakshatra = '$nakshatra till ${_formatClock(at)}';
     }
 
-    return Panchang(
+    final Panchang result = Panchang(
       weekday: kWeekdays[day.weekday - 1],
       city: place.name,
       tithi: _tithiName(elongation),
@@ -808,6 +838,8 @@ class PanchangCalculator {
       rahuKaal: '${_formatClock(rahuStart)} to ${_formatClock(rahuEnd)}. '
           'Avoid starting new work in this window.',
     );
+    _cache.put(key, result);
+    return result;
   }
 }
 
