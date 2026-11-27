@@ -532,7 +532,7 @@ List<ChoghadiyaSegment> _choghadiya(
     );
     final double moonLon = siderealLongitudes(utc)['Moon']!;
     final double lonR = moonLon * math.pi / 180.0;
-    final double epsR = eps * math.pi / 180.0;
+    const double epsR = eps * math.pi / 180.0;
     final double dec = math.asin(math.sin(epsR) * math.sin(lonR));
     double ra = math.atan2(
       math.sin(lonR) * math.cos(epsR),
