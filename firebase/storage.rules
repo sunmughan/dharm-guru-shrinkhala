@@ -1,0 +1,51 @@
+rules_version = '2';
+
+// Draft only. Not published. Added in Phase 1 security audit.
+// No app code uploads to Storage today, so these paths are
+// proposed, not wired to any UI. When profile images or
+// horoscope images are built, the UI must use exactly these
+// paths. Default is deny: any path not matched below is closed.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Owner role lives in the admins document today. When roles
+    // move to custom claims, this check becomes a token claim
+    // check, same as the planned Firestore isOwner change.
+    function isOwner() {
+      return request.auth != null &&
+        firestore.get(/databases/(default)/documents/admins/$(request.auth.uid)).data.role == 'owner';
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function isSmall() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // One user files: the owner of the uid writes own files
+    // only, the owner role reads them too.
+    match /users/{uid}/{fileName} {
+      allow read: if isSignedIn() &&
+        (request.auth.uid == uid || isOwner());
+      allow write: if request.auth != null &&
+        request.auth.uid == uid && isImage() && isSmall();
+    }
+
+    // Published horoscope images: every signed in user reads,
+    // only the owner role writes.
+    match /horoscopes/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isOwner() && isImage() && isSmall();
+    }
+
+    // Everything else is closed.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
