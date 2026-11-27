@@ -138,22 +138,62 @@ void main() {
     }
 
     /// Plain text of a PDF built with embedded TrueType fonts.
-    /// The text lives in the content streams as UTF-16BE hex
-    /// strings, so this decodes every hex string and joins
-    /// them. Standard Helvetica has no Unicode support and
-    /// writes no readable text, which is why the report always
+    /// The content streams hold subset glyph ids, not Unicode,
+    /// so this first reads the ToUnicode CMap of each font,
+    /// which maps every glyph id to its Unicode value, and
+    /// then decodes the content hex strings through that map.
+    /// Standard Helvetica has no Unicode support and writes
+    /// no readable text, which is why the report always
     /// builds with the embedded fonts.
     String pdfText(Uint8List bytes) {
       final String raw = latin1.decode(bytes);
+      final Map<String, int> glyphToUnicode = <String, int>{};
+      void addPair(String glyphHex, String unicodeHex) {
+        glyphToUnicode[glyphHex.toUpperCase()] =
+            int.parse(unicodeHex, radix: 16);
+      }
+
+      for (final RegExpMatch block in RegExp(
+        r'beginbfchar(.*?)endbfchar',
+        dotAll: true,
+      ).allMatches(raw)) {
+        for (final RegExpMatch pair in RegExp(
+          r'<([0-9A-Fa-f]{4})>\s*<([0-9A-Fa-f]{4,6})>',
+        ).allMatches(block.group(1)!)) {
+          addPair(pair.group(1)!, pair.group(2)!);
+        }
+      }
+      for (final RegExpMatch block in RegExp(
+        r'beginbfrange(.*?)endbfrange',
+        dotAll: true,
+      ).allMatches(raw)) {
+        for (final RegExpMatch range in RegExp(
+          r'<([0-9A-Fa-f]{4})>\s*<([0-9A-Fa-f]{4})>\s*<([0-9A-Fa-f]{4,6})>',
+        ).allMatches(block.group(1)!)) {
+          int glyph = int.parse(range.group(1)!, radix: 16);
+          final int end = int.parse(range.group(2)!, radix: 16);
+          int unicode = int.parse(range.group(3)!, radix: 16);
+          while (glyph <= end) {
+            addPair(
+              glyph.toRadixString(16).padLeft(4, '0'),
+              unicode.toRadixString(16),
+            );
+            glyph++;
+            unicode++;
+          }
+        }
+      }
       final StringBuffer out = StringBuffer();
       for (final RegExpMatch match
           in RegExp(r'<([0-9A-Fa-f\s]+)>').allMatches(raw)) {
         final String hex =
             match.group(1)!.replaceAll(RegExp(r'\s'), '');
         for (int i = 0; i + 4 <= hex.length; i += 4) {
-          out.writeCharCode(
-            int.parse(hex.substring(i, i + 4), radix: 16),
-          );
+          final int? unicode =
+              glyphToUnicode[hex.substring(i, i + 4).toUpperCase()];
+          if (unicode != null) {
+            out.writeCharCode(unicode);
+          }
         }
       }
       return out.toString();
