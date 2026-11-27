@@ -32,6 +32,46 @@ jobs:
           channel: stable
       - name: Install dependencies
         run: flutter pub get
+      - name: Restore Firebase Android config
+        # google-services.json is gitignored and never committed.
+        # It comes from the GOOGLE_SERVICES_JSON_BASE64 repo secret.
+        # The file alone does nothing without the google-services
+        # Gradle plugin, so the same values are also written as
+        # string resources: FirebaseInitProvider reads them and the
+        # native default app exists before Flutter starts. The
+        # plugin itself is not applied: it would fail the admin
+        # flavor build because the admin package has no matching
+        # client in the file yet (console step, still owed).
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            echo "GOOGLE_SERVICES_JSON_BASE64 secret is not set in this repo."
+            exit 1
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > android/app/google-services.json
+          python3 - <<'PYEOF'
+          import json
+          from xml.sax.saxutils import escape
+          with open('android/app/google-services.json') as f:
+              data = json.load(f)
+          info = data['project_info']
+          client = data['client'][0]
+          values = {
+              'google_app_id': client['client_info']['mobilesdk_app_id'],
+              'gcm_defaultSenderId': info['project_number'],
+              'google_api_key': client['api_key'][0]['current_key'],
+              'google_storage_bucket': info['storage_bucket'],
+              'project_id': info['project_id'],
+          }
+          lines = ['<?xml version="1.0" encoding="utf-8"?>', '<resources>']
+          for name in sorted(values):
+              lines.append('    <string name="' + name + '" translatable="false">' + escape(values[name]) + '</string>')
+          lines.append('</resources>')
+          with open('android/app/src/main/res/values/firebase_values.xml', 'w') as f:
+              f.write('\n'.join(lines) + '\n')
+          print('firebase_values.xml written with: ' + ', '.join(sorted(values)))
+          PYEOF
       - name: Set build stamp
         run: |
           VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}')

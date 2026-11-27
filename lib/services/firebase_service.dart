@@ -17,12 +17,26 @@ import '../firebase_options.dart';
 class FirebaseService {
   FirebaseService._();
 
+  /// The stage and error text of the last failed initialise, shown
+  /// on the setup screen so the phone itself names the failing
+  /// call. Only set when initialise throws.
+  static String? lastInitStage;
+  static String? lastInitError;
+
   static FirebaseAnalytics get analytics => FirebaseAnalytics.instance;
 
   static Future<void> initialise() async {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    lastInitStage = 'initializeApp';
+    lastInitError = null;
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } catch (error, stack) {
+      lastInitError =
+          '$error\n${stack.toString().split('\n').take(6).join('\n')}';
+      rethrow;
+    }
     await _runOptional(_configureCrashlytics);
     await _runOptional(_configureRemoteConfig);
     await _runOptional(_configureMessaging);

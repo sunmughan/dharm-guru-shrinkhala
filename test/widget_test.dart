@@ -99,6 +99,24 @@ void main() {
     expect(find.text(kBuildStamp), findsOneWidget);
   });
 
+  testWidgets('Setup screen shows the init error when given',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const DharmGuruApp(
+        showSplash: false,
+        firebaseReady: false,
+        firebaseError: 'PlatformException(core, no app, null, null)',
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Firebase is not configured yet.'), findsOneWidget);
+    expect(find.text('Start error:'), findsOneWidget);
+    expect(
+      find.text('PlatformException(core, no app, null, null)'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('Admin setup screen shows the build stamp',
       (WidgetTester tester) async {
     await tester.pumpWidget(
@@ -107,6 +125,23 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Firebase is not configured yet.'), findsOneWidget);
     expect(find.text(kBuildStamp), findsOneWidget);
+  });
+
+  testWidgets('Admin setup screen shows the init error when given',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const DharmGuruAdminApp(
+        firebaseReady: false,
+        firebaseError: 'PlatformException(core, no app, null, null)',
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Firebase is not configured yet.'), findsOneWidget);
+    expect(find.text('Start error:'), findsOneWidget);
+    expect(
+      find.text('PlatformException(core, no app, null, null)'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Sign in rejects a bad email before calling auth',

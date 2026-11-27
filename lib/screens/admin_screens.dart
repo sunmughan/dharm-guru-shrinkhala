@@ -92,12 +92,17 @@ class DharmGuruAdminApp extends StatefulWidget {
   const DharmGuruAdminApp({
     super.key,
     this.firebaseReady = true,
+    this.firebaseError,
     this.authService,
     this.firestoreService,
     this.featureFlags,
   });
 
   final bool firebaseReady;
+
+  /// The init error text, shown on the setup screen when Firebase
+  /// failed to initialise, so the phone names the failing call.
+  final String? firebaseError;
   final AuthService? authService;
   final FirestoreService? firestoreService;
 
@@ -127,7 +132,9 @@ class _DharmGuruAdminAppState extends State<DharmGuruAdminApp> {
   @override
   Widget build(BuildContext context) {
     if (!widget.firebaseReady) {
-      return _app(home: const _FirebaseSetupNeededScreen());
+      return _app(
+        home: _FirebaseSetupNeededScreen(errorText: widget.firebaseError),
+      );
     }
     return StreamBuilder<bool>(
       stream: _auth.signedIn,
@@ -179,13 +186,17 @@ class _DharmGuruAdminAppState extends State<DharmGuruAdminApp> {
 }
 
 class _FirebaseSetupNeededScreen extends StatelessWidget {
-  const _FirebaseSetupNeededScreen();
+  const _FirebaseSetupNeededScreen({this.errorText});
+
+  /// The caught init error, shown so the phone names the failing
+  /// call. Null when the screen is shown without an error.
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Dharm Guru Admin')),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,6 +217,18 @@ class _FirebaseSetupNeededScreen extends StatelessWidget {
                 color: AppColors.ink2,
               )),
             ),
+            if (errorText != null) ...<Widget>[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Start error:',
+                style: AppTextStyles.themed(context, AppTextStyles.body),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SelectableText(
+                errorText!,
+                style: AppTextStyles.themed(context, AppTextStyles.body),
+              ),
+            ],
           ],
         ),
       ),

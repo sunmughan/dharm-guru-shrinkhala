@@ -12,10 +12,17 @@ import 'services/firebase_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   bool firebaseReady = true;
+  String? firebaseError;
   try {
     await FirebaseService.initialise();
-  } catch (_) {
+  } catch (error) {
     firebaseReady = false;
+    firebaseError = FirebaseService.lastInitError ?? error.toString();
   }
-  runApp(DharmGuruAdminApp(firebaseReady: firebaseReady));
+  runApp(
+    DharmGuruAdminApp(
+      firebaseReady: firebaseReady,
+      firebaseError: firebaseError,
+    ),
+  );
 }
