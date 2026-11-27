@@ -42,6 +42,15 @@ class KundliPdfFonts {
       bold: pw.Font.ttf(ByteData.sublistView(boldBytes)),
     );
   }
+
+  /// One shared font for both weights. Tests use this for the
+  /// content check: one font means one subset and one
+  /// ToUnicode map, so byte level text checks stay exact.
+  /// Two fonts would share glyph ids with different mappings.
+  factory KundliPdfFonts.single(Uint8List bytes) {
+    final pw.Font font = pw.Font.ttf(ByteData.sublistView(bytes));
+    return KundliPdfFonts(regular: font, bold: font);
+  }
 }
 
 /// Kundli PDF report, built only from KundliReportData.

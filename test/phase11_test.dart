@@ -211,17 +211,26 @@ void main() {
     });
 
     test('embedded font build carries the real content as text', () async {
-      final Uint8List bytes = await realPdfBytes();
-      final String text = pdfText(bytes);
-      expect(text, contains('Test User'));
+      final Uint8List regular =
+          await File('assets/fonts/Roboto-Regular.ttf').readAsBytes();
+      final KundliPdfFonts fonts = KundliPdfFonts.single(regular);
+      final Uint8List bytes = await KundliPdfBuilder.build(
+        realReport(),
+        fonts: fonts,
+        compress: false,
+      );
+      // Spaces are not stored as glyphs in the PDF, so the
+      // check ignores them on both sides.
+      final String text = pdfText(bytes).replaceAll(RegExp(r'\s'), '');
+      expect(text, contains('TestUser'));
       expect(text, contains('Kumbha'));
-      expect(text, contains('Report v1.0'));
-      expect(text, contains('28 Nov 2026'));
-      expect(text, contains('Planetary positions'));
-      expect(text, contains('Planetary explanations'));
+      expect(text, contains('Reportv1.0'));
+      expect(text, contains('28Nov2026'));
+      expect(text, contains('Planetarypositions'));
+      expect(text, contains('Planetaryexplanations'));
       expect(text, contains('Sun'));
       expect(text, contains('Saturn'));
-      expect(text, contains('Page 1 of'));
+      expect(text, contains('Page1of'));
     });
   });
 
