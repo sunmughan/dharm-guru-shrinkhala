@@ -5,8 +5,8 @@
 /// phone, language, and the daily horoscope alert time.
 /// Dates are yyyy-MM-dd strings and times are HH:mm strings in
 /// Firestore, so no Timestamp parsing is needed anywhere.
-class UserProfile {
-  const UserProfile({
+class AppUserProfile {
+  const AppUserProfile({
     required this.name,
     this.gender,
     this.dateOfBirth,
@@ -136,14 +136,14 @@ class UserProfile {
     return '$year-$month-${day.toString().padLeft(2, '0')}';
   }
 
-  factory UserProfile.fromMap(Map<String, dynamic> map) {
+  factory AppUserProfile.fromMap(Map<String, dynamic> map) {
     String? text(String key) {
       final Object? value = map[key];
       if (value is String && value.trim().isNotEmpty) return value.trim();
       return null;
     }
 
-    return UserProfile(
+    return AppUserProfile(
       name: text('name') ?? '',
       gender: text('gender'),
       dateOfBirth: text('dateOfBirth'),

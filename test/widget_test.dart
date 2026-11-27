@@ -909,7 +909,7 @@ void main() {
     );
     expect(
       AuthService.plainError(
-        const FirebaseAuthException(
+        FirebaseAuthException(
           code: 'account-exists-with-different-credential',
         ),
       ),
@@ -917,7 +917,7 @@ void main() {
     );
     expect(
       AuthService.plainError(
-        const FirebaseAuthException(code: 'requires-recent-login'),
+        FirebaseAuthException(code: 'requires-recent-login'),
       ),
       contains('sign out and sign in again'),
     );

@@ -26,7 +26,7 @@ class ProfileFormScreen extends StatefulWidget {
   final FirestoreService? firestoreService;
 
   /// Profile to edit, or null to start from a blank form.
-  final UserProfile? existing;
+  final AppUserProfile? existing;
 
   @override
   State<ProfileFormScreen> createState() => _ProfileFormScreenState();
@@ -60,7 +60,7 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
   @override
   void initState() {
     super.initState();
-    final UserProfile? existing = widget.existing;
+    final AppUserProfile? existing = widget.existing;
     if (existing != null) {
       _nameController.text = existing.name;
       _gender = existing.gender;
@@ -200,7 +200,7 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
       _busy = true;
       _error = null;
     });
-    final UserProfile profile = UserProfile(
+    final AppUserProfile profile = AppUserProfile(
       name: name,
       gender: _gender,
       dateOfBirth:
@@ -271,7 +271,7 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
           DropdownButtonFormField<String>(
             value: _gender,
             decoration: const InputDecoration(labelText: 'Gender'),
-            items: UserProfile.genders
+            items: AppUserProfile.genders
                 .map(
                   (String value) => DropdownMenuItem<String>(
                     value: value,
@@ -287,7 +287,7 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
             value: _maritalStatus,
             decoration:
                 const InputDecoration(labelText: 'Marital status'),
-            items: UserProfile.maritalStatuses
+            items: AppUserProfile.maritalStatuses
                 .map(
                   (String value) => DropdownMenuItem<String>(
                     value: value,
@@ -384,7 +384,7 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
             value: _language,
             decoration:
                 const InputDecoration(labelText: 'Horoscope language'),
-            items: UserProfile.languages
+            items: AppUserProfile.languages
                 .map(
                   (String value) => DropdownMenuItem<String>(
                     value: value,

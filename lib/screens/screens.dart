@@ -560,9 +560,9 @@ class HomeScreen extends StatelessWidget {
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
-                final UserProfile? profile = snapshot.data == null
+                final AppUserProfile? profile = snapshot.data == null
                     ? null
-                    : UserProfile.fromMap(snapshot.data!);
+                    : AppUserProfile.fromMap(snapshot.data!);
                 return _HomeGreeting(
                   profile: profile,
                   onOpenTab: onOpenTab,
@@ -678,12 +678,12 @@ class _HomeCard extends StatelessWidget {
 class _HomeGreeting extends StatelessWidget {
   const _HomeGreeting({required this.profile, required this.onOpenTab});
 
-  final UserProfile? profile;
+  final AppUserProfile? profile;
   final void Function(int tabIndex) onOpenTab;
 
   @override
   Widget build(BuildContext context) {
-    final UserProfile? profile = this.profile;
+    final AppUserProfile? profile = this.profile;
     if (profile == null || !profile.isComplete) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -771,18 +771,18 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
         if (!mounted || map == null) {
           return;
         }
-        final UserProfile profile = UserProfile.fromMap(map);
+        final AppUserProfile profile = AppUserProfile.fromMap(map);
         if (!profile.isComplete) {
           return;
         }
         setState(() {
           _nameController.text = profile.name;
           _dateController.text =
-              UserProfile.displayDate(profile.dateOfBirth!);
+              AppUserProfile.displayDate(profile.dateOfBirth!);
           _timeController.text =
               profile.birthTimeUnknown || profile.timeOfBirth == null
                   ? ''
-                  : UserProfile.displayTime(profile.timeOfBirth!);
+                  : AppUserProfile.displayTime(profile.timeOfBirth!);
           _placeController.text = profile.placeLine;
         });
       });
@@ -2402,7 +2402,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  Future<void> _openForm(UserProfile? existing) async {
+  Future<void> _openForm(AppUserProfile? existing) async {
     final bool? saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => ProfileFormScreen(
@@ -2469,16 +2469,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Center(child: CircularProgressIndicator()),
                 );
               }
-              final UserProfile? profile = snapshot.data == null
+              final AppUserProfile? profile = snapshot.data == null
                   ? null
-                  : UserProfile.fromMap(snapshot.data!);
+                  : AppUserProfile.fromMap(snapshot.data!);
               final String name =
                   profile != null && profile.name.isNotEmpty
                       ? profile.name
                       : 'Your profile';
               final String alertTime =
                   profile?.horoscopeAlertTime != null
-                      ? UserProfile.displayTime(profile!.horoscopeAlertTime!)
+                      ? AppUserProfile.displayTime(profile!.horoscopeAlertTime!)
                       : '06:00 AM';
               return Column(
                 children: <Widget>[
@@ -2554,7 +2554,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             if (profile.dateOfBirth != null)
                               _detailRow(
                                 'Date of birth',
-                                UserProfile.displayDate(profile.dateOfBirth!),
+                                AppUserProfile.displayDate(profile.dateOfBirth!),
                               ),
                             _detailRow(
                               'Time of birth',
@@ -2562,7 +2562,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ? 'Not known'
                                   : profile.timeOfBirth == null
                                       ? 'Not set'
-                                      : UserProfile.displayTime(
+                                      : AppUserProfile.displayTime(
                                           profile.timeOfBirth!,
                                         ),
                             ),

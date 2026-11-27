@@ -3213,7 +3213,7 @@ class _AdminAccountScreenState extends State<AdminAccountScreen> {
       TextEditingController();
 
   String? _language;
-  UserProfile? _profile;
+  AppUserProfile? _profile;
   bool _profileLoaded = false;
   String? _profileNote;
   String? _emailNote;
@@ -3250,7 +3250,7 @@ class _AdminAccountScreenState extends State<AdminAccountScreen> {
         await widget.firestore.getUserProfile(uid);
     if (!mounted) return;
     setState(() {
-      _profile = map == null ? null : UserProfile.fromMap(map);
+      _profile = map == null ? null : AppUserProfile.fromMap(map);
       _profileLoaded = true;
       _nameController.text = _profile?.name ?? '';
       _phoneController.text = _profile?.phoneNumber ?? '';
@@ -3270,7 +3270,7 @@ class _AdminAccountScreenState extends State<AdminAccountScreen> {
       _busy = true;
       _profileNote = null;
     });
-    final UserProfile profile = UserProfile(
+    final AppUserProfile profile = AppUserProfile(
       name: name,
       gender: _profile?.gender,
       dateOfBirth: _profile?.dateOfBirth,
@@ -3491,7 +3491,7 @@ class _AdminAccountScreenState extends State<AdminAccountScreen> {
             value: _language,
             decoration:
                 const InputDecoration(labelText: 'Horoscope language'),
-            items: UserProfile.languages
+            items: AppUserProfile.languages
                 .map(
                   (String value) => DropdownMenuItem<String>(
                     value: value,
