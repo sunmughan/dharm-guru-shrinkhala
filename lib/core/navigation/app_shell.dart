@@ -6,6 +6,7 @@ import '../theme/design_tokens.dart';
 import '../../screens/auth_screen.dart';
 import '../../screens/screens.dart';
 import '../../services/auth_service.dart';
+import '../../services/firebase_service.dart';
 import '../../services/firestore_service.dart';
 
 /// SharedPreferences key that remembers the user saw onboarding.
@@ -16,12 +17,25 @@ const String kOnboardingSeenKey = 'onboarding_seen';
 /// Tabs in fixed order: Home, Kundli, Panchang, Consult, Profile.
 /// Kundli tab opens the birth details form first, then the chart.
 class AppShell extends StatefulWidget {
-  const AppShell({super.key, this.firestoreService});
+  const AppShell({
+    super.key,
+    this.firestoreService,
+    this.authService,
+    this.askNotifications = true,
+  });
 
   /// Firestore service for the tabs. Null in production, where a
   /// real one is created. Tests pass a fake so no Firebase call
   /// runs while the app is pumped without Firebase initialised.
   final FirestoreService? firestoreService;
+
+  /// Auth service for the tabs. Null in production, where a real
+  /// one is created. Tests pass a fake.
+  final AuthService? authService;
+
+  /// False in tests, so the one time notification dialog never
+  /// opens while the shell is pumped. True in production.
+  final bool askNotifications;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -34,6 +48,58 @@ class _AppShellState extends State<AppShell> {
   // through the same live streams.
   late final FirestoreService _firestore =
       widget.firestoreService ?? FirestoreService();
+  late final AuthService _auth = widget.authService ?? AuthService();
+
+  @override
+  void initState() {
+    super.initState();
+    // The notification permission dialog appears here and only
+    // here: on the main screen, after onboarding and sign in,
+    // once per install, with the reason shown first. Never at
+    // app open, never during splash or onboarding.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _askNotificationPermissionOnce();
+    });
+  }
+
+  Future<void> _askNotificationPermissionOnce() async {
+    if (!widget.askNotifications) {
+      return;
+    }
+    if (await FirebaseService.notificationPromptShown()) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    final bool? allow = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Daily horoscope alerts'),
+          content: const Text(
+            'Allow notifications to get your daily horoscope alert at 06:00 AM. You can change this later in Profile.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Not now'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Allow notifications'),
+            ),
+          ],
+        );
+      },
+    );
+    if (allow == true) {
+      await FirebaseService.requestNotificationPermissionOnce();
+    } else {
+      await FirebaseService.markNotificationPromptShown();
+    }
+  }
 
   void _goToTab(int index) {
     setState(() {
@@ -44,11 +110,15 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> tabs = <Widget>[
-      HomeScreen(onOpenTab: _goToTab, firestore: _firestore),
-      const KundliInputScreen(),
+      HomeScreen(
+        onOpenTab: _goToTab,
+        firestore: _firestore,
+        authService: _auth,
+      ),
+      KundliInputScreen(firestore: _firestore, authService: _auth),
       PanchangScreen(firestore: _firestore),
       ConsultScreen(firestore: _firestore),
-      ProfileScreen(firestore: _firestore),
+      ProfileScreen(firestore: _firestore, authService: _auth),
     ];
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: tabs),
@@ -103,6 +173,7 @@ class DharmGuruApp extends StatefulWidget {
     this.authService,
     this.firestoreService,
     this.onboardingSeen,
+    this.askNotifications = true,
   });
 
   final bool firebaseReady;
@@ -117,6 +188,10 @@ class DharmGuruApp extends StatefulWidget {
   /// First launch flag. Null in production, where it is read
   /// from SharedPreferences. Tests pass it in directly.
   final bool? onboardingSeen;
+
+  /// False in tests, so the one time notification dialog never
+  /// opens while the app is pumped. True in production.
+  final bool askNotifications;
 
   @override
   State<DharmGuruApp> createState() => _DharmGuruAppState();
@@ -207,7 +282,11 @@ class _DharmGuruAppState extends State<DharmGuruApp> {
           return _app(home: AuthScreen(authService: _auth));
         }
         return _app(
-          home: AppShell(firestoreService: widget.firestoreService),
+          home: AppShell(
+            firestoreService: widget.firestoreService,
+            authService: _auth,
+            askNotifications: widget.askNotifications,
+          ),
         );
       },
     );

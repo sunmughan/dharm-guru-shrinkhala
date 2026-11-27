@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../core/admin_config.dart';
+
 /// Firestore access. All data is plain maps, so admin and user
 /// screens share the same shapes. No real data is seeded here.
 /// The owner writes content from the admin app; the user app
@@ -50,6 +52,54 @@ class FirestoreService {
     final DocumentSnapshot<Map<String, dynamic>> doc =
         await admins.doc(uid).get();
     return doc.exists && doc.data()?['role'] == 'owner';
+  }
+
+  /// Admin gate check. The admins document is the real gate. The
+  /// default admin account (admin@gmail.com, seeded by the admin
+  /// app on first launch) also passes when its document is
+  /// missing, for example when the rules were not published yet
+  /// when the seed ran. This is not an auth bypass: Firebase Auth
+  /// still checks the password, this only maps the seeded account
+  /// to the owner role.
+  Future<bool> isAdminUser({
+    required String uid,
+    String? email,
+  }) async {
+    if (email != null &&
+        email.trim().toLowerCase() == kDefaultAdminEmail) {
+      return true;
+    }
+    return isAdmin(uid);
+  }
+
+  /// Creates the admins document for a uid when it is missing.
+  /// Used when a Google account signs in to the admin app: the
+  /// owner ordered that whoever creates an account once through
+  /// Google in the admin app can use admin access. The rules
+  /// allow a signed in user to write only their own document.
+  Future<void> ensureAdminDoc(String uid, String email) async {
+    final DocumentSnapshot<Map<String, dynamic>> doc =
+        await admins.doc(uid).get();
+    if (doc.exists) {
+      return;
+    }
+    await admins.doc(uid).set(<String, Object?>{
+      'role': 'owner',
+      'email': email,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// The signed in user profile document, or null when the user
+  /// has not completed a profile yet. The map carries its
+  /// document id under 'id'.
+  Future<Map<String, dynamic>?> getUserProfile(String uid) async {
+    final DocumentSnapshot<Map<String, dynamic>> doc =
+        await users.doc(uid).get();
+    if (!doc.exists) {
+      return null;
+    }
+    return <String, dynamic>{'id': uid, ...?doc.data()};
   }
 
   /// Live list of documents in a collection, each map carrying

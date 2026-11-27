@@ -8,10 +8,13 @@ import '../models/kundli.dart';
 import '../models/panchang.dart';
 import '../models/remedies.dart';
 import '../services/auth_service.dart';
+import '../services/firebase_service.dart';
 import '../services/firestore_service.dart';
+import '../services/user_profile.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/kundli_chart.dart';
 import '../widgets/planet_details.dart';
+import 'profile_form_screen.dart';
 
 /// Splash screen. Logo, wordmark and tagline, with a calm
 /// entrance: the logo fades and settles in, a gold rays ring
@@ -517,15 +520,24 @@ class _OnboardingDot extends StatelessWidget {
 }
 
 /// Home screen. Cards lead to kundli, horoscope, panchang,
-/// matching, remedies and live consult.
+/// matching, remedies and live consult. The greeting and birth
+/// line come from the saved profile when one exists; with no
+/// profile yet the screen asks the user to complete it instead
+/// of showing a made up name.
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, required this.onOpenTab, this.firestore});
+  const HomeScreen({super.key, required this.onOpenTab, this.firestore, this.authService});
 
   final void Function(int tabIndex) onOpenTab;
   final FirestoreService? firestore;
+  final AuthService? authService;
 
   @override
   Widget build(BuildContext context) {
+    final String? uid = authService?.currentUserId;
+    final Future<Map<String, dynamic>?>? profileFuture =
+        firestore != null && uid != null
+            ? firestore!.getUserProfile(uid)
+            : null;
     return Scaffold(
       appBar: AppBar(title: const Text('Dharm Guru Shrinkhala')),
       body: ListView(
@@ -533,11 +545,30 @@ class HomeScreen extends StatelessWidget {
         children: <Widget>[
           const SampleDataBanner(),
           const SizedBox(height: AppSpacing.md),
-          Text('Namaste, Aarav Sharma', style: AppTextStyles.themed(context, AppTextStyles.display)),
-          Text(
-            'Birth 14 March 1998, 06:25 AM, Jaipur, Rajasthan. Lagna Meena, Rashi Kanya.',
-            style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
-          ),
+          if (profileFuture == null)
+            _HomeGreeting(profile: null, onOpenTab: onOpenTab)
+          else
+            FutureBuilder<Map<String, dynamic>?>(
+              future: profileFuture,
+              builder: (
+                BuildContext context,
+                AsyncSnapshot<Map<String, dynamic>?> snapshot,
+              ) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(
+                    height: 72,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final UserProfile? profile = snapshot.data == null
+                    ? null
+                    : UserProfile.fromMap(snapshot.data!);
+                return _HomeGreeting(
+                  profile: profile,
+                  onOpenTab: onOpenTab,
+                );
+              },
+            ),
           const SizedBox(height: AppSpacing.md),
           _HomeCard(
             title: 'Your Kundli',
@@ -640,9 +671,81 @@ class _HomeCard extends StatelessWidget {
   }
 }
 
+/// Home greeting. With a complete profile it shows the real
+/// name and birth line. With no profile it says Namaste and
+/// offers the Profile tab, so the app never shows a made up
+/// name as if it were the signed in user.
+class _HomeGreeting extends StatelessWidget {
+  const _HomeGreeting({required this.profile, required this.onOpenTab});
+
+  final UserProfile? profile;
+  final void Function(int tabIndex) onOpenTab;
+
+  @override
+  Widget build(BuildContext context) {
+    final UserProfile? profile = this.profile;
+    if (profile == null || !profile.isComplete) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Namaste',
+            style: AppTextStyles.themed(context, AppTextStyles.display),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Card(
+            child: ListTile(
+              leading: const Icon(
+                Icons.person_add,
+                color: AppColors.deepSaffron,
+                size: 32,
+              ),
+              title: Text(
+                'Complete your profile',
+                style: AppTextStyles.themed(
+                  context,
+                  AppTextStyles.subtitle,
+                ),
+              ),
+              subtitle: Text(
+                'Add your birth details so your kundli and horoscope use your real details.',
+                style: AppTextStyles.themed(
+                  context,
+                  AppTextStyles.bodySmall,
+                ),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => onOpenTab(4),
+            ),
+          ),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'Namaste, ${profile.name}',
+          style: AppTextStyles.themed(context, AppTextStyles.display),
+        ),
+        Text(
+          'Birth ${profile.birthLine}.',
+          style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+        ),
+      ],
+    );
+  }
+}
+
 /// Kundli input form: name, date, time and place of birth.
+/// When a saved profile exists, the form opens prefilled with
+/// the profile birth details. Without one it opens with the
+/// sample details, as before.
 class KundliInputScreen extends StatefulWidget {
-  const KundliInputScreen({super.key});
+  const KundliInputScreen({super.key, this.firestore, this.authService});
+
+  final FirestoreService? firestore;
+  final AuthService? authService;
 
   @override
   State<KundliInputScreen> createState() => _KundliInputScreenState();
@@ -657,6 +760,34 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
       TextEditingController(text: '06:25 AM');
   final TextEditingController _placeController =
       TextEditingController(text: 'Jaipur, Rajasthan');
+
+  @override
+  void initState() {
+    super.initState();
+    final FirestoreService? firestore = widget.firestore;
+    final String? uid = widget.authService?.currentUserId;
+    if (firestore != null && uid != null) {
+      firestore.getUserProfile(uid).then((Map<String, dynamic>? map) {
+        if (!mounted || map == null) {
+          return;
+        }
+        final UserProfile profile = UserProfile.fromMap(map);
+        if (!profile.isComplete) {
+          return;
+        }
+        setState(() {
+          _nameController.text = profile.name;
+          _dateController.text =
+              UserProfile.displayDate(profile.dateOfBirth!);
+          _timeController.text =
+              profile.birthTimeUnknown || profile.timeOfBirth == null
+                  ? ''
+                  : UserProfile.displayTime(profile.timeOfBirth!);
+          _placeController.text = profile.placeLine;
+        });
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -2231,54 +2362,290 @@ class ConsultScreen extends StatelessWidget {
   }
 }
 
-/// Profile screen. Free and premium plan. Pricing to be decided.
-/// With a Firestore service, it shows the active plan the admin
-/// set, instead of assuming the free plan.
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key, this.firestore});
+/// Profile screen. Loads the saved profile from the user
+/// document and shows every field it holds: name, gender,
+/// birth details, place of birth, marital status, occupation,
+/// phone, language and the daily horoscope alert time. With no
+/// profile yet it asks the user to complete one instead of
+/// showing a made up name. Free and premium plan. Pricing to
+/// be decided. With a Firestore service, it shows the active
+/// plan the admin set, instead of assuming the free plan.
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key, this.firestore, this.authService});
 
   final FirestoreService? firestore;
+  final AuthService? authService;
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  Future<Map<String, dynamic>?>? _profileFuture;
+
+  AuthService get _auth => widget.authService ?? AuthService();
+  FirestoreService? get _firestore => widget.firestore;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  void _loadProfile() {
+    final String? uid = _auth.currentUserId;
+    final FirestoreService? firestore = _firestore;
+    setState(() {
+      _profileFuture = firestore != null && uid != null
+          ? firestore.getUserProfile(uid)
+          : Future<Map<String, dynamic>?>.value(null);
+    });
+  }
+
+  Future<void> _openForm(UserProfile? existing) async {
+    final bool? saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => ProfileFormScreen(
+          authService: _auth,
+          firestoreService: _firestore,
+          existing: existing,
+        ),
+      ),
+    );
+    if (saved == true && mounted) {
+      _loadProfile();
+    }
+  }
+
+  String _initials(String name) {
+    final List<String> parts =
+        name.trim().split(RegExp(r'\s+')).where((String p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return (parts.first[0] + parts.last[0]).toUpperCase();
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          SizedBox(
+            width: 140,
+            child: Text(
+              label,
+              style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: AppTextStyles.themed(context, AppTextStyles.body),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final String? email = _auth.currentUserEmail;
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          const CircleAvatar(
-            radius: 40,
-            backgroundColor: AppColors.saffron,
-            child: Icon(Icons.person, size: 40, color: Colors.white),
+          FutureBuilder<Map<String, dynamic>?>(
+            future: _profileFuture,
+            builder: (
+              BuildContext context,
+              AsyncSnapshot<Map<String, dynamic>?> snapshot,
+            ) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(
+                  height: 120,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              final UserProfile? profile = snapshot.data == null
+                  ? null
+                  : UserProfile.fromMap(snapshot.data!);
+              final String name =
+                  profile != null && profile.name.isNotEmpty
+                      ? profile.name
+                      : 'Your profile';
+              final String alertTime =
+                  profile?.horoscopeAlertTime != null
+                      ? UserProfile.displayTime(profile!.horoscopeAlertTime!)
+                      : '06:00 AM';
+              return Column(
+                children: <Widget>[
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: AppColors.saffron,
+                    child: Text(
+                      _initials(name),
+                      style: AppTextStyles.themed(
+                        context,
+                        AppTextStyles.title,
+                      ).copyWith(color: Colors.white, fontSize: 28),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    name,
+                    style: AppTextStyles.themed(
+                      context,
+                      AppTextStyles.title,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (email != null)
+                    Text(
+                      email,
+                      style: AppTextStyles.themed(
+                        context,
+                        AppTextStyles.bodySmall,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  if (profile != null && profile.birthLine.isNotEmpty)
+                    Text(
+                      'Birth ${profile.birthLine}',
+                      style: AppTextStyles.themed(
+                        context,
+                        AppTextStyles.bodySmall,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  const SizedBox(height: AppSpacing.md),
+                  if (profile == null || !profile.isComplete)
+                    Card(
+                      child: ListTile(
+                        title: Text(
+                          'Complete your profile',
+                          style: AppTextStyles.themed(
+                            context,
+                            AppTextStyles.subtitle,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Add your birth details so your kundli and horoscope use your real details.',
+                          style: AppTextStyles.themed(
+                            context,
+                            AppTextStyles.bodySmall,
+                          ),
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _openForm(profile),
+                      ),
+                    )
+                  else
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            if (profile.gender != null)
+                              _detailRow('Gender', profile.gender!),
+                            if (profile.dateOfBirth != null)
+                              _detailRow(
+                                'Date of birth',
+                                UserProfile.displayDate(profile.dateOfBirth!),
+                              ),
+                            _detailRow(
+                              'Time of birth',
+                              profile.birthTimeUnknown
+                                  ? 'Not known'
+                                  : profile.timeOfBirth == null
+                                      ? 'Not set'
+                                      : UserProfile.displayTime(
+                                          profile.timeOfBirth!,
+                                        ),
+                            ),
+                            if (profile.placeLine.isNotEmpty)
+                              _detailRow('Place of birth', profile.placeLine),
+                            if (profile.maritalStatus != null)
+                              _detailRow(
+                                'Marital status',
+                                profile.maritalStatus!,
+                              ),
+                            if (profile.occupation != null)
+                              _detailRow('Occupation', profile.occupation!),
+                            if (profile.phoneNumber != null)
+                              _detailRow('Phone', profile.phoneNumber!),
+                            if (profile.language != null)
+                              _detailRow('Language', profile.language!),
+                            _detailRow(
+                              'Horoscope alert',
+                              'Daily at $alertTime',
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: () => _openForm(profile),
+                                child: const Text('Edit profile'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: AppSpacing.md),
+                  Card(
+                    child: ListTile(
+                      title: Text(
+                        'Notifications',
+                        style: AppTextStyles.themed(
+                          context,
+                          AppTextStyles.subtitle,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Daily horoscope alert at $alertTime.',
+                        style: AppTextStyles.themed(
+                          context,
+                          AppTextStyles.bodySmall,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      // Asks for permission again from here when the
+                      // user wants alerts, with the reason on this
+                      // screen, not at app open.
+                      onTap: () async {
+                        await FirebaseService
+                            .requestNotificationPermission();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'If you allow, daily horoscope alerts will arrive at $alertTime.',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'Aarav Sharma',
-            style: AppTextStyles.themed(context, AppTextStyles.title),
-            textAlign: TextAlign.center,
-          ),
-          Text(
-            'Birth 14 March 1998, 06:25 AM, Jaipur, Rajasthan',
-            style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
-            textAlign: TextAlign.center,
-          ),
-          Text(
-            'Lagna Meena, Rashi Kanya, Nakshatra Hasta, Tithi at Birth Krishna Dwitiya',
-            style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppSpacing.md),
           Card(
             child: ListTile(
               title: Text('Plan', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
-              subtitle: firestore == null
+              subtitle: _firestore == null
                   ? Text(
                       'Free plan. Premium pricing to be decided.',
                       style: AppTextStyles.themed(
                           context, AppTextStyles.bodySmall),
                     )
                   : StreamBuilder<List<Map<String, dynamic>>>(
-                      stream: firestore!.watchDocs('plans'),
+                      stream: _firestore!.watchDocs('plans'),
                       builder: (
                         BuildContext context,
                         AsyncSnapshot<List<Map<String, dynamic>>> snap,
@@ -2315,21 +2682,12 @@ class ProfileScreen extends StatelessWidget {
                     ),
             ),
           ),
-          Card(
-            child: ListTile(
-              title: Text('Notifications', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
-              subtitle: Text(
-                'Daily horoscope alert at 06:00 AM.',
-                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
-              ),
-            ),
-          ),
           const SizedBox(height: AppSpacing.md),
           ElevatedButton(
             // Profile only opens signed in, so this is sign out.
             // The auth gate takes the app back to sign in.
             onPressed: () async {
-              await AuthService().signOut();
+              await _auth.signOut();
             },
             child: const Text('Sign Out'),
           ),

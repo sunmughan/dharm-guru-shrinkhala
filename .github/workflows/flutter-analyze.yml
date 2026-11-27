@@ -72,14 +72,74 @@ jobs:
               f.write('\n'.join(lines) + '\n')
           print('firebase_values.xml written with: ' + ', '.join(sorted(values)))
           PYEOF
+      - name: Restore release keystore
+        # Permanent release signing key, so the SHA-1 fingerprint
+        # registered in the Firebase console stays valid for
+        # every build. The keystore is a PKCS12 file, never
+        # committed. Without this step the build falls back to
+        # the debug key, whose fingerprint changes every run.
+        env:
+          DHARM_GURU_KEYSTORE_BASE64: ${{ secrets.DHARM_GURU_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$DHARM_GURU_KEYSTORE_BASE64" ]; then
+            echo "DHARM_GURU_KEYSTORE_BASE64 secret is not set; release builds will sign with the debug key."
+            exit 0
+          fi
+          printf '%s' "$DHARM_GURU_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          echo "Release keystore restored."
       - name: Set build stamp
         run: |
           VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}')
           echo "BUILD_STAMP=$(git rev-parse --short HEAD) • $VERSION" >> "$GITHUB_ENV"
       - name: Build user release APK
+        env:
+          DHARM_GURU_KEYSTORE_PASSWORD: ${{ secrets.DHARM_GURU_KEYSTORE_PASSWORD }}
+          DHARM_GURU_KEY_PASSWORD: ${{ secrets.DHARM_GURU_KEY_PASSWORD }}
+          DHARM_GURU_KEY_ALIAS: ${{ secrets.DHARM_GURU_KEY_ALIAS }}
         run: flutter build apk --release --flavor user --dart-define="BUILD_STAMP=$BUILD_STAMP"
       - name: Build admin release APK
+        env:
+          DHARM_GURU_KEYSTORE_PASSWORD: ${{ secrets.DHARM_GURU_KEYSTORE_PASSWORD }}
+          DHARM_GURU_KEY_PASSWORD: ${{ secrets.DHARM_GURU_KEY_PASSWORD }}
+          DHARM_GURU_KEY_ALIAS: ${{ secrets.DHARM_GURU_KEY_ALIAS }}
         run: flutter build apk --release --flavor admin -t lib/main_admin.dart --dart-define="BUILD_STAMP=$BUILD_STAMP"
+      - name: Verify APK signing fingerprint is the release key
+        # Both APKs must carry the permanent release key, never a
+        # debug key. Prints the SHA-1 fingerprint for the console
+        # steps in FIREBASE-SETUP.md. Fails the build when the
+        # cert is a debug cert, so a missing keystore secret can
+        # never silently ship a debug signed release APK.
+        run: |
+          python3 - <<'PYEOF'
+          import subprocess
+          for apk in [
+              'build/app/outputs/flutter-apk/app-user-release.apk',
+              'build/app/outputs/flutter-apk/app-admin-release.apk',
+          ]:
+              data = open(apk, 'rb').read()
+              found = False
+              i = 0
+              while True:
+                  j = data.find(b'\x30\x82', i)
+                  if j < 0:
+                      break
+                  ln = 4 + ((data[j+2] << 8) | data[j+3])
+                  if 200 < ln < 5000:
+                      open('/tmp/cert.der', 'wb').write(data[j:j+ln])
+                      r = subprocess.run(['openssl', 'x509', '-inform', 'DER', '-in', '/tmp/cert.der', '-noout', '-subject', '-fingerprint', '-sha1'], capture_output=True, text=True)
+                      if r.returncode == 0:
+                          out = r.stdout.strip().replace(chr(10), ' | ')
+                          print(apk + ': ' + out)
+                          if 'Android Debug' in out:
+                              print('ERROR: ' + apk + ' is signed with a debug key, not the permanent release key.')
+                              raise SystemExit(1)
+                          found = True
+                          break
+                  i = j + 1
+              if not found:
+                  print('NO CERT FOUND in ' + apk)
+                  raise SystemExit(1)
+          PYEOF
       - name: Verify APK package names differ
         run: |
           AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt | head -n 1)

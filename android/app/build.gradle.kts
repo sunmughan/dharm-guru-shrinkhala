@@ -52,11 +52,46 @@ android {
         }
     }
 
+    // Permanent release signing key. CI restores
+    // android/app/release.keystore from the
+    // DHARM_GURU_KEYSTORE_BASE64 repo secret and passes the
+    // passwords as environment variables. The key never changes,
+    // so the SHA-1 fingerprint registered in the Firebase
+    // console stays valid for every build. Without it each CI
+    // run signs with a fresh debug key whose fingerprint
+    // changes every time, and Google sign in on Android can
+    // never be registered. When the keystore is absent (local
+    // builds) the release build falls back to the debug key.
+    val releaseKeystoreFile = file("release.keystore")
+    val releaseKeystorePassword =
+        System.getenv("DHARM_GURU_KEYSTORE_PASSWORD")
+    val releaseKeyPassword = System.getenv("DHARM_GURU_KEY_PASSWORD")
+    val releaseKeyAlias =
+        System.getenv("DHARM_GURU_KEY_ALIAS") ?: "dharmguru"
+    val hasReleaseKey = releaseKeystoreFile.exists() &&
+        releaseKeystorePassword != null &&
+        releaseKeyPassword != null
+
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                storeFile = releaseKeystoreFile
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseKey) {
+                signingConfigs.getByName("release")
+            } else {
+                // No release key present: local builds sign with
+                // the debug key, so `flutter run --release` works.
+                signingConfigs.getByName("debug")
+            }
             // Release shrinking (R8) is on. The keep rules in
             // proguard-rules.pro protect the Firebase and
             // FlutterFire implementation classes: without them R8

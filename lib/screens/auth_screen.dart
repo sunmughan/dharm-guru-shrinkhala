@@ -54,6 +54,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   _AuthMode _mode = _AuthMode.signIn;
   String? _error;
+  String? _notice;
   String? _resetSentTo;
   bool _busy = false;
 
@@ -71,6 +72,7 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() {
       _mode = mode;
       _error = null;
+      _notice = null;
       _resetSentTo = null;
     });
   }
@@ -116,6 +118,7 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _notice = null;
     });
     try {
       if (_mode == _AuthMode.signUp) {
@@ -129,6 +132,24 @@ class _AuthScreenState extends State<AuthScreen> {
           password: password,
         );
       }
+      // A Google sign in earlier found this email on an existing
+      // account. The password sign in just succeeded, so link the
+      // Google account to it now: one account, both sign in
+      // methods, never two accounts for the same person.
+      if (_auth.hasPendingGoogleLink) {
+        try {
+          await _auth.linkPendingGoogleCredential();
+          if (mounted) {
+            setState(() {
+              _notice = 'Google account linked to this account.';
+            });
+          }
+        } catch (error) {
+          if (mounted) {
+            setState(() => _error = AuthService.plainError(error));
+          }
+        }
+      }
     } catch (error) {
       setState(() => _error = AuthService.plainError(error));
     } finally {
@@ -140,13 +161,33 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _notice = null;
     });
     try {
       await _auth.signInWithGoogle();
+    } on GoogleLinkNeededException catch (error) {
+      // This Google email already has an email and password
+      // account. Prefill that email and ask for the password once;
+      // _submitEmail links the Google account right after.
+      if (mounted) {
+        setState(() {
+          _mode = _AuthMode.signIn;
+          if (error.email != null) {
+            _emailController.text = error.email!;
+          }
+          _error =
+              'An account already exists for this email. Sign in with '
+              'your password once to link Google to it.';
+        });
+      }
     } catch (error) {
-      setState(() => _error = AuthService.plainError(error));
+      if (mounted) {
+        setState(() => _error = AuthService.plainError(error));
+      }
     } finally {
-      setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _busy = false);
+      }
     }
   }
 
@@ -209,18 +250,30 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               const SizedBox(height: AppSpacing.md),
             ],
+            if (_notice != null) ...<Widget>[
+              Text(
+                _notice!,
+                style: AppTextStyles.themed(context, AppTextStyles.body),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
             ElevatedButton(
               onPressed: _busy ? null : _submitEmail,
               child: Text(submitLabel),
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          if (_mode == _AuthMode.signIn) ...<Widget>[
+          // Google sign in is on sign in and on create account
+          // both, so a new user can start with Google and an
+          // existing user can link it from either screen.
+          if (_mode != _AuthMode.forgot) ...<Widget>[
             OutlinedButton(
               onPressed: _busy ? null : _submitGoogle,
               child: const Text('Continue with Google'),
             ),
             const SizedBox(height: AppSpacing.md),
+          ],
+          if (_mode == _AuthMode.signIn) ...<Widget>[
             TextButton(
               onPressed: _busy ? null : () => _showMode(_AuthMode.forgot),
               child: const Text('Forgot password?'),

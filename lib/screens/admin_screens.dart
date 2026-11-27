@@ -8,6 +8,7 @@ import 'auth_screen.dart';
 import 'screens.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/user_profile.dart';
 
 /// Admin app for Dharm Guru Shrinkhala. Same Firebase project as
 /// the user app, same auth system, owner only. Admin screens are
@@ -131,6 +132,25 @@ class _DharmGuruAdminAppState extends State<DharmGuruAdminApp> {
     _splashDone = !widget.showSplash;
   }
 
+  /// Admin gate. A Google account that signs in to the admin app
+  /// gets its owner record created first, so whoever creates an
+  /// account once through Google in the admin app can use admin
+  /// access. The default admin account passes through the
+  /// seeded email check in isAdminUser. Everyone else needs an
+  /// admins document with role owner.
+  Future<bool> _checkAdminAccess(String uid) async {
+    final String? email = _auth.currentUserEmail;
+    if (_auth.currentUserHasGoogleProvider) {
+      try {
+        await _firestore.ensureAdminDoc(uid, email ?? '');
+      } catch (_) {
+        // A failed write must not lock the owner out: the gate
+        // below still checks the document and the seeded email.
+      }
+    }
+    return _firestore.isAdminUser(uid: uid, email: email);
+  }
+
   MaterialApp _app({required Widget home}) {
     return MaterialApp(
       title: 'Dharm Guru Admin',
@@ -174,7 +194,7 @@ class _DharmGuruAdminAppState extends State<DharmGuruAdminApp> {
           return _app(home: AuthScreen(authService: _auth));
         }
         return FutureBuilder<bool>(
-          future: _firestore.isAdmin(uid),
+          future: _checkAdminAccess(uid),
           builder: (BuildContext context, AsyncSnapshot<bool> adminSnap) {
             if (!adminSnap.hasData) {
               return _app(
@@ -499,6 +519,7 @@ class _AdminShellState extends State<AdminShell> {
     'Analytics',
     'Notifications',
     'Moderation',
+    'Account',
   ];
 
   static const List<IconData> _icons = <IconData>[
@@ -509,6 +530,7 @@ class _AdminShellState extends State<AdminShell> {
     Icons.bar_chart,
     Icons.notifications,
     Icons.shield,
+    Icons.manage_accounts,
   ];
 
   void _go(int index) {
@@ -527,7 +549,11 @@ class _AdminShellState extends State<AdminShell> {
       3 => SubscriptionsScreen(firestore: widget.firestore),
       4 => AnalyticsScreen(firestore: widget.firestore),
       5 => NotificationsScreenAdmin(firestore: widget.firestore),
-      _ => ModerationScreen(firestore: widget.firestore),
+      6 => ModerationScreen(firestore: widget.firestore),
+      _ => AdminAccountScreen(
+          firestore: widget.firestore,
+          auth: widget.auth,
+        ),
     };
   }
 
@@ -3147,5 +3173,415 @@ class _ModerationScreenState extends State<ModerationScreen> {
     if (context.mounted) {
       _toast(context, 'Item $decision.');
     }
+  }
+}
+
+/// Admin account screen. Shows the signed in admin account and
+/// role, the admin profile (name, phone, language, kept in the
+/// user document), change email and change password through
+/// Firebase Auth, and Google linking. Change email sends a
+/// verification link to the new email: the email only changes
+/// after that link is tapped. Change password needs the current
+/// password first, as Firebase requires reauthentication.
+/// Google only accounts have no password to change: they use
+/// Forgot password on the sign in screen instead.
+class AdminAccountScreen extends StatefulWidget {
+  const AdminAccountScreen({
+    super.key,
+    required this.firestore,
+    required this.auth,
+  });
+
+  final FirestoreService firestore;
+  final AuthService auth;
+
+  @override
+  State<AdminAccountScreen> createState() => _AdminAccountScreenState();
+}
+
+class _AdminAccountScreenState extends State<AdminAccountScreen> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _newEmailController = TextEditingController();
+  final TextEditingController _currentPasswordController =
+      TextEditingController();
+  final TextEditingController _currentPasswordForEmailController =
+      TextEditingController();
+  final TextEditingController _newPasswordController =
+      TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+
+  String? _language;
+  UserProfile? _profile;
+  bool _profileLoaded = false;
+  String? _profileNote;
+  String? _emailNote;
+  String? _emailError;
+  String? _passwordNote;
+  String? _passwordError;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _newEmailController.dispose();
+    _currentPasswordController.dispose();
+    _currentPasswordForEmailController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadProfile() async {
+    final String? uid = widget.auth.currentUserId;
+    if (uid == null) {
+      setState(() => _profileLoaded = true);
+      return;
+    }
+    final Map<String, dynamic>? map =
+        await widget.firestore.getUserProfile(uid);
+    if (!mounted) return;
+    setState(() {
+      _profile = map == null ? null : UserProfile.fromMap(map);
+      _profileLoaded = true;
+      _nameController.text = _profile?.name ?? '';
+      _phoneController.text = _profile?.phoneNumber ?? '';
+      _language = _profile?.language;
+    });
+  }
+
+  Future<void> _saveProfile() async {
+    final String? uid = widget.auth.currentUserId;
+    if (uid == null) return;
+    final String name = _nameController.text.trim();
+    if (name.isEmpty) {
+      setState(() => _profileNote = 'Enter your full name.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _profileNote = null;
+    });
+    final UserProfile profile = UserProfile(
+      name: name,
+      gender: _profile?.gender,
+      dateOfBirth: _profile?.dateOfBirth,
+      timeOfBirth: _profile?.timeOfBirth,
+      birthTimeUnknown: _profile?.birthTimeUnknown ?? false,
+      birthCity: _profile?.birthCity,
+      birthState: _profile?.birthState,
+      birthCountry: _profile?.birthCountry,
+      maritalStatus: _profile?.maritalStatus,
+      occupation: _profile?.occupation,
+      phoneNumber: _phoneController.text.trim().isEmpty
+          ? null
+          : _phoneController.text.trim(),
+      language: _language,
+      horoscopeAlertTime: _profile?.horoscopeAlertTime,
+    );
+    try {
+      await widget.firestore.saveUserProfile(uid: uid, data: profile.toMap());
+      if (mounted) {
+        setState(() {
+          _profile = profile;
+          _profileNote = 'Profile saved.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _profileNote = 'Could not save the profile.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _changeEmail() async {
+    final String newEmail = _newEmailController.text.trim();
+    final String? problem = validateEmail(newEmail);
+    if (problem != null) {
+      setState(() => _emailError = problem);
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _emailError = null;
+      _emailNote = null;
+    });
+    try {
+      await widget.auth.updateEmailAddress(
+        newEmail: newEmail,
+        currentPassword:
+            widget.auth.currentUserHasPasswordProvider
+                ? _currentPasswordForEmailController.text
+                : null,
+      );
+      if (mounted) {
+        setState(() {
+          _emailNote =
+              'Verification link sent to $newEmail. Tap the link in that email to complete the change.';
+          _newEmailController.clear();
+          _currentPasswordForEmailController.clear();
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _emailError = AuthService.plainError(error));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _changePassword() async {
+    final String current = _currentPasswordController.text;
+    final String next = _newPasswordController.text;
+    final String confirm = _confirmPasswordController.text;
+    final String? passwordError = validatePassword(next);
+    if (passwordError != null) {
+      setState(() => _passwordError = passwordError);
+      return;
+    }
+    final String? matchError = validatePasswordMatch(next, confirm);
+    if (matchError != null) {
+      setState(() => _passwordError = matchError);
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _passwordError = null;
+      _passwordNote = null;
+    });
+    try {
+      await widget.auth.updateAccountPassword(
+        currentPassword: current,
+        newPassword: next,
+      );
+      if (mounted) {
+        setState(() {
+          _passwordNote = 'Password changed.';
+          _currentPasswordController.clear();
+          _newPasswordController.clear();
+          _confirmPasswordController.clear();
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _passwordError = AuthService.plainError(error));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _linkGoogle() async {
+    setState(() {
+      _busy = true;
+      _emailError = null;
+      _emailNote = null;
+    });
+    try {
+      await widget.auth.signInWithGoogle();
+      if (mounted) {
+        setState(() => _emailNote = 'Google account linked.');
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _emailError = AuthService.plainError(error));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Widget _sectionTitle(String text) {
+    return Text(
+      text,
+      style: AppTextStyles.themed(context, AppTextStyles.title),
+    );
+  }
+
+  Widget _note(String? text) {
+    if (text == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Text(
+        text,
+        style: AppTextStyles.themed(context, AppTextStyles.body),
+      ),
+    );
+  }
+
+  Widget _error(String? text) {
+    if (text == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Text(
+        text,
+        style: AppTextStyles.themed(context, AppTextStyles.body).copyWith(
+              color: Theme.of(context).colorScheme.error,
+            ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String email = widget.auth.currentUserEmail ?? '';
+    final bool hasGoogle = widget.auth.currentUserHasGoogleProvider;
+    final bool hasPassword = widget.auth.currentUserHasPasswordProvider;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _sectionTitle('Account'),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'Signed in as $email. Role: owner.',
+          style: AppTextStyles.themed(context, AppTextStyles.body),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          hasGoogle
+              ? 'Google sign in is linked to this account.'
+              : 'Google sign in is not linked to this account.',
+          style: AppTextStyles.themed(context, AppTextStyles.body),
+        ),
+        if (!hasGoogle) ...<Widget>[
+          const SizedBox(height: AppSpacing.md),
+          OutlinedButton(
+            onPressed: _busy ? null : _linkGoogle,
+            child: const Text('Link Google account'),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.lg),
+        _sectionTitle('Admin profile'),
+        const SizedBox(height: AppSpacing.md),
+        if (!_profileLoaded)
+          const Center(child: CircularProgressIndicator())
+        else ...<Widget>[
+          TextField(
+            controller: _nameController,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(labelText: 'Full name'),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'Phone number'),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          DropdownButtonFormField<String>(
+            value: _language,
+            decoration:
+                const InputDecoration(labelText: 'Horoscope language'),
+            items: UserProfile.languages
+                .map(
+                  (String value) => DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  ),
+                )
+                .toList(),
+            onChanged: (String? value) =>
+                setState(() => _language = value),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ElevatedButton(
+            onPressed: _busy ? null : _saveProfile,
+            child: const Text('Save profile'),
+          ),
+          _note(_profileNote),
+        ],
+        const SizedBox(height: AppSpacing.lg),
+        _sectionTitle('Change email'),
+        const SizedBox(height: AppSpacing.md),
+        TextField(
+          controller: _newEmailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(labelText: 'New email'),
+        ),
+        if (hasPassword) ...<Widget>[
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _currentPasswordForEmailController,
+            obscureText: true,
+            decoration:
+                const InputDecoration(labelText: 'Current password'),
+          ),
+        ],
+        if (!hasPassword) ...<Widget>[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'You sign in with Google, so changing the email asks you to sign in with Google again first.',
+            style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.md),
+        ElevatedButton(
+          onPressed: _busy ? null : _changeEmail,
+          child: const Text('Send verification link'),
+        ),
+        _error(_emailError),
+        _note(_emailNote),
+        const SizedBox(height: AppSpacing.lg),
+        _sectionTitle('Change password'),
+        const SizedBox(height: AppSpacing.md),
+        if (!hasPassword)
+          Text(
+            'This account signs in with Google and has no password yet. Use Forgot password on the sign in screen to set one.',
+            style: AppTextStyles.themed(context, AppTextStyles.body),
+          )
+        else ...<Widget>[
+          TextField(
+            controller: _currentPasswordController,
+            obscureText: true,
+            decoration:
+                const InputDecoration(labelText: 'Current password'),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _newPasswordController,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'New password'),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _confirmPasswordController,
+            obscureText: true,
+            decoration:
+                const InputDecoration(labelText: 'Confirm new password'),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ElevatedButton(
+            onPressed: _busy ? null : _changePassword,
+            child: const Text('Change password'),
+          ),
+          _error(_passwordError),
+          _note(_passwordNote),
+        ],
+        const SizedBox(height: AppSpacing.lg),
+        OutlinedButton(
+          onPressed: () => widget.auth.signOut(),
+          child: const Text('Sign Out'),
+        ),
+      ],
+    );
   }
 }

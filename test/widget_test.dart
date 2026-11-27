@@ -2,7 +2,9 @@ import 'package:dharm_guru_shrinkhala/core/build_info.dart';
 import 'package:dharm_guru_shrinkhala/core/navigation/app_shell.dart';
 import 'package:dharm_guru_shrinkhala/screens/admin_screens.dart';
 import 'package:dharm_guru_shrinkhala/screens/auth_screen.dart';
+import 'package:dharm_guru_shrinkhala/screens/profile_form_screen.dart';
 import 'package:dharm_guru_shrinkhala/screens/screens.dart';
+import 'package:dharm_guru_shrinkhala/services/admin_seed_service.dart';
 import 'package:dharm_guru_shrinkhala/services/auth_service.dart';
 import 'package:dharm_guru_shrinkhala/services/firestore_service.dart';
 import 'package:dharm_guru_shrinkhala/widgets/kundli_chart.dart';
@@ -15,11 +17,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// takes no real FirebaseAuth, and every member used here is
 /// overridden, so FirebaseAuth.instance is never reached.
 class _FakeAuthService extends AuthService {
-  _FakeAuthService({this.signedInValue = false});
+  _FakeAuthService({
+    this.signedInValue = false,
+    this.userEmail,
+    this.hasGoogleValue = false,
+    this.hasPasswordValue = true,
+    this.throwLinkNeeded = false,
+    this.signUpThrowsAlreadyInUse = false,
+  });
 
   final bool signedInValue;
+  final String? userEmail;
+  final bool hasGoogleValue;
+  final bool hasPasswordValue;
+  final bool throwLinkNeeded;
+  final bool signUpThrowsAlreadyInUse;
   String? lastResetEmail;
   String? lastSignedInEmail;
+  String? lastSignedUpEmail;
+  bool signOutCalled = false;
+  bool linkPendingCalled = false;
 
   @override
   Stream<bool> get signedIn => Stream.value(signedInValue);
@@ -29,7 +46,13 @@ class _FakeAuthService extends AuthService {
 
   @override
   String? get currentUserEmail =>
-      signedInValue ? 'owner@example.com' : null;
+      signedInValue ? (userEmail ?? 'owner@example.com') : null;
+
+  @override
+  bool get currentUserHasGoogleProvider => hasGoogleValue;
+
+  @override
+  bool get currentUserHasPasswordProvider => hasPasswordValue;
 
   @override
   Future<void> signInWithEmailAndPassword({
@@ -37,6 +60,34 @@ class _FakeAuthService extends AuthService {
     required String password,
   }) async {
     lastSignedInEmail = email;
+  }
+
+  @override
+  Future<void> signUpWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    if (signUpThrowsAlreadyInUse) {
+      throw FirebaseAuthException(code: 'email-already-in-use');
+    }
+    lastSignedUpEmail = email;
+  }
+
+  @override
+  Future<void> signInWithGoogle() async {
+    if (throwLinkNeeded) {
+      throw GoogleLinkNeededException('someone@example.com');
+    }
+  }
+
+  @override
+  Future<void> linkPendingGoogleCredential() async {
+    linkPendingCalled = true;
+  }
+
+  @override
+  Future<void> signOut() async {
+    signOutCalled = true;
   }
 
   @override
@@ -59,6 +110,7 @@ void main() {
         authService: _FakeAuthService(signedInValue: true),
         firestoreService: _FakeFirestore(),
         onboardingSeen: false,
+        askNotifications: false,
       ),
     );
     await tester.pumpAndSettle();
@@ -643,6 +695,233 @@ void main() {
     expect(find.text('Guru Dev'), findsOneWidget);
     expect(find.text('New Guru'), findsNothing);
   });
+
+  testWidgets('Create account screen shows Continue with Google',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: AuthScreen()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Continue with Google'), findsOneWidget);
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+    expect(find.text('Continue with Google'), findsOneWidget);
+  });
+
+  testWidgets('Google sign in with an existing email asks for the password',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AuthScreen(
+          authService: _FakeAuthService(throwLinkNeeded: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue with Google'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'An account already exists for this email. Sign in with your password once to link Google to it.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller?.text,
+      'someone@example.com',
+    );
+  });
+
+  testWidgets('Home shows the saved profile name and birth line',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          onOpenTab: (_) {},
+          firestore: _FakeFirestore(),
+          authService: _FakeAuthService(signedInValue: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Namaste, Aarav Sharma'), findsOneWidget);
+    expect(
+      find.text('Birth 14 March 1998, 06:25 AM, Jaipur, Rajasthan, India.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Home with no profile asks to complete it',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(onOpenTab: (_) {}),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Namaste'), findsOneWidget);
+    expect(find.text('Complete your profile'), findsOneWidget);
+  });
+
+  testWidgets('Profile screen shows the saved details and Edit profile',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProfileScreen(
+          firestore: _FakeFirestore(),
+          authService: _FakeAuthService(signedInValue: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Aarav Sharma'), findsOneWidget);
+    expect(find.text('Edit profile'), findsOneWidget);
+    expect(find.text('Date of birth'), findsOneWidget);
+    expect(find.text('14 March 1998'), findsOneWidget);
+    expect(find.text('Jaipur, Rajasthan, India'), findsOneWidget);
+    expect(find.text('Daily horoscope alert at 06:00 AM.'), findsOneWidget);
+  });
+
+  testWidgets('Profile form saves the entered details',
+      (WidgetTester tester) async {
+    final _FakeFirestore firestore = _FakeFirestore();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProfileFormScreen(
+          authService: _FakeAuthService(signedInValue: true),
+          firestoreService: firestore,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // No name yet: the form refuses to save.
+    await tester.tap(find.text('Save profile'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter your full name.'), findsOneWidget);
+    expect(firestore.lastSavedProfile, isNull);
+    // Fill the required fields: name, date of birth, birth city.
+    await tester.enterText(find.byType(TextField).at(0), 'Test User');
+    await tester.tap(find.byType(TextField).at(1));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(3), 'Jaipur');
+    await tester.tap(find.text('Save profile'));
+    await tester.pumpAndSettle();
+    expect(firestore.lastSavedProfile, isNotNull);
+    expect(firestore.lastSavedProfile!['name'], 'Test User');
+    expect(firestore.lastSavedProfile!['birthCity'], 'Jaipur');
+    expect(firestore.lastSavedProfile!['dateOfBirth'], isNotNull);
+    expect(find.text('Profile saved.'), findsOneWidget);
+  });
+
+  testWidgets('Admin account screen shows change email and change password',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: AdminAccountScreen(
+              firestore: _FakeFirestore(),
+              auth: _FakeAuthService(signedInValue: true),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Account'), findsOneWidget);
+    expect(
+      find.text('Signed in as owner@example.com. Role: owner.'),
+      findsOneWidget,
+    );
+    expect(find.text('Link Google account'), findsOneWidget);
+    expect(find.text('Change email'), findsOneWidget);
+    expect(find.text('Change password'), findsOneWidget);
+    expect(find.text('Current password'), findsWidgets);
+  });
+
+  testWidgets('Admin gate allows the default admin email without a document',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      DharmGuruAdminApp(
+        showSplash: false,
+        authService: _FakeAuthService(
+          signedInValue: true,
+          userEmail: 'admin@gmail.com',
+        ),
+        firestoreService: _FakeFirestore(admin: false),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Users'), findsOneWidget);
+  });
+
+  test('Admin seed creates the default admin once', () async {
+    final _FakeAuthService auth = _FakeAuthService(signedInValue: true);
+    final _FakeFirestore firestore = _FakeFirestore();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('admin_seed_attempted_v1');
+    await AdminSeedService.ensureDefaultAdmin(
+      auth: auth,
+      firestore: firestore,
+      prefs: prefs,
+    );
+    expect(auth.lastSignedUpEmail, 'admin@gmail.com');
+    expect(firestore.lastEnsuredAdminUid, 'test-uid');
+    expect(auth.signOutCalled, isTrue);
+    expect(prefs.getBool('admin_seed_attempted_v1'), isTrue);
+    // A second run does nothing: the flag is set.
+    auth.lastSignedUpEmail = null;
+    firestore.lastEnsuredAdminUid = null;
+    await AdminSeedService.ensureDefaultAdmin(
+      auth: auth,
+      firestore: firestore,
+      prefs: prefs,
+    );
+    expect(auth.lastSignedUpEmail, isNull);
+    expect(firestore.lastEnsuredAdminUid, isNull);
+  });
+
+  test('Admin seed does nothing new when the account already exists',
+      () async {
+    final _FakeAuthService auth = _FakeAuthService(
+      signedInValue: true,
+      signUpThrowsAlreadyInUse: true,
+    );
+    final _FakeFirestore firestore = _FakeFirestore();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('admin_seed_attempted_v1');
+    await AdminSeedService.ensureDefaultAdmin(
+      auth: auth,
+      firestore: firestore,
+      prefs: prefs,
+    );
+    expect(firestore.lastEnsuredAdminUid, isNull);
+    expect(auth.signOutCalled, isFalse);
+    expect(prefs.getBool('admin_seed_attempted_v1'), isTrue);
+  });
+
+  test('plainError explains the Google link case', () {
+    expect(
+      AuthService.plainError(GoogleLinkNeededException('x@y.com')),
+      contains('link Google'),
+    );
+    expect(
+      AuthService.plainError(
+        const FirebaseAuthException(
+          code: 'account-exists-with-different-credential',
+        ),
+      ),
+      contains('link Google'),
+    );
+    expect(
+      AuthService.plainError(
+        const FirebaseAuthException(code: 'requires-recent-login'),
+      ),
+      contains('sign out and sign in again'),
+    );
+  });
 }
 
 /// Fake Firestore that never touches Firebase. Every method the
@@ -656,9 +935,35 @@ class _FakeFirestore extends FirestoreService {
 
   final bool admin;
   final Map<String, List<Map<String, dynamic>>> docs;
+  Map<String, Object?>? lastSavedProfile;
+  String? lastEnsuredAdminUid;
 
   @override
   Future<bool> isAdmin(String uid) async => admin;
+
+  @override
+  Future<Map<String, dynamic>?> getUserProfile(String uid) async =>
+      <String, dynamic>{
+        'name': 'Aarav Sharma',
+        'dateOfBirth': '1998-03-14',
+        'timeOfBirth': '06:25',
+        'birthCity': 'Jaipur',
+        'birthState': 'Rajasthan',
+        'birthCountry': 'India',
+      };
+
+  @override
+  Future<void> saveUserProfile({
+    required String uid,
+    required Map<String, Object?> data,
+  }) async {
+    lastSavedProfile = data;
+  }
+
+  @override
+  Future<void> ensureAdminDoc(String uid, String email) async {
+    lastEnsuredAdminUid = uid;
+  }
 
   @override
   Stream<List<Map<String, dynamic>>> watchDocs(String collection) =>
