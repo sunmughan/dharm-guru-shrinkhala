@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../core/build_info.dart';
 import '../core/theme/design_tokens.dart';
 import 'auth_screen.dart';
 import '../services/auth_service.dart';
@@ -197,6 +198,13 @@ class _FirebaseSetupNeededScreen extends StatelessWidget {
             Text(
               'See FIREBASE-SETUP.md for the console steps, then run flutterfire configure.',
               style: AppTextStyles.themed(context, AppTextStyles.body),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              kBuildStamp,
+              style: AppTextStyles.themed(context, AppTextStyles.body.copyWith(
+                color: AppColors.ink2,
+              )),
             ),
           ],
         ),

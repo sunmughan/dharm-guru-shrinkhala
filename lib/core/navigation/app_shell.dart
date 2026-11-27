@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../build_info.dart';
 import '../theme/design_tokens.dart';
 import '../../screens/auth_screen.dart';
 import '../../screens/screens.dart';
@@ -171,6 +172,13 @@ class _FirebaseSetupNeededScreen extends StatelessWidget {
             Text(
               'See FIREBASE-SETUP.md for the console steps, then run flutterfire configure.',
               style: AppTextStyles.themed(context, AppTextStyles.body),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              kBuildStamp,
+              style: AppTextStyles.themed(context, AppTextStyles.body.copyWith(
+                color: AppColors.ink2,
+              )),
             ),
           ],
         ),

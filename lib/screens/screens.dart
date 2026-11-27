@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../core/build_info.dart';
 import '../core/theme/design_tokens.dart';
 import '../models/kundli.dart';
 import '../models/panchang.dart';
@@ -9,9 +10,10 @@ import '../services/firestore_service.dart';
 import '../widgets/kundli_chart.dart';
 import '../widgets/planet_details.dart';
 
-/// Splash screen. Wordmark only, no button, no link, no
-/// version text. Auto advances after two seconds, per
-/// design/screens/01-splash.md. The sun mark uses the closest
+/// Splash screen. Wordmark only, no button, no link. Auto
+/// advances after two seconds, per design/screens/01-splash.md.
+/// The small build stamp at the bottom tells the installed
+/// build apart on the phone. The sun mark uses the closest
 /// line icon, Icons.wb_sunny, because Flutter has no drawn
 /// sun mark.
 class SplashScreen extends StatefulWidget {
@@ -82,6 +84,13 @@ class _SplashScreenState extends State<SplashScreen> {
                   ],
                 ),
               ),
+            ),
+            Text(
+              kBuildStamp,
+              style: AppTextStyles.themed(context, AppTextStyles.body.copyWith(
+                color: AppColors.ink2,
+              )),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.xxl),
           ],

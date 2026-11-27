@@ -1,3 +1,4 @@
+import 'package:dharm_guru_shrinkhala/core/build_info.dart';
 import 'package:dharm_guru_shrinkhala/core/navigation/app_shell.dart';
 import 'package:dharm_guru_shrinkhala/screens/admin_screens.dart';
 import 'package:dharm_guru_shrinkhala/screens/auth_screen.dart';
@@ -73,6 +74,43 @@ void main() {
     expect(find.text('Enter birth details'), findsNothing);
     expect(find.text('Home'), findsNothing);
     expect(find.text('Kundli'), findsNothing);
+  });
+
+  testWidgets('Splash shows the build stamp',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      DharmGuruApp(
+        showSplash: true,
+        firebaseReady: true,
+        authService: _FakeAuthService(),
+      ),
+    );
+    await tester.pump();
+    expect(find.text(kBuildStamp), findsOneWidget);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Setup screen shows the build stamp',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const DharmGuruApp(
+        showSplash: false,
+        firebaseReady: false,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Firebase is not configured yet.'), findsOneWidget);
+    expect(find.text(kBuildStamp), findsOneWidget);
+  });
+
+  testWidgets('Admin setup screen shows the build stamp',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const DharmGuruAdminApp(firebaseReady: false),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Firebase is not configured yet.'), findsOneWidget);
+    expect(find.text(kBuildStamp), findsOneWidget);
   });
 
   testWidgets('Sign in rejects a bad email before calling auth',

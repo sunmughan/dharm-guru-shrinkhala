@@ -32,10 +32,14 @@ jobs:
           channel: stable
       - name: Install dependencies
         run: flutter pub get
+      - name: Set build stamp
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          echo "BUILD_STAMP=$(git rev-parse --short HEAD) • $VERSION" >> "$GITHUB_ENV"
       - name: Build user release APK
-        run: flutter build apk --release --flavor user
+        run: flutter build apk --release --flavor user --dart-define="BUILD_STAMP=$BUILD_STAMP"
       - name: Build admin release APK
-        run: flutter build apk --release --flavor admin -t lib/main_admin.dart
+        run: flutter build apk --release --flavor admin -t lib/main_admin.dart --dart-define="BUILD_STAMP=$BUILD_STAMP"
       - name: Verify APK package names differ
         run: |
           AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt | head -n 1)
@@ -61,15 +65,19 @@ jobs:
           channel: stable
       - name: Install dependencies
         run: flutter pub get
+      - name: Set build stamp
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          echo "BUILD_STAMP=$(git rev-parse --short HEAD) • $VERSION" >> "$GITHUB_ENV"
       - name: Build user iOS app
-        run: flutter build ios --release --flavor user --no-codesign
+        run: flutter build ios --release --flavor user --no-codesign --dart-define="BUILD_STAMP=$BUILD_STAMP"
       - name: Verify user bundle id
         run: |
           APP=$(find build/ios -name "Runner.app" -maxdepth 4 | head -n 1)
           test "$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist")" = "com.codeair.dharmgurushrinkhala"
           mv "$APP" build/ios/Runner-user.app
       - name: Build admin iOS app
-        run: flutter build ios --release --flavor admin --no-codesign -t lib/main_admin.dart
+        run: flutter build ios --release --flavor admin --no-codesign -t lib/main_admin.dart --dart-define="BUILD_STAMP=$BUILD_STAMP"
       - name: Verify admin bundle id
         run: |
           APP=$(find build/ios -name "Runner.app" -maxdepth 4 | head -n 1)
