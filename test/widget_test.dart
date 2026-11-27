@@ -145,19 +145,19 @@ void main() {
   test('Auth errors map to plain words, never raw codes', () {
     expect(
       AuthService.plainError(
-        const FirebaseAuthException(code: 'invalid-credential'),
+        FirebaseAuthException(code: 'invalid-credential'),
       ),
       'The email or password is wrong. Try again or reset your password.',
     );
     expect(
       AuthService.plainError(
-        const FirebaseAuthException(code: 'email-already-in-use'),
+        FirebaseAuthException(code: 'email-already-in-use'),
       ),
       'An account already exists for that email. Sign in instead.',
     );
     expect(
       AuthService.plainError(
-        const FirebaseAuthException(code: 'operation-not-allowed'),
+        FirebaseAuthException(code: 'operation-not-allowed'),
       ),
       'Email sign in is not switched on yet. Ask the app team to enable it.',
     );
