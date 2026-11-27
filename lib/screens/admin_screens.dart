@@ -10,6 +10,7 @@ import 'auth_screen.dart';
 import 'screens.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../services/notification_schedule.dart';
 import '../services/user_profile.dart';
 
 /// Admin app for Dharm Guru Shrinkhala. Same Firebase project as
@@ -666,6 +667,7 @@ class _AdminShellState extends State<AdminShell> {
     'Dashboard',
     'Astrologers',
     'Daily Content',
+    'Chats',
     'Subscriptions',
     'Analytics',
     'Notifications',
@@ -677,6 +679,7 @@ class _AdminShellState extends State<AdminShell> {
     Icons.dashboard,
     Icons.person,
     Icons.wb_sunny,
+    Icons.chat,
     Icons.card_membership,
     Icons.bar_chart,
     Icons.notifications,
@@ -697,10 +700,14 @@ class _AdminShellState extends State<AdminShell> {
         ),
       1 => AstrologersScreen(firestore: widget.firestore),
       2 => DailyContentScreen(firestore: widget.firestore),
-      3 => SubscriptionsScreen(firestore: widget.firestore),
-      4 => AnalyticsScreen(firestore: widget.firestore),
-      5 => NotificationsScreenAdmin(firestore: widget.firestore),
-      6 => ModerationScreen(firestore: widget.firestore),
+      3 => AdminChatsScreen(
+          firestore: widget.firestore,
+          auth: widget.auth,
+        ),
+      4 => SubscriptionsScreen(firestore: widget.firestore),
+      5 => AnalyticsScreen(firestore: widget.firestore),
+      6 => NotificationsScreenAdmin(firestore: widget.firestore),
+      7 => ModerationScreen(firestore: widget.firestore),
       _ => AdminAccountScreen(
           firestore: widget.firestore,
           auth: widget.auth,
@@ -957,7 +964,7 @@ class AdminDashboardScreen extends StatelessWidget {
                       .where((Map<String, dynamic> d) =>
                           str(d, 'status') == 'pending')
                       .length,
-                  onTap: () => onNavigate(6),
+                  onTap: () => onNavigate(7),
                 ),
               ],
             ),
@@ -977,11 +984,11 @@ class AdminDashboardScreen extends StatelessWidget {
               child: const Text('Add astrologer'),
             ),
             OutlinedButton(
-              onPressed: () => onNavigate(5),
+              onPressed: () => onNavigate(6),
               child: const Text('Send notification'),
             ),
             OutlinedButton(
-              onPressed: () => onNavigate(6),
+              onPressed: () => onNavigate(7),
               child: const Text('Review reports'),
             ),
           ],
@@ -1309,6 +1316,7 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
     final TextEditingController name = TextEditingController();
     final TextEditingController languages = TextEditingController();
     final TextEditingController bio = TextEditingController();
+    final TextEditingController phone = TextEditingController();
     final TextEditingController rate = TextEditingController();
     bool chat = true;
     bool call = true;
@@ -1333,6 +1341,11 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
                       label: 'Short bio',
                       controller: bio,
                       maxLines: 3,
+                    ),
+                    _adminField(
+                      label: 'Phone for calls',
+                      controller: phone,
+                      hint: 'Saved with the astrologer. Users call this number.',
                     ),
                     _adminField(
                       label: 'Rate',
@@ -1379,6 +1392,7 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
                                   'name': name.text.trim(),
                                   'languages': languages.text.trim(),
                                   'bio': bio.text.trim(),
+                                  'phone': phone.text.trim(),
                                   'rate': rate.text.trim(),
                                   'chatAvailable': chat,
                                   'callAvailable': call,
@@ -1431,6 +1445,9 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
                 Text('Languages: ${str(doc, 'languages')}'),
                 Text('Status: ${str(doc, 'status')}'),
                 Text(
+                  'Phone: ${str(doc, 'phone').isEmpty ? 'Not set' : str(doc, 'phone')}',
+                ),
+                Text(
                   'Rate: ${str(doc, 'rate').isEmpty ? 'Rate to be decided' : str(doc, 'rate')}',
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -1480,6 +1497,96 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
           ],
         );
       },
+    );
+  }
+}
+
+/// Admin chats: every user chat room, newest first.
+/// Tapping one opens the same real chat room as the admin,
+/// so the admin can read and reply to user messages. No
+/// astrologer is assigned yet, so the admin answers here
+/// until one is added.
+class AdminChatsScreen extends StatelessWidget {
+  const AdminChatsScreen({
+    super.key,
+    required this.firestore,
+    required this.auth,
+  });
+
+  final FirestoreService firestore;
+  final AuthService auth;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? uid = auth.currentUserId;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'Chats',
+          style: AppTextStyles.themed(context, AppTextStyles.display),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        StreamBuilder<List<Map<String, dynamic>>>(
+          stream: firestore.watchDocs('chats'),
+          builder: (
+            BuildContext context,
+            AsyncSnapshot<List<Map<String, dynamic>>> snap,
+          ) {
+            if (snap.hasError) {
+              return const Text('Chats could not be loaded.');
+            }
+            if (!snap.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final List<Map<String, dynamic>> docs = snap.data!;
+            if (docs.isEmpty) {
+              return const _Empty(
+                title: 'No chats yet',
+                body: 'User chats appear here once someone writes.',
+              );
+            }
+            return Card(
+              child: Column(
+                children: docs.map((Map<String, dynamic> doc) {
+                  final List<String> participants =
+                      (doc['participantIds'] as List<dynamic>? ??
+                              <dynamic>[])
+                          .map((dynamic e) => e.toString())
+                          .toList();
+                  final String who = participants.isEmpty
+                      ? str(doc, 'id')
+                      : participants.first;
+                  return ListTile(
+                    leading: const Icon(
+                      Icons.chat,
+                      color: AppColors.deepSaffron,
+                    ),
+                    title: Text(who),
+                    subtitle: Text(str(doc, 'lastMessage')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: uid == null
+                        ? null
+                        : () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ChatScreen(
+                                  chatId: str(doc, 'id'),
+                                  title: who,
+                                  currentUserId: uid,
+                                  senderRole: 'admin',
+                                  firestore: firestore,
+                                ),
+                              ),
+                            );
+                          },
+                  );
+                }).toList(),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
@@ -2061,9 +2168,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                               ),
                               const SizedBox(height: AppSpacing.sm),
                               Text(
-                                str(plan, 'price').isEmpty
-                                    ? 'To be decided'
-                                    : str(plan, 'price'),
+                                'Price to be decided',
                                 style: AppTextStyles.themed(
                                   context,
                                   AppTextStyles.title,
@@ -2782,6 +2887,12 @@ class _NotificationsScreenAdminState
   Future<void> _save(String status) async {
     final String id = _editingId ??
         DateTime.now().millisecondsSinceEpoch.toString();
+    final DateTime? scheduledFor = status == 'scheduled'
+        ? NotificationSchedule.scheduledSendTime(
+            now: DateTime.now(),
+            sendTime: _sendTime,
+          )
+        : null;
     await widget.firestore.saveDoc(
       'notifications',
       id,
@@ -2791,6 +2902,7 @@ class _NotificationsScreenAdminState
         'audience': _audience,
         'type': _type,
         'sendTime': _sendTime,
+        'scheduledFor': scheduledFor?.toIso8601String(),
         'openScreen': _openScreen,
         'status': status,
       },

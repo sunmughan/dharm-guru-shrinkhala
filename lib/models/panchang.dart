@@ -1,10 +1,7 @@
-/// Panchang model. Exact sample values from
-/// design/screens/08-panchang.md and
-/// design/flows/02-panchang-clarity.md.
-/// Sample date is Saturday 14 March 1998, Jaipur. The weekday
-/// is Saturday, so the vaar is Shanivaar. Sample data only,
-/// until the panchang calculation service is built. No value
-/// here is presented as a calculated result.
+/// Panchang model. Values come from the real engine in
+/// lib/services/astro.dart for the chosen date and city, or
+/// from a panchang document the admin published for that date.
+/// No fixed values are stored anywhere.
 class Panchang {
   const Panchang({
     required this.weekday,
@@ -33,25 +30,10 @@ class Panchang {
   final String rahuKaal;
 
   String get dateLine => '$weekday, $city';
-
-  static const Panchang sample = Panchang(
-    weekday: 'Saturday',
-    city: 'Jaipur',
-    tithi: 'Shukla Panchami',
-    vaar: 'Shanivaar',
-    nakshatra: 'Rohini till 04:12 PM',
-    yoga: 'Siddhi',
-    karana: 'Bava',
-    sunrise: '06:48 AM',
-    sunset: '05:52 PM',
-    shubhMuhurat: '09:42 AM to 11:15 AM and 04:30 PM to 06:05 PM',
-    rahuKaal: '01:30 PM to 03:00 PM. Avoid starting new work '
-        'in this window.',
-  );
 }
 
-/// Horoscope content model. Content is published from the admin panel
-/// in a later phase. Phase 1 carries no prediction text.
+/// Horoscope content model. Content is published from the admin
+/// panel only. When nothing is published, the app says so.
 class HoroscopeEntry {
   const HoroscopeEntry({
     required this.rashi,
@@ -62,12 +44,6 @@ class HoroscopeEntry {
   final String rashi;
   final String date;
   final String summary;
-
-  static const HoroscopeEntry sample = HoroscopeEntry(
-    rashi: 'Kanya',
-    date: '14 March 1998',
-    summary: 'Daily horoscope content will be published from the admin panel.',
-  );
 }
 
 enum PlanTier { free, premium }

@@ -15,8 +15,7 @@ import '../models/panchang.dart';
 /// sunset, abhijit muhurat and rahu kaal from those.
 ///
 /// Accuracy is rashi level and better: every value is checked
-/// in test/astro_test.dart against the known ephemeris for the
-/// sample birth, 14 March 1998, 06:25 AM, Jaipur. This is a
+/// in test/astro_test.dart against a known ephemeris. This is a
 /// real calculation, not a table lookup: any birth date, time
 /// and place in the city list gets its own chart.
 ///
@@ -548,7 +547,7 @@ String _karanaName(double elongation) {
 
 /// One computed kundli: lagna, planets and Moon details, all
 /// sidereal. Degrees are inside the rashi, for example
-/// "01° 24′". The sample chart is not used here at all.
+/// "01° 24′".
 class KundliResult {
   const KundliResult({
     required this.lagna,
@@ -807,8 +806,89 @@ class PanchangCalculator {
   }
 }
 
+/// Vimshottari Mahadasha years, in cycle order.
+const List<String> kDashaOrder = <String>[
+  'Ketu',
+  'Venus',
+  'Sun',
+  'Moon',
+  'Mars',
+  'Rahu',
+  'Jupiter',
+  'Saturn',
+  'Mercury',
+];
+
+const Map<String, int> kDashaYears = <String, int>{
+  'Ketu': 7,
+  'Venus': 20,
+  'Sun': 6,
+  'Moon': 10,
+  'Mars': 7,
+  'Rahu': 18,
+  'Jupiter': 16,
+  'Saturn': 19,
+  'Mercury': 17,
+};
+
+/// One Mahadasha span: the ruling planet and its dates.
+class DashaInfo {
+  const DashaInfo({
+    required this.lord,
+    required this.start,
+    required this.end,
+  });
+
+  final String lord;
+  final DateTime start;
+  final DateTime end;
+}
+
+/// Current Vimshottari Mahadasha for a birth. The Moon
+/// nakshatra lord opens the cycle, with the balance set by how
+/// far the Moon has travelled through that nakshatra at birth.
+DashaInfo vimshottariDasha({
+  required DateTime birthLocal,
+  required DateTime asOf,
+}) {
+  final DateTime utc = birthLocal.subtract(
+    const Duration(hours: 5, minutes: 30),
+  );
+  final double d = _dayNumber(utc);
+  final double moonSidereal =
+      _norm(_moonLongitude(d) - ayanamsa(d));
+  final int nakshatraIndex =
+      (moonSidereal ~/ (40.0 / 3.0)) % 27;
+  final String firstLord = kNakshatraLords[nakshatraIndex];
+  final double travelled =
+      (moonSidereal % (40.0 / 3.0)) / (40.0 / 3.0);
+  final double balanceYears =
+      (1.0 - travelled) * kDashaYears[firstLord]!;
+  int orderIndex = kDashaOrder.indexOf(firstLord);
+  DateTime start = birthLocal;
+  double spanYears = balanceYears;
+  for (int step = 0; step < 40; step++) {
+    final String lord = kDashaOrder[orderIndex % kDashaOrder.length];
+    final int days = (spanYears * 365.25).round();
+    final DateTime end = start.add(Duration(days: days));
+    if (!asOf.isAfter(end)) {
+      return DashaInfo(lord: lord, start: start, end: end);
+    }
+    start = end;
+    orderIndex += 1;
+    spanYears =
+        kDashaYears[kDashaOrder[orderIndex % kDashaOrder.length]]!
+            .toDouble();
+  }
+  return DashaInfo(
+    lord: kDashaOrder[orderIndex % kDashaOrder.length],
+    start: start,
+    end: start.add(const Duration(days: 365)),
+  );
+}
+
 /// Parses the birth form text the app already uses:
-/// date "14 March 1998", time "06:25 AM". Null when the
+/// date "1 January 2000", time "07:30 AM". Null when the
 /// text does not parse, so the form can reject it.
 DateTime? parseBirthDateTime(String dateText, String timeText) {
   final List<String> dateBits = dateText.trim().split(' ');

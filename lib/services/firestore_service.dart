@@ -42,6 +42,9 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get notifications =>
       _db.collection('notifications');
 
+  CollectionReference<Map<String, dynamic>> get chats =>
+      _db.collection('chats');
+
   CollectionReference<Map<String, dynamic>> get moderation =>
       _db.collection('moderation');
 
@@ -124,6 +127,32 @@ class FirestoreService {
         return docs;
       },
     );
+  }
+
+  /// One document by id, or null when it does not exist.
+  /// The map carries its document id under 'id'.
+  Future<Map<String, dynamic>?> getDoc(
+    String collection,
+    String id,
+  ) async {
+    final DocumentSnapshot<Map<String, dynamic>> doc =
+        await _db.collection(collection).doc(id).get();
+    if (!doc.exists) {
+      return null;
+    }
+    return <String, dynamic>{'id': id, ...?doc.data()};
+  }
+
+  /// Adds a document with an auto id to a collection or a
+  /// subcollection path such as chats/<id>/messages. Returns
+  /// the new document id.
+  Future<String> addDoc(
+    String collection,
+    Map<String, Object?> data,
+  ) async {
+    final DocumentReference<Map<String, dynamic>> ref =
+        await _db.collection(collection).add(data);
+    return ref.id;
   }
 
   /// Creates or merges a document. New documents get a server

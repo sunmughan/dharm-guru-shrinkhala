@@ -63,7 +63,7 @@ class AppUserProfile {
       (birthCity ?? '').trim().isNotEmpty;
 
   /// One line for the profile header, for example
-  /// "14 March 1998, 06:25 AM, Jaipur, Rajasthan, India".
+  /// "15 January 2000, 07:30 AM, Delhi, Delhi, India".
   String get birthLine {
     final List<String> parts = <String>[];
     if ((dateOfBirth ?? '').isNotEmpty) {
@@ -89,7 +89,7 @@ class AppUserProfile {
     return parts.join(', ');
   }
 
-  /// "1998-03-14" becomes "14 March 1998". Falls back to the
+  /// "2000-01-15" becomes "15 January 2000". Falls back to the
   /// stored string when it does not parse.
   static String displayDate(String stored) {
     final List<String> bits = stored.split('-');
@@ -106,7 +106,7 @@ class AppUserProfile {
     return '$day ${months[month - 1]} ${bits[0]}';
   }
 
-  /// "06:25" becomes "06:25 AM". Falls back to the stored string.
+  /// "07:30" becomes "07:30 AM". Falls back to the stored string.
   static String displayTime(String stored) {
     final List<String> bits = stored.split(':');
     if (bits.length != 2) return stored;
@@ -118,7 +118,7 @@ class AppUserProfile {
     return '${shown.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $suffix';
   }
 
-  /// "14 March 1998" becomes "1998-03-14" for storage. Returns
+  /// "15 January 2000" becomes "2000-01-15" for storage. Returns
   /// null when the text does not parse, so the form can reject it.
   static String? storeDate(String text) {
     final List<String> bits = text.trim().split(' ');

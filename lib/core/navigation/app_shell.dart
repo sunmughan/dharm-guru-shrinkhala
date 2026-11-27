@@ -117,7 +117,7 @@ class _AppShellState extends State<AppShell> {
       ),
       KundliInputScreen(firestore: _firestore, authService: _auth),
       PanchangScreen(firestore: _firestore),
-      ConsultScreen(firestore: _firestore),
+      ConsultScreen(firestore: _firestore, authService: _auth),
       ProfileScreen(firestore: _firestore, authService: _auth),
     ];
     return Scaffold(

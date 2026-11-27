@@ -1,7 +1,7 @@
-/// Remedy content model. Exact sample values from
-/// design/screens/10-remedies.md. The four cards are the
-/// presentation sample set for the sample kundli. No remedy
-/// is invented. Remedies are guidance only and promise no
+/// Remedy content model. Remedies are derived from the real
+/// kundli by lib/services/remedies_engine.dart: weak planets
+/// from computed positions, and the current Vimshottari
+/// Mahadasha. Remedies are guidance only and promise no
 /// outcome.
 class Remedy {
   const Remedy({
@@ -13,38 +13,7 @@ class Remedy {
   final String title;
   final String body;
 
-  /// 'done' shows a Mark as done button, 'ask' shows the
-  /// gemstone question button.
+  /// 'done' shows a Mark as done button, 'ask' opens live
+  /// consult for a question about the remedy.
   final String action;
-}
-
-class SampleRemedies {
-  SampleRemedies._();
-
-  static const List<Remedy> list = <Remedy>[
-    Remedy(
-      title: 'For weak Sun',
-      body: 'Offer water to the rising sun each morning and chant '
-          'Om Suryaya Namah eleven times.',
-      action: 'done',
-    ),
-    Remedy(
-      title: 'For Saturn calm',
-      body: 'Light a mustard oil diya under a peepal tree on '
-          'Saturday evening.',
-      action: 'done',
-    ),
-    Remedy(
-      title: 'Gemstone note',
-      body: 'Panna suits your rashi swami Mercury. Wear it only '
-          'after a full consultation.',
-      action: 'ask',
-    ),
-    Remedy(
-      title: 'Daily small act',
-      body: 'Feed birds before breakfast. A tiny habit with a large '
-          'blessing.',
-      action: 'done',
-    ),
-  ];
 }

@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/build_info.dart';
 import '../core/theme/design_tokens.dart';
@@ -9,8 +11,13 @@ import '../models/panchang.dart';
 import '../models/remedies.dart';
 import '../services/astro.dart';
 import '../services/auth_service.dart';
+import '../services/chat_service.dart';
 import '../services/firebase_service.dart';
 import '../services/firestore_service.dart';
+import '../services/matching.dart';
+import '../services/notification_schedule.dart';
+import '../services/premium_service.dart';
+import '../services/remedies_engine.dart';
 import '../services/user_profile.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/kundli_chart.dart';
@@ -610,7 +617,10 @@ class HomeScreen extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => const MatchingScreen(),
+                  builder: (_) => MatchingScreen(
+                    firestore: firestore,
+                    authService: authService,
+                  ),
                 ),
               );
             },
@@ -622,7 +632,10 @@ class HomeScreen extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => const RemediesScreen(),
+                  builder: (_) => RemediesScreen(
+                    firestore: firestore,
+                    authService: authService,
+                  ),
                 ),
               );
             },
@@ -867,8 +880,8 @@ class _HomeGreeting extends StatelessWidget {
 
 /// Kundli input form: name, date, time and place of birth.
 /// When a saved profile exists, the form opens prefilled with
-/// the profile birth details. Without one it opens with the
-/// sample details, as before.
+/// the profile birth details. Without one it opens empty: no
+/// fixed details are ever shown as if they were the user.
 class KundliInputScreen extends StatefulWidget {
   const KundliInputScreen({super.key, this.firestore, this.authService});
 
@@ -880,19 +893,10 @@ class KundliInputScreen extends StatefulWidget {
 }
 
 class _KundliInputScreenState extends State<KundliInputScreen> {
-  final TextEditingController _nameController =
-      TextEditingController(text: 'Aarav Sharma');
-  final TextEditingController _dateController =
-      TextEditingController(text: '14 March 1998');
-  final TextEditingController _timeController =
-      TextEditingController(text: '06:25 AM');
-  final TextEditingController _placeController =
-      TextEditingController(text: 'Jaipur, Rajasthan');
-
-  /// True when the form was prefilled from a saved profile.
-  /// The sample chart shows only when the form still holds the
-  /// prefilled sample details and no profile was loaded.
-  bool _fromProfile = false;
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _dateController = TextEditingController();
+  final TextEditingController _timeController = TextEditingController();
+  final TextEditingController _placeController = TextEditingController();
 
   @override
   void initState() {
@@ -909,7 +913,6 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
           return;
         }
         setState(() {
-          _fromProfile = true;
           _nameController.text = profile.name;
           _dateController.text =
               AppUserProfile.displayDate(profile.dateOfBirth!);
@@ -946,17 +949,26 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
           const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _dateController,
-            decoration: const InputDecoration(labelText: 'Date of birth'),
+            decoration: const InputDecoration(
+              labelText: 'Date of birth',
+              hintText: 'Day Month Year',
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _timeController,
-            decoration: const InputDecoration(labelText: 'Time of birth'),
+            decoration: const InputDecoration(
+              labelText: 'Time of birth',
+              hintText: 'HH:MM AM or PM',
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _placeController,
-            decoration: const InputDecoration(labelText: 'Place of birth'),
+            decoration: const InputDecoration(
+              labelText: 'Place of birth',
+              hintText: 'City, State',
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
           ElevatedButton(
@@ -993,22 +1005,16 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(
-                      'Enter a valid date and time, for example '
-                      '14 March 1998 and 06:25 AM.',
+                      'Enter a valid date and time.',
                     ),
                   ),
                 );
                 return;
               }
-              final bool isSample = !_fromProfile &&
-                  date == SampleKundli.birth.dateOfBirth &&
-                  time == SampleKundli.birth.timeOfBirth &&
-                  place == SampleKundli.birth.placeOfBirth;
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => KundliChartScreen(
                     birth: entered,
-                    isSample: isSample,
                   ),
                 ),
               );
@@ -1017,8 +1023,7 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Your kundli is calculated from your birth date, time and place. '
-            'The sample chart shows only until your profile is complete.',
+            'Your kundli is calculated from your birth date, time and place.',
             style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
           ),
         ],
@@ -1033,21 +1038,14 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
 /// The chart is calculated from the entered birth details
 /// with the real engine: lagna, planets, rashi and nakshatra
 /// are all computed, for any birth date, time and place. The
-/// Moon chart counts bhavas from the Moon sign. The sample
-/// chart shows only before the profile is complete, and the
-/// screen says so.
+/// Moon chart counts bhavas from the Moon sign.
 class KundliChartScreen extends StatefulWidget {
   const KundliChartScreen({
     super.key,
-    this.birth = SampleKundli.birth,
-    this.isSample = true,
+    required this.birth,
   });
 
   final BirthDetails birth;
-
-  /// True when the shown chart is the sample, before the
-  /// profile is complete. The chart is then marked as sample.
-  final bool isSample;
 
   @override
   State<KundliChartScreen> createState() => _KundliChartScreenState();
@@ -1079,10 +1077,6 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          if (widget.isSample) ...<Widget>[
-            const SampleDataBanner(),
-            const SizedBox(height: AppSpacing.md),
-          ],
           if (kundli == null) ...<Widget>[
             Card(
               child: Padding(
@@ -1108,8 +1102,7 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       'These birth details could not be read. '
-                      'Enter a valid date and time, for example '
-                      '14 March 1998 and 06:25 AM.',
+                      'Enter a valid date and time.',
                       style: AppTextStyles.themed(
                         context,
                         AppTextStyles.bodySmall,
@@ -1134,7 +1127,6 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
                 birth: widget.birth,
                 planets: kundli.moonChart.planets,
                 lagna: kundli.moonChart.lagna,
-                isSample: widget.isSample,
               ),
               const SizedBox(height: AppSpacing.space3),
               _ChartLegend(
@@ -1149,7 +1141,6 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
                 birth: widget.birth,
                 planets: kundli.planets,
                 lagna: kundli.lagna,
-                isSample: widget.isSample,
               ),
               const SizedBox(height: AppSpacing.space3),
               _ChartLegend(
@@ -1340,7 +1331,7 @@ class _PlanetSummaryList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: planets.map((PlanetDetail planet) {
         final String abbr =
-            SampleKundli.abbreviations[planet.name] ?? '';
+            kPlanetAbbreviations[planet.name] ?? '';
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: Row(
@@ -1383,39 +1374,30 @@ class _PlanetSummaryList extends StatelessWidget {
 /// Planet details screen: full table with exact degrees,
 /// swami notes and the premium note, per
 /// design/screens/06-planet-details.md. Shows the computed
-/// kundli when given one; without one it shows the sample,
-/// honestly marked.
+/// kundli it is given.
 class PlanetDetailsScreen extends StatelessWidget {
-  const PlanetDetailsScreen({super.key, this.kundli});
+  const PlanetDetailsScreen({super.key, required this.kundli});
 
-  final KundliResult? kundli;
+  final KundliResult kundli;
 
   @override
   Widget build(BuildContext context) {
-    final KundliResult? kundli = this.kundli;
     return Scaffold(
       appBar: AppBar(title: const Text('Planet Details')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          if (kundli == null) ...<Widget>[
-            const SampleDataBanner(),
-            const SizedBox(height: AppSpacing.md),
-          ],
           Text(
             'Position, rashi, bhava and exact degree of every graha.',
             style: AppTextStyles.themed(context, AppTextStyles.body),
           ),
           const SizedBox(height: AppSpacing.md),
-          if (kundli == null)
-            const PlanetDetails()
-          else
-            PlanetDetails(
-              planets: kundli.planets,
-              lagna: kundli.lagna,
-              rashi: kundli.moonRashi,
-              nakshatra: kundli.moonNakshatra,
-            ),
+          PlanetDetails(
+            planets: kundli.planets,
+            lagna: kundli.lagna,
+            rashi: kundli.moonRashi,
+            nakshatra: kundli.moonNakshatra,
+          ),
         ],
       ),
     );
@@ -1486,6 +1468,15 @@ String str(Map<String, dynamic> doc, String key) {
 double numVal(Map<String, dynamic> doc, String key) {
   final Object? value = doc[key];
   return value is num ? value.toDouble() : 0;
+}
+
+/// "today" or "tomorrow" for the next daily alert at [hhmm],
+/// computed from the published schedule, not stored text.
+String _nextAlertDay(String hhmm) {
+  final DateTime now = DateTime.now();
+  final DateTime next =
+      NotificationSchedule.nextDailyAlertAfter(now, hhmm);
+  return next.day == now.day ? 'today' : 'tomorrow';
 }
 
 class _HoroscopeView extends StatelessWidget {
@@ -1608,54 +1599,93 @@ class _HoroscopeArea extends StatelessWidget {
 
 /// Panchang screen: tithi, vaar, nakshatra, yoga, karana,
 /// sunrise, sunset, shubh muhurat and rahu kaal, per
-/// design/screens/08-panchang.md. When the admin panel has
-/// published a panchang, that is shown. Otherwise the panchang
-/// is computed from the real date, so the screen always shows
-/// real values and never static sample text.
-class PanchangScreen extends StatelessWidget {
+/// design/screens/08-panchang.md. The date and the city are
+/// real pickers: for the chosen date and city the screen shows
+/// the panchang the admin published for that date when one
+/// exists, else the values computed by the engine for that
+/// date and city. No fixed values anywhere.
+class PanchangScreen extends StatefulWidget {
   const PanchangScreen({super.key, this.firestore});
 
   final FirestoreService? firestore;
 
   @override
+  State<PanchangScreen> createState() => _PanchangScreenState();
+}
+
+class _PanchangScreenState extends State<PanchangScreen> {
+  DateTime _date = DateTime.now();
+  AstroPlace _place = kDefaultPlace;
+
+  String get _dateKey =>
+      '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}';
+
+  Future<void> _pickDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+    );
+    if (picked != null) {
+      setState(() => _date = picked);
+    }
+  }
+
+  Future<void> _pickCity() async {
+    final AstroPlace? picked = await showDialog<AstroPlace>(
+      context: context,
+      builder: (BuildContext context) {
+        return SimpleDialog(
+          title: const Text('City'),
+          children: kIndianCities
+              .map(
+                (AstroPlace place) => SimpleDialogOption(
+                  onPressed: () => Navigator.of(context).pop(place),
+                  child: Text(place.name),
+                ),
+              )
+              .toList(),
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _place = picked);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final Panchang computed =
+        PanchangCalculator.forDate(_date, _place);
+    final FirestoreService? firestore = widget.firestore;
     if (firestore == null) {
       return _PanchangBody(
-        panchang: PanchangCalculator.forDate(DateTime.now(), kDefaultPlace),
-        isLive: true,
+        panchang: computed,
+        date: _date,
+        onPickDate: _pickDate,
+        onPickCity: _pickCity,
       );
     }
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: firestore!.watchDocs('panchang'),
+      stream: firestore.watchDocs('panchang'),
       builder: (
         BuildContext context,
         AsyncSnapshot<List<Map<String, dynamic>>> snap,
       ) {
-        if (snap.hasError) {
-          return _PanchangBody(
-            panchang:
-                PanchangCalculator.forDate(DateTime.now(), kDefaultPlace),
-            isLive: true,
-          );
+        Panchang shown = computed;
+        if (snap.hasData) {
+          for (final Map<String, dynamic> doc in snap.data!) {
+            if (str(doc, 'date') == _dateKey) {
+              shown = _panchangFromDoc(doc);
+            }
+          }
         }
-        if (!snap.hasData) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        final List<Map<String, dynamic>> docs = snap.data!;
-        if (docs.isEmpty) {
-          return _PanchangBody(
-            panchang:
-                PanchangCalculator.forDate(DateTime.now(), kDefaultPlace),
-            isLive: true,
-          );
-        }
-        docs.sort((Map<String, dynamic> a, Map<String, dynamic> b) =>
-            str(b, 'date').compareTo(str(a, 'date')));
         return _PanchangBody(
-          panchang: _panchangFromDoc(docs.first),
-          isLive: true,
+          panchang: shown,
+          date: _date,
+          onPickDate: _pickDate,
+          onPickCity: _pickCity,
         );
       },
     );
@@ -1688,11 +1718,26 @@ Panchang _panchangFromDoc(Map<String, dynamic> doc) {
   );
 }
 
+String _formatLongDate(DateTime date) {
+  const List<String> months = <String>[
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+  return '${date.day} ${months[date.month - 1]} ${date.year}';
+}
+
 class _PanchangBody extends StatelessWidget {
-  const _PanchangBody({required this.panchang, this.isLive = false});
+  const _PanchangBody({
+    required this.panchang,
+    required this.date,
+    required this.onPickDate,
+    required this.onPickCity,
+  });
 
   final Panchang panchang;
-  final bool isLive;
+  final DateTime date;
+  final VoidCallback onPickDate;
+  final VoidCallback onPickCity;
 
   @override
   Widget build(BuildContext context) {
@@ -1700,16 +1745,21 @@ class _PanchangBody extends StatelessWidget {
         panchang.shubhMuhurat.split(' and ');
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Todays Panchang'),
+        title: const Text('Panchang'),
         actions: <Widget>[
           TextButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('City choice is a later phase.'),
-                ),
-              );
-            },
+            onPressed: onPickDate,
+            icon: const Icon(Icons.calendar_today, size: 20),
+            label: Text(
+              _formatLongDate(date),
+              style: AppTextStyles.themed(context, AppTextStyles.body.copyWith(
+                color: AppColors.saffron2,
+                fontWeight: FontWeight.w600,
+              )),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: onPickCity,
             icon: const Icon(Icons.keyboard_arrow_down, size: 20),
             label: Text(
               panchang.city,
@@ -1724,8 +1774,6 @@ class _PanchangBody extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          if (!isLive) const SampleDataBanner(),
-          if (!isLive) const SizedBox(height: AppSpacing.md),
           Text(
             panchang.dateLine,
             style: AppTextStyles.themed(context, AppTextStyles.body.copyWith(
@@ -1827,12 +1875,6 @@ class _PanchangBody extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          if (!isLive)
-            Text(
-              'Panchang values are sample values in Phase 1. Real panchang calculation is a later phase.',
-              style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
-            ),
         ],
       ),
     );
@@ -1863,34 +1905,207 @@ class _PanchangCard extends StatelessWidget {
   }
 }
 
-/// Kundli matching screen, per design/screens/09-kundli-matching.md.
-/// Sample persons Aarav and Priya with the sample score 28 / 36,
-/// three guna rows and the dosha value from the presentation.
-/// New match clears the second person; the empty card opens the
-/// birth details form. The full report is premium, so its button
-/// says so honestly instead of opening a fake report.
+/// Kundli matching screen. Both persons enter birth details
+/// and the score is calculated from the two real charts by
+/// MatchingCalculator: all eight gunas from the Moon rashi
+/// and Moon nakshatra, plus Mangal Dosha from the Mars bhava.
+/// The first person prefills from the saved profile when one
+/// is complete. The full report is premium, gated by the
+/// Remote Config flag, so its button says so honestly until
+/// premium is on.
 class MatchingScreen extends StatefulWidget {
-  const MatchingScreen({super.key});
+  const MatchingScreen({
+    super.key,
+    this.firestore,
+    this.authService,
+    this.premiumService,
+  });
+
+  final FirestoreService? firestore;
+  final AuthService? authService;
+
+  /// Premium gate. Tests pass their own flag reader.
+  final PremiumService? premiumService;
 
   @override
   State<MatchingScreen> createState() => _MatchingScreenState();
 }
 
 class _MatchingScreenState extends State<MatchingScreen> {
-  bool _secondPersonChosen = true;
+  final TextEditingController _name1 = TextEditingController();
+  final TextEditingController _date1 = TextEditingController();
+  final TextEditingController _time1 = TextEditingController();
+  final TextEditingController _place1 = TextEditingController();
+  final TextEditingController _name2 = TextEditingController();
+  final TextEditingController _date2 = TextEditingController();
+  final TextEditingController _time2 = TextEditingController();
+  final TextEditingController _place2 = TextEditingController();
 
-  void _showPremiumNote() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Full milan report is premium. Pricing to be decided.',
+  MatchingResult? _result;
+  String _name1Shown = 'First person';
+  String _name2Shown = 'Second person';
+
+  @override
+  void initState() {
+    super.initState();
+    final FirestoreService? firestore = widget.firestore;
+    final String? uid = widget.authService?.currentUserId;
+    if (firestore != null && uid != null) {
+      firestore.getUserProfile(uid).then((Map<String, dynamic>? map) {
+        if (!mounted || map == null) {
+          return;
+        }
+        final AppUserProfile profile = AppUserProfile.fromMap(map);
+        if (!profile.isComplete) {
+          return;
+        }
+        setState(() {
+          _name1.text = profile.name;
+          _date1.text =
+              AppUserProfile.displayDate(profile.dateOfBirth!);
+          _time1.text =
+              profile.birthTimeUnknown || profile.timeOfBirth == null
+                  ? ''
+                  : AppUserProfile.displayTime(profile.timeOfBirth!);
+          _place1.text = profile.placeLine;
+        });
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _name1.dispose();
+    _date1.dispose();
+    _time1.dispose();
+    _place1.dispose();
+    _name2.dispose();
+    _date2.dispose();
+    _time2.dispose();
+    _place2.dispose();
+    super.dispose();
+  }
+
+  KundliResult? _chartFor({
+    required String date,
+    required String time,
+    required String place,
+  }) {
+    final DateTime? birth = parseBirthDateTime(
+      date,
+      time.isEmpty ? '12:00 PM' : time,
+    );
+    if (birth == null) return null;
+    return KundliCalculator.calculate(
+      birthLocal: birth,
+      placeText: place,
+      timeKnown: time.isNotEmpty,
+    );
+  }
+
+  void _calculate() {
+    final String date1 = _date1.text.trim();
+    final String place1 = _place1.text.trim();
+    final String date2 = _date2.text.trim();
+    final String place2 = _place2.text.trim();
+    if (date1.isEmpty || place1.isEmpty || date2.isEmpty || place2.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Enter date and place of birth for both persons.',
+          ),
         ),
-      ),
+      );
+      return;
+    }
+    final KundliResult? first = _chartFor(
+      date: date1,
+      time: _time1.text.trim(),
+      place: place1,
+    );
+    final KundliResult? second = _chartFor(
+      date: date2,
+      time: _time2.text.trim(),
+      place: place2,
+    );
+    if (first == null || second == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter a valid date and time.'),
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _result = MatchingCalculator.calculate(
+        first: first,
+        second: second,
+      );
+      _name1Shown =
+          _name1.text.trim().isEmpty ? 'First person' : _name1.text.trim();
+      _name2Shown =
+          _name2.text.trim().isEmpty ? 'Second person' : _name2.text.trim();
+    });
+  }
+
+  void _showFullReport() {
+    final MatchingResult? result = _result;
+    if (result == null) return;
+    final bool enabled =
+        (widget.premiumService ?? PremiumService()).isPremiumEnabled;
+    if (!enabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Full milan report is premium. Premium is not available yet. Pricing to be decided.',
+          ),
+        ),
+      );
+      return;
+    }
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Full Milan Report'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text('$_name1Shown and $_name2Shown'),
+                const SizedBox(height: AppSpacing.md),
+                ...result.rows.map(
+                  (GunaScore row) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: Text(
+                      '${row.label}: ${gunaScoreText(row)}. ${row.note}',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Mangal Dosha: $_name1Shown '
+                  '${result.mangalFirst ? 'present' : 'none'}, '
+                  '$_name2Shown ${result.mangalSecond ? 'present' : 'none'}.',
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final MatchingResult? result = _result;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kundli Matching'),
@@ -1898,7 +2113,11 @@ class _MatchingScreenState extends State<MatchingScreen> {
           TextButton(
             onPressed: () {
               setState(() {
-                _secondPersonChosen = false;
+                _name2.clear();
+                _date2.clear();
+                _time2.clear();
+                _place2.clear();
+                _result = null;
               });
             },
             child: Text(
@@ -1911,51 +2130,35 @@ class _MatchingScreenState extends State<MatchingScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          const SampleDataBanner(),
-          const SizedBox(height: AppSpacing.md),
           Text(
             'Milan for marriage and partnership.',
             style: AppTextStyles.themed(context, AppTextStyles.body),
           ),
           const SizedBox(height: AppSpacing.md),
-          Row(
-            children: <Widget>[
-              const Expanded(
-                child: _PersonCard(
-                  initial: 'A',
-                  name: 'Aarav',
-                  detail: 'Meena Lagna',
-                  onTap: null,
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                child: Icon(Icons.diamond, size: 12),
-              ),
-              Expanded(
-                child: _secondPersonChosen
-                    ? const _PersonCard(
-                        initial: 'P',
-                        name: 'Priya',
-                        detail: 'Karka Lagna',
-                        onTap: null,
-                      )
-                    : _PersonCard(
-                        initial: '+',
-                        name: 'Add second kundli',
-                        detail: '',
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const KundliInputScreen(),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
+          _PersonForm(
+            label: 'First person',
+            name: _name1,
+            date: _date1,
+            time: _time1,
+            place: _place1,
           ),
-          if (_secondPersonChosen) ...<Widget>[
+          const SizedBox(height: AppSpacing.md),
+          _PersonForm(
+            label: 'Second person',
+            name: _name2,
+            date: _date2,
+            time: _time2,
+            place: _place2,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _calculate,
+              child: const Text('Calculate matching'),
+            ),
+          ),
+          if (result != null) ...<Widget>[
             const SizedBox(height: AppSpacing.md),
             Card(
               color: AppColors.resolve(
@@ -1977,14 +2180,14 @@ class _MatchingScreenState extends State<MatchingScreen> {
                       ),
                     ),
                     Text(
-                      '28 / 36',
+                      result.totalText,
                       style: AppTextStyles.themed(
                         context,
                         AppTextStyles.title,
                       ),
                     ),
                     Text(
-                      'Very Good Match',
+                      result.verdict,
                       style: AppTextStyles.themed(
                         context,
                         AppTextStyles.listTitle.copyWith(
@@ -1997,13 +2200,16 @@ class _MatchingScreenState extends State<MatchingScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            const Card(
+            Card(
               child: Column(
-                children: <Widget>[
-                  _GunaRow(label: 'Varna', score: '1 / 1'),
-                  _GunaRow(label: 'Bhakoot', score: '7 / 7'),
-                  _GunaRow(label: 'Nadi', score: '8 / 8'),
-                ],
+                children: result.rows
+                    .map(
+                      (GunaScore row) => _GunaRow(
+                        label: row.label,
+                        score: gunaScoreText(row),
+                      ),
+                    )
+                    .toList(),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -2022,12 +2228,45 @@ class _MatchingScreenState extends State<MatchingScreen> {
                       ),
                     ),
                     Text(
-                      'Balanced',
+                      '$_name1Shown: ${result.mangalFirst ? 'Present' : 'None'}',
                       style: AppTextStyles.themed(
                         context,
                         AppTextStyles.body.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: AppColors.good,
+                          color: result.mangalFirst
+                              ? AppColors.maroon
+                              : AppColors.good,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        'Mangal Dosha',
+                        style: AppTextStyles.themed(
+                          context,
+                          AppTextStyles.listTitle,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '$_name2Shown: ${result.mangalSecond ? 'Present' : 'None'}',
+                      style: AppTextStyles.themed(
+                        context,
+                        AppTextStyles.body.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: result.mangalSecond
+                              ? AppColors.maroon
+                              : AppColors.good,
                         ),
                       ),
                     ),
@@ -2039,15 +2278,9 @@ class _MatchingScreenState extends State<MatchingScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _showPremiumNote,
+                onPressed: _showFullReport,
                 child: const Text('View Full Milan Report'),
               ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'One free matching each day. The next matching is free tomorrow.',
-              style: AppTextStyles.themed(context, AppTextStyles.caption),
-              textAlign: TextAlign.center,
             ),
           ],
         ],
@@ -2056,59 +2289,63 @@ class _MatchingScreenState extends State<MatchingScreen> {
   }
 }
 
-class _PersonCard extends StatelessWidget {
-  const _PersonCard({
-    required this.initial,
+class _PersonForm extends StatelessWidget {
+  const _PersonForm({
+    required this.label,
     required this.name,
-    required this.detail,
-    required this.onTap,
+    required this.date,
+    required this.time,
+    required this.place,
   });
 
-  final String initial;
-  final String name;
-  final String detail;
-  final VoidCallback? onTap;
+  final String label;
+  final TextEditingController name;
+  final TextEditingController date;
+  final TextEditingController time;
+  final TextEditingController place;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            children: <Widget>[
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: AppColors.saffron,
-                child: Text(
-                  initial,
-                  style: AppTextStyles.themed(
-                    context,
-                    AppTextStyles.button,
-                  ),
-                ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              label,
+              style: AppTextStyles.themed(context, AppTextStyles.subtitle),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: name,
+              decoration: const InputDecoration(labelText: 'Name'),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: date,
+              decoration: const InputDecoration(
+                labelText: 'Date of birth',
+                hintText: 'Day Month Year',
               ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                name,
-                style: AppTextStyles.themed(
-                  context,
-                  AppTextStyles.listTitle,
-                ),
-                textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: time,
+              decoration: const InputDecoration(
+                labelText: 'Time of birth',
+                hintText: 'HH:MM AM or PM',
               ),
-              if (detail.isNotEmpty)
-                Text(
-                  detail,
-                  style: AppTextStyles.themed(
-                    context,
-                    AppTextStyles.bodySmall,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-            ],
-          ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: place,
+              decoration: const InputDecoration(
+                labelText: 'Place of birth',
+                hintText: 'City, State',
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -2149,60 +2386,100 @@ class _GunaRow extends StatelessWidget {
   }
 }
 
-/// Remedies screen, per design/screens/10-remedies.md. The four
-/// cards are the presentation sample set for the sample kundli.
-/// Mark as done is a real daily habit check: it flips to Done
-/// today and resets the next morning. The gemstone question and
-/// the Ask About a Remedy button lead to live consult, which is
-/// premium, so they say so honestly instead of opening a fake
-/// chat.
-/// Remedies screen. With a Firestore service, it also lists the
-/// remedies the admin approved, below the sample set.
+/// Remedies screen. Remedies come from the real kundli:
+/// weak planets from computed positions, and the current
+/// Mahadasha lord, through RemedyEngine. With no complete
+/// profile the screen asks the user to complete it instead
+/// of showing a fixed set. Mark as done is a real daily
+/// habit check, saved in SharedPreferences for today. The
+/// remedies the admin approved still list below.
 class RemediesScreen extends StatefulWidget {
-  const RemediesScreen({super.key, this.firestore});
+  const RemediesScreen({super.key, this.firestore, this.authService});
 
   final FirestoreService? firestore;
+  final AuthService? authService;
 
   @override
   State<RemediesScreen> createState() => _RemediesScreenState();
 }
 
 class _RemediesScreenState extends State<RemediesScreen> {
-  // shortcut: done state is in memory only and does not survive
-  // an app restart; persist it in Firestore when the remedies
-  // engine lands.
-  final Set<int> _done = <int>{};
-  DateTime? _doneDay;
+  List<Remedy>? _remedies;
+  bool _loading = true;
+  Set<String> _doneToday = <String>{};
+  String _doneKey = '';
 
-  bool _isDoneToday(int index) {
-    if (_doneDay == null || !_done.contains(index)) {
-      return false;
-    }
-    final DateTime now = DateTime.now();
-    return _doneDay!.year == now.year &&
-        _doneDay!.month == now.month &&
-        _doneDay!.day == now.day;
+  @override
+  void initState() {
+    super.initState();
+    _load();
   }
 
-  void _markDone(int index) {
+  String _todayKey() {
     final DateTime now = DateTime.now();
-    setState(() {
-      if (_doneDay == null ||
-          _doneDay!.year != now.year ||
-          _doneDay!.month != now.month ||
-          _doneDay!.day != now.day) {
-        _done.clear();
-        _doneDay = now;
+    return '${now.year}-${now.month}-${now.day}';
+  }
+
+  Future<void> _load() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String key = _todayKey();
+    final Set<String> done =
+        prefs.getStringList('remedy_done_$key')?.toSet() ?? <String>{};
+    final FirestoreService? firestore = widget.firestore;
+    final String? uid = widget.authService?.currentUserId;
+    List<Remedy>? remedies;
+    if (firestore != null && uid != null) {
+      final Map<String, dynamic>? map = await firestore.getUserProfile(uid);
+      if (map != null) {
+        final AppUserProfile profile = AppUserProfile.fromMap(map);
+        if (profile.isComplete) {
+          final DateTime? birth = parseBirthDateTime(
+            AppUserProfile.displayDate(profile.dateOfBirth!),
+            profile.birthTimeUnknown || profile.timeOfBirth == null
+                ? '12:00 PM'
+                : AppUserProfile.displayTime(profile.timeOfBirth!),
+          );
+          if (birth != null) {
+            final KundliResult kundli = KundliCalculator.calculate(
+              birthLocal: birth,
+              placeText: profile.placeLine,
+              timeKnown: !profile.birthTimeUnknown,
+            );
+            remedies = RemedyEngine.derive(
+              kundli: kundli,
+              birthLocal: birth,
+              asOf: DateTime.now(),
+            );
+          }
+        }
       }
-      _done.add(index);
+    }
+    if (!mounted) return;
+    setState(() {
+      _remedies = remedies;
+      _loading = false;
+      _doneToday = done;
+      _doneKey = key;
     });
   }
 
-  void _showPremiumNote() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Live consult is premium. Pricing to be decided.',
+  Future<void> _markDone(String title) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final Set<String> done = <String>{..._doneToday, title};
+    await prefs.setStringList(
+      'remedy_done_$_doneKey',
+      done.toList(),
+    );
+    if (!mounted) return;
+    setState(() => _doneToday = done);
+  }
+
+  void _openConsult() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ConsultScreen(
+          firestore: widget.firestore,
+          authService: widget.authService,
         ),
       ),
     );
@@ -2215,121 +2492,119 @@ class _RemediesScreenState extends State<RemediesScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          const SampleDataBanner(),
-          const SizedBox(height: AppSpacing.md),
           Text(
             'Simple upay chosen from your own kundli.',
             style: AppTextStyles.themed(context, AppTextStyles.body),
           ),
           const SizedBox(height: AppSpacing.md),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      'This is a general set. A personal plan from your own kundli is premium.',
-                      style: AppTextStyles.themed(
-                        context,
-                        AppTextStyles.bodySmall,
+          if (_loading)
+            const Center(child: CircularProgressIndicator())
+          else if (_remedies == null)
+            Card(
+              child: ListTile(
+                title: Text(
+                  'Complete your profile first',
+                  style: AppTextStyles.themed(
+                    context,
+                    AppTextStyles.subtitle,
+                  ),
+                ),
+                subtitle: Text(
+                  'Add your birth details in Profile so remedies can be chosen from your own kundli.',
+                  style: AppTextStyles.themed(
+                    context,
+                    AppTextStyles.bodySmall,
+                  ),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => ProfileScreen(
+                        firestore: widget.firestore,
+                        authService: widget.authService,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            )
+          else
+            ..._remedies!.map(
+              (Remedy remedy) {
+                final bool done = _doneToday.contains(remedy.title);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.space3),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            remedy.title,
+                            style: AppTextStyles.themed(
+                              context,
+                              AppTextStyles.cardTitle,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            remedy.body,
+                            style: AppTextStyles.themed(
+                              context,
+                              AppTextStyles.body,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.space3),
+                          if (done)
+                            Row(
+                              children: <Widget>[
+                                Icon(
+                                  Icons.check_circle,
+                                  color: AppColors.resolve(
+                                    context,
+                                    AppColors.good,
+                                    AppColorsDark.good,
+                                  ),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Text(
+                                  'Done today',
+                                  style: AppTextStyles.themed(
+                                    context,
+                                    AppTextStyles.body.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.good,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else if (remedy.action == 'done')
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () => _markDone(remedy.title),
+                                child: const Text('Mark as done'),
+                              ),
+                            )
+                          else
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: _openConsult,
+                                child: const Text('Ask about this remedy'),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Premium pricing to be decided.',
-                          ),
-                        ),
-                      );
-                    },
-                    child: const Text('View premium'),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          ...SampleRemedies.list.asMap().entries.map(
-            (MapEntry<int, Remedy> entry) {
-              final int index = entry.key;
-              final Remedy remedy = entry.value;
-              final bool done = _isDoneToday(index);
-              return Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.space3),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          remedy.title,
-                          style: AppTextStyles.themed(
-                            context,
-                            AppTextStyles.cardTitle,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          remedy.body,
-                          style: AppTextStyles.themed(
-                            context,
-                            AppTextStyles.body,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.space3),
-                        if (done)
-                          Row(
-                            children: <Widget>[
-                              Icon(
-                                Icons.check_circle,
-                                color: AppColors.resolve(
-                                  context,
-                                  AppColors.good,
-                                  AppColorsDark.good,
-                                ),
-                                size: 20,
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Text(
-                                'Done today',
-                                style: AppTextStyles.themed(
-                                  context,
-                                  AppTextStyles.body.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.good,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        else if (remedy.action == 'done')
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () => _markDone(index),
-                              child: const Text('Mark as done'),
-                            ),
-                          )
-                        else
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: _showPremiumNote,
-                              child: const Text('Ask about this gemstone'),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
           const SizedBox(height: AppSpacing.lg),
           if (widget.firestore != null) ...<Widget>[
             Text(
@@ -2403,7 +2678,7 @@ class _RemediesScreenState extends State<RemediesScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _showPremiumNote,
+              onPressed: _openConsult,
               child: const Text('Ask About a Remedy'),
             ),
           ),
@@ -2413,13 +2688,105 @@ class _RemediesScreenState extends State<RemediesScreen> {
   }
 }
 
-/// Consult screen. With a Firestore service, it lists the
-/// astrologers the admin approved, in real time. Without one it
-/// shows the Phase 1 state: no astrologers yet.
+/// Consult screen. Lists the astrologers the admin
+/// approved, in real time, with a real chat and a real call
+/// path for each one. Chat opens a Firestore backed room
+/// that stores and reads messages. Call dials the phone
+/// number the admin saved for that astrologer, and says so
+/// plainly when none is saved. No astrologer is on the other
+/// side yet: the general chat room stores the user messages
+/// and the admin app reads and replies there, but no
+/// astrologer name, photo or reply is invented.
 class ConsultScreen extends StatelessWidget {
-  const ConsultScreen({super.key, this.firestore});
+  const ConsultScreen({
+    super.key,
+    this.firestore,
+    this.authService,
+    this.chatService,
+  });
 
   final FirestoreService? firestore;
+  final AuthService? authService;
+  final ChatService? chatService;
+
+  ChatService get _chat =>
+      chatService ?? ChatService(firestore: firestore);
+
+  void _openGeneralChat(BuildContext context) {
+    final String? uid = authService?.currentUserId;
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to chat.')),
+      );
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChatScreen(
+          chatId: ChatService.userChatId(uid),
+          title: 'Chat with the astrologer',
+          currentUserId: uid,
+          senderRole: 'user',
+          firestore: firestore,
+          chatService: _chat,
+        ),
+      ),
+    );
+  }
+
+  void _openAstrologerChat(
+    BuildContext context,
+    Map<String, dynamic> doc,
+  ) {
+    final String? uid = authService?.currentUserId;
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to chat.')),
+      );
+      return;
+    }
+    final String astrologerId = str(doc, 'id');
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChatScreen(
+          chatId: ChatService.astrologerChatId(astrologerId, uid),
+          title: str(doc, 'name'),
+          currentUserId: uid,
+          senderRole: 'user',
+          participantIds: <String>[uid, astrologerId],
+          firestore: firestore,
+          chatService: _chat,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _callAstrologer(
+    BuildContext context,
+    Map<String, dynamic> doc,
+  ) async {
+    final String phone = str(doc, 'phone').trim();
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No phone number yet for this astrologer.',
+          ),
+        ),
+      );
+      return;
+    }
+    final bool opened = await launchUrl(
+      Uri(scheme: 'tel', path: phone),
+    );
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open the dialer.'),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2428,11 +2795,28 @@ class ConsultScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          const SampleDataBanner(),
-          const SizedBox(height: AppSpacing.md),
           Text(
             'Chat and call with an astrologer.',
             style: AppTextStyles.themed(context, AppTextStyles.body),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.chat, color: AppColors.deepSaffron),
+              title: Text(
+                'Chat with the astrologer',
+                style: AppTextStyles.themed(context, AppTextStyles.subtitle),
+              ),
+              subtitle: Text(
+                'Messages are saved. No astrologer has joined yet.',
+                style: AppTextStyles.themed(
+                  context,
+                  AppTextStyles.bodySmall,
+                ),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _openGeneralChat(context),
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           if (firestore == null)
@@ -2484,7 +2868,7 @@ class ConsultScreen extends StatelessWidget {
                               ),
                             ),
                             subtitle: Text(
-                              '${str(doc, 'languages')}${str(doc, 'rate').isEmpty ? '' : '  •  ${str(doc, 'rate')}'}',
+                              str(doc, 'languages'),
                               style: AppTextStyles.themed(
                                 context,
                                 AppTextStyles.bodySmall,
@@ -2494,20 +2878,20 @@ class ConsultScreen extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: <Widget>[
                                 if (doc['chatAvailable'] == true)
-                                  const Icon(Icons.chat, size: 20),
+                                  IconButton(
+                                    icon: const Icon(Icons.chat),
+                                    onPressed: () =>
+                                        _openAstrologerChat(context, doc),
+                                  ),
                                 if (doc['callAvailable'] == true)
-                                  const Icon(Icons.call, size: 20),
+                                  IconButton(
+                                    icon: const Icon(Icons.call),
+                                    onPressed: () =>
+                                        _callAstrologer(context, doc),
+                                  ),
                               ],
                             ),
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Live chat and call are not ready yet.',
-                                  ),
-                                ),
-                              );
-                            },
+                            onTap: () => _openAstrologerChat(context, doc),
                           ),
                         ),
                       )
@@ -2515,41 +2899,174 @@ class ConsultScreen extends StatelessWidget {
                 );
               },
             ),
-          const SizedBox(height: AppSpacing.md),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.chat, color: AppColors.deepSaffron),
-              title: Text('Chat', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
-              subtitle: Text(
-                'Live chat is a later phase.',
-                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
-              ),
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Live chat is not ready yet.'),
-                  ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Real chat room over Firestore. Messages stream live,
+/// oldest first. Sending stores the message with the sender
+/// id, the sender role and a server timestamp, and keeps the
+/// chat document current. The empty state names the honest
+/// boundary: no astrologer has joined yet.
+class ChatScreen extends StatefulWidget {
+  const ChatScreen({
+    super.key,
+    required this.chatId,
+    required this.title,
+    required this.currentUserId,
+    required this.senderRole,
+    this.participantIds,
+    this.firestore,
+    this.chatService,
+  });
+
+  final String chatId;
+  final String title;
+  final String currentUserId;
+  final String senderRole;
+  final List<String>? participantIds;
+  final FirestoreService? firestore;
+  final ChatService? chatService;
+
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  final TextEditingController _controller = TextEditingController();
+
+  ChatService get _chat =>
+      widget.chatService ?? ChatService(firestore: widget.firestore);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final String text = _controller.text.trim();
+    if (text.isEmpty) return;
+    _controller.clear();
+    await _chat.sendMessage(
+      chatId: widget.chatId,
+      senderId: widget.currentUserId,
+      senderRole: widget.senderRole,
+      text: text,
+      participantIds:
+          widget.participantIds ?? <String>[widget.currentUserId],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isAdmin = widget.senderRole == 'admin';
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      body: Column(
+        children: <Widget>[
+          Expanded(
+            child: StreamBuilder<List<ChatMessage>>(
+              stream: _chat.watchMessages(widget.chatId),
+              builder: (
+                BuildContext context,
+                AsyncSnapshot<List<ChatMessage>> snap,
+              ) {
+                if (snap.hasError) {
+                  return const Center(
+                    child: Text('Messages could not be loaded.'),
+                  );
+                }
+                if (!snap.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final List<ChatMessage> messages = snap.data!;
+                if (messages.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.all(AppSpacing.screenPadding),
+                      child: Text(
+                        isAdmin
+                            ? 'No messages yet.'
+                            : 'No astrologer has joined yet. Your messages are saved here and the astrologer will reply once added.',
+                        style: AppTextStyles.themed(
+                          context,
+                          AppTextStyles.body,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+                return ListView.builder(
+                  padding:
+                      const EdgeInsets.all(AppSpacing.screenPadding),
+                  itemCount: messages.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final ChatMessage message = messages[index];
+                    final bool mine =
+                        message.senderId == widget.currentUserId;
+                    return Align(
+                      alignment: mine
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.only(
+                          bottom: AppSpacing.sm,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm,
+                        ),
+                        decoration: BoxDecoration(
+                          color: mine
+                              ? AppColors.saffron
+                              : AppColors.resolve(
+                                  context,
+                                  AppColors.surface2,
+                                  AppColorsDark.surface2,
+                                ),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.smallRadius,
+                          ),
+                        ),
+                        child: Text(
+                          message.text,
+                          style: AppTextStyles.themed(
+                            context,
+                            AppTextStyles.body,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
           ),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.call, color: AppColors.deepSaffron),
-              title: Text('Call', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
-              subtitle: Text(
-                'Live call is a later phase. Pricing to be decided.',
-                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
-              ),
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Live call is not ready yet. Pricing to be decided.',
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: const InputDecoration(
+                      hintText: 'Type a message',
+                      border: OutlineInputBorder(),
                     ),
+                    onSubmitted: (_) => _send(),
                   ),
-                );
-              },
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: _send,
+                ),
+              ],
             ),
           ),
         ],
@@ -2802,7 +3319,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       subtitle: Text(
-                        'Daily horoscope alert at $alertTime.',
+                        'Daily horoscope alert at $alertTime. '
+                        'Next alert ${_nextAlertDay(profile?.horoscopeAlertTime ?? '06:00')}.',
                         style: AppTextStyles.themed(
                           context,
                           AppTextStyles.bodySmall,
@@ -2865,12 +3383,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           );
                         }
                         final Map<String, dynamic> plan = active.first;
-                        final String price =
-                            numVal(plan, 'monthlyPrice') == 0
-                                ? ''
-                                : '  •  Rs ${numVal(plan, 'monthlyPrice').toInt()}/month';
                         return Text(
-                          '${str(plan, 'name')} plan$price',
+                          '${str(plan, 'name')} plan',
                           style: AppTextStyles.themed(
                               context, AppTextStyles.bodySmall),
                         );

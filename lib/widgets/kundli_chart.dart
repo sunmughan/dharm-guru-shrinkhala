@@ -15,16 +15,13 @@ import '../models/kundli.dart';
 /// bhava 12 at the top right.
 ///
 /// The chart renders any kundli it is given: lagna and
-/// planets come from the real calculation. The defaults are
-/// the old sample chart, used only before the profile is
-/// complete, and the chart is then marked as sample.
+/// planets come from the real calculation.
 class KundliChart extends StatelessWidget {
   const KundliChart({
     super.key,
-    this.birth = SampleKundli.birth,
-    this.planets = SampleKundli.planets,
-    this.lagna = 'Meena',
-    this.isSample = true,
+    required this.birth,
+    required this.planets,
+    required this.lagna,
   });
 
   final BirthDetails birth;
@@ -32,10 +29,6 @@ class KundliChart extends StatelessWidget {
 
   /// Lagna rashi name, the rashi in bhava 1.
   final String lagna;
-
-  /// True when the chart is the sample shown before the
-  /// profile is complete. The centre cell then says so.
-  final bool isSample;
 
   /// Bhava number for each cell, row by row, left to right.
   /// Top row: 3, 2, 1, 12. Middle rows: 4 and 11, then 5 and 10.
@@ -77,7 +70,7 @@ class KundliChart extends StatelessWidget {
     }
     for (final PlanetDetail planet in planets) {
       if (planet.bhava == 'Bhava $bhava') {
-        final String? abbr = SampleKundli.abbreviations[planet.name];
+        final String? abbr = kPlanetAbbreviations[planet.name];
         if (abbr != null) {
           found.add(abbr);
         }
@@ -140,7 +133,7 @@ class KundliChart extends StatelessWidget {
                       ),
                       Expanded(
                         flex: 2,
-                        child: _NameCell(birth: birth, isSample: isSample),
+                        child: _NameCell(birth: birth),
                       ),
                       Expanded(
                         child: _cellForBhava(_bhavaGrid[2][1]),
@@ -285,10 +278,9 @@ class _CenterCell extends StatelessWidget {
 }
 
 class _NameCell extends StatelessWidget {
-  const _NameCell({required this.birth, required this.isSample});
+  const _NameCell({required this.birth});
 
   final BirthDetails birth;
-  final bool isSample;
 
   @override
   Widget build(BuildContext context) {
@@ -302,11 +294,6 @@ class _NameCell extends StatelessWidget {
             style: AppTextStyles.themed(context, AppTextStyles.chartPlanet),
             textAlign: TextAlign.center,
           ),
-          if (isSample)
-            Text(
-              'Sample data',
-              style: AppTextStyles.themed(context, AppTextStyles.caption),
-            ),
         ],
       ),
     );

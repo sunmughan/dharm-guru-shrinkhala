@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:dharm_guru_shrinkhala/core/build_info.dart';
 import 'package:dharm_guru_shrinkhala/core/navigation/app_shell.dart';
+import 'package:dharm_guru_shrinkhala/models/kundli.dart';
 import 'package:dharm_guru_shrinkhala/models/panchang.dart';
 import 'package:dharm_guru_shrinkhala/screens/admin_screens.dart';
 import 'package:dharm_guru_shrinkhala/screens/auth_screen.dart';
@@ -8,7 +11,10 @@ import 'package:dharm_guru_shrinkhala/screens/screens.dart';
 import 'package:dharm_guru_shrinkhala/services/admin_seed_service.dart';
 import 'package:dharm_guru_shrinkhala/services/astro.dart';
 import 'package:dharm_guru_shrinkhala/services/auth_service.dart';
+import 'package:dharm_guru_shrinkhala/services/chat_service.dart';
 import 'package:dharm_guru_shrinkhala/services/firestore_service.dart';
+import 'package:dharm_guru_shrinkhala/services/matching.dart';
+import 'package:dharm_guru_shrinkhala/services/remedies_engine.dart';
 import 'package:dharm_guru_shrinkhala/widgets/kundli_chart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
@@ -131,7 +137,7 @@ void main() {
     // keeps the shell off real Firebase while it is pumped.
     await tester.tap(find.text('Skip'));
     await tester.pumpAndSettle();
-    expect(find.text('Namaste, Aarav Sharma'), findsOneWidget);
+    expect(find.text('Namaste, Test User'), findsOneWidget);
   });
 
   testWidgets('Onboarding Skip goes to sign in when signed out',
@@ -408,15 +414,104 @@ void main() {
     );
   });
 
-  testWidgets('Chart shows lagna rashi and all nine planets',
+  testWidgets('Chart shows the given kundli and all nine planets',
       (WidgetTester tester) async {
+    const List<PlanetDetail> planets = <PlanetDetail>[
+      PlanetDetail(
+        name: 'Sun',
+        rashi: 'Mesha',
+        bhava: 'Bhava 1',
+        degree: '01° 00′',
+        swami: 'Mars',
+        note: 'Sun in Mesha, Bhava 1.',
+      ),
+      PlanetDetail(
+        name: 'Moon',
+        rashi: 'Vrishabha',
+        bhava: 'Bhava 2',
+        degree: '02° 00′',
+        swami: 'Venus',
+        note: 'Moon in Vrishabha, Bhava 2.',
+      ),
+      PlanetDetail(
+        name: 'Mars',
+        rashi: 'Mithuna',
+        bhava: 'Bhava 3',
+        degree: '03° 00′',
+        swami: 'Mercury',
+        note: 'Mars in Mithuna, Bhava 3.',
+      ),
+      PlanetDetail(
+        name: 'Mercury',
+        rashi: 'Karka',
+        bhava: 'Bhava 4',
+        degree: '04° 00′',
+        swami: 'Moon',
+        note: 'Mercury in Karka, Bhava 4.',
+      ),
+      PlanetDetail(
+        name: 'Jupiter',
+        rashi: 'Simha',
+        bhava: 'Bhava 5',
+        degree: '05° 00′',
+        swami: 'Sun',
+        note: 'Jupiter in Simha, Bhava 5.',
+      ),
+      PlanetDetail(
+        name: 'Venus',
+        rashi: 'Kanya',
+        bhava: 'Bhava 6',
+        degree: '06° 00′',
+        swami: 'Mercury',
+        note: 'Venus in Kanya, Bhava 6.',
+      ),
+      PlanetDetail(
+        name: 'Saturn',
+        rashi: 'Tula',
+        bhava: 'Bhava 7',
+        degree: '07° 00′',
+        swami: 'Venus',
+        note: 'Saturn in Tula, Bhava 7.',
+      ),
+      PlanetDetail(
+        name: 'Rahu',
+        rashi: 'Vrishchika',
+        bhava: 'Bhava 8',
+        degree: '08° 00′',
+        swami: 'Mars',
+        note: 'Rahu in Vrishchika, Bhava 8.',
+      ),
+      PlanetDetail(
+        name: 'Ketu',
+        rashi: 'Dhanu',
+        bhava: 'Bhava 9',
+        degree: '09° 00′',
+        swami: 'Jupiter',
+        note: 'Ketu in Dhanu, Bhava 9.',
+      ),
+    ];
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: KundliChart()),
+        home: Scaffold(
+          body: KundliChart(
+            birth: BirthDetails(
+              name: 'Test User',
+              dateOfBirth: '1 January 2000',
+              timeOfBirth: '06:25 AM',
+              placeOfBirth: 'Jaipur',
+              rashi: 'Vrishabha',
+              nakshatra: 'Rohini',
+              tithiAtBirth: 'Shukla Pratipada',
+            ),
+            planets: planets,
+            lagna: 'Mesha',
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Meena'), findsOneWidget);
+    expect(find.text('Mesha'), findsOneWidget);
+    expect(find.text('Lagna Mesha'), findsOneWidget);
     expect(find.text('Lagna'), findsOneWidget);
     expect(find.text('As'), findsOneWidget);
     expect(find.text('Su'), findsOneWidget);
@@ -425,9 +520,10 @@ void main() {
     expect(find.text('Me'), findsOneWidget);
     expect(find.text('Ju'), findsOneWidget);
     expect(find.text('Ve'), findsOneWidget);
+    expect(find.text('Sa'), findsOneWidget);
     expect(find.text('Ra'), findsOneWidget);
     expect(find.text('Ke'), findsOneWidget);
-    expect(find.text('+1'), findsOneWidget);
+    expect(find.text('Test User'), findsOneWidget);
   });
 
   testWidgets('Panchang shows the real computed values for today',
@@ -464,9 +560,18 @@ void main() {
       const MaterialApp(home: KundliInputScreen()),
     );
     await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'Test User');
     await tester.enterText(
       find.byType(TextField).at(1),
       '1 January 2000',
+    );
+    await tester.enterText(
+      find.byType(TextField).at(2),
+      '06:25 AM',
+    );
+    await tester.enterText(
+      find.byType(TextField).at(3),
+      'Jaipur, Rajasthan',
     );
     await tester.tap(find.text('Show Kundli'));
     await tester.pumpAndSettle();
@@ -489,61 +594,150 @@ void main() {
     );
   });
 
-  testWidgets('Kundli form with sample details shows the sample chart',
+  testWidgets('Kundli form with the old details shows a real chart, never a sample chart',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(home: KundliInputScreen()),
     );
     await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'Test User');
+    await tester.enterText(
+      find.byType(TextField).at(1),
+      '14 March 1998',
+    );
+    await tester.enterText(
+      find.byType(TextField).at(2),
+      '06:25 AM',
+    );
+    await tester.enterText(
+      find.byType(TextField).at(3),
+      'Jaipur, Rajasthan',
+    );
     await tester.tap(find.text('Show Kundli'));
     await tester.pumpAndSettle();
-    // The chart is calculated from the sample birth details,
+    // The chart is calculated from the entered birth details,
     // so the real lagna for 14 March 1998, 06:25 AM, Jaipur
-    // is Kumbha, and the screen still marks it as sample
-    // because no profile is complete.
+    // is Kumbha, and the screen never marks it as sample.
     expect(find.text('Lagna Kumbha'), findsOneWidget);
-    expect(find.text('Meena'), findsWidgets);
+    expect(find.text('Meena'), findsOneWidget);
     expect(find.text('Lagna'), findsOneWidget);
     expect(
       find.text('Sample data only. No real prediction.'),
-      findsOneWidget,
+      findsNothing,
     );
+    expect(find.text('Sample data'), findsNothing);
   });
 
-  testWidgets('Matching New match clears the second person',
+  testWidgets('Matching calculates a real score from two real charts',
       (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 2600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       const MaterialApp(home: MatchingScreen()),
     );
     await tester.pumpAndSettle();
-    expect(find.text('28 / 36'), findsOneWidget);
-    await tester.tap(find.text('New match'));
+    await tester.enterText(find.byType(TextField).at(1), '1 January 2000');
+    await tester.enterText(find.byType(TextField).at(2), '06:25 AM');
+    await tester.enterText(find.byType(TextField).at(3), 'Jaipur');
+    await tester.enterText(find.byType(TextField).at(5), '14 March 1998');
+    await tester.enterText(find.byType(TextField).at(6), '06:25 AM');
+    await tester.enterText(find.byType(TextField).at(7), 'Jaipur, Rajasthan');
+    await tester.tap(find.text('Calculate matching'));
     await tester.pumpAndSettle();
-    expect(find.text('Add second kundli'), findsOneWidget);
+    final KundliResult first = KundliCalculator.calculate(
+      birthLocal: DateTime(2000, 1, 1, 6, 25),
+      placeText: 'Jaipur',
+    );
+    final KundliResult second = KundliCalculator.calculate(
+      birthLocal: DateTime(1998, 3, 14, 6, 25),
+      placeText: 'Jaipur, Rajasthan',
+    );
+    final MatchingResult expected = MatchingCalculator.calculate(
+      first: first,
+      second: second,
+    );
+    expect(find.text('Guna Milan Score'), findsOneWidget);
+    expect(find.text(expected.totalText), findsOneWidget);
+    expect(find.text(expected.verdict), findsOneWidget);
+    for (final String label in <String>[
+      'Varna', 'Vashya', 'Tara', 'Yoni',
+      'Graha Maitri', 'Gana', 'Bhakoot', 'Nadi',
+    ]) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('Mangal Dosha'), findsNWidgets(2));
     expect(find.text('28 / 36'), findsNothing);
   });
 
-  testWidgets('Remedies Mark as done flips to Done today',
+  testWidgets('Remedies come from the real kundli and Mark as done persists',
       (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 2600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
-      const MaterialApp(home: RemediesScreen()),
+      MaterialApp(
+        home: RemediesScreen(
+          firestore: _FakeFirestore(),
+          authService: _FakeAuthService(signedInValue: true),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('For weak Sun'), findsOneWidget);
-    await tester.tap(find.text('Mark as done').first);
-    await tester.pumpAndSettle();
-    expect(find.text('Done today'), findsOneWidget);
+    final KundliResult kundli = KundliCalculator.calculate(
+      birthLocal: DateTime(2000, 1, 15, 7, 30),
+      placeText: 'Delhi, Delhi, India',
+    );
+    final List<dynamic> remedies = RemedyEngine.derive(
+      kundli: kundli,
+      birthLocal: DateTime(2000, 1, 15, 7, 30),
+      asOf: DateTime.now(),
+    );
+    expect(remedies, isNotEmpty);
+    for (final dynamic remedy in remedies) {
+      expect(find.text(remedy.title), findsOneWidget);
+    }
+    final List<dynamic> doneRemedies =
+        remedies.where((dynamic r) => r.action == 'done').toList();
+    if (doneRemedies.isNotEmpty) {
+      await tester.ensureVisible(find.text('Mark as done').first);
+      await tester.tap(find.text('Mark as done').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Done today'), findsOneWidget);
+    } else {
+      expect(find.text('Ask about this remedy'), findsOneWidget);
+    }
   });
 
-  testWidgets('Consult Chat tile says it is not ready yet',
+  testWidgets('Consult Chat opens a real chat room',
       (WidgetTester tester) async {
+    final _FakeChatService chat = _FakeChatService();
     await tester.pumpWidget(
-      const MaterialApp(home: ConsultScreen()),
+      MaterialApp(
+        home: ConsultScreen(
+          firestore: _FakeFirestore(),
+          authService: _FakeAuthService(signedInValue: true),
+          chatService: chat,
+        ),
+      ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Chat'));
-    await tester.pump();
-    expect(find.text('Live chat is not ready yet.'), findsOneWidget);
+    await tester.tap(find.text('Chat with the astrologer'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'No astrologer has joined yet. Your messages are saved here and the astrologer will reply once added.',
+      ),
+      findsOneWidget,
+    );
+    await tester.enterText(find.byType(TextField).first, 'Hello');
+    await tester.tap(find.byIcon(Icons.send));
+    await tester.pumpAndSettle();
+    expect(find.text('Hello'), findsOneWidget);
+    expect(chat.sent.length, 1);
+    expect(chat.sent.first.text, 'Hello');
   });
 
   testWidgets('Admin gate denies a signed in non owner',
@@ -697,7 +891,6 @@ void main() {
                   'id': 'a1',
                   'name': 'Guru Dev',
                   'languages': 'Hindi, English',
-                  'rate': 'Rs 99/min',
                   'status': 'approved',
                   'chatAvailable': true,
                   'callAvailable': true,
@@ -706,7 +899,6 @@ void main() {
                   'id': 'a2',
                   'name': 'New Guru',
                   'languages': 'Hindi',
-                  'rate': '',
                   'status': 'waiting',
                   'chatAvailable': true,
                   'callAvailable': false,
@@ -792,9 +984,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Namaste, Aarav Sharma'), findsOneWidget);
+    expect(find.text('Namaste, Test User'), findsOneWidget);
     expect(
-      find.text('Birth 14 March 1998, 06:25 AM, Jaipur, Rajasthan, India.'),
+      find.text('Birth 15 January 2000, 07:30 AM, Delhi, Delhi, India.'),
       findsOneWidget,
     );
   });
@@ -822,12 +1014,15 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Aarav Sharma'), findsOneWidget);
+    expect(find.text('Test User'), findsOneWidget);
     expect(find.text('Edit profile'), findsOneWidget);
     expect(find.text('Date of birth'), findsOneWidget);
-    expect(find.text('14 March 1998'), findsOneWidget);
-    expect(find.text('Jaipur, Rajasthan, India'), findsOneWidget);
-    expect(find.text('Daily horoscope alert at 06:00 AM.'), findsOneWidget);
+    expect(find.text('15 January 2000'), findsOneWidget);
+    expect(find.text('Delhi, Delhi, India'), findsOneWidget);
+    expect(
+      find.textContaining('Daily horoscope alert at 06:00 AM.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Profile form saves the entered details',
@@ -1036,11 +1231,11 @@ class _FakeFirestore extends FirestoreService {
   @override
   Future<Map<String, dynamic>?> getUserProfile(String uid) async =>
       <String, dynamic>{
-        'name': 'Aarav Sharma',
-        'dateOfBirth': '1998-03-14',
-        'timeOfBirth': '06:25',
-        'birthCity': 'Jaipur',
-        'birthState': 'Rajasthan',
+        'name': 'Test User',
+        'dateOfBirth': '2000-01-15',
+        'timeOfBirth': '07:30',
+        'birthCity': 'Delhi',
+        'birthState': 'Delhi',
         'birthCountry': 'India',
       };
 
@@ -1074,4 +1269,37 @@ class _FakeFirestore extends FirestoreService {
 
   @override
   Future<void> deleteDoc(String collection, String id) async {}
+}
+
+/// Fake chat that keeps messages in memory, so the chat
+/// screen can be pumped with no Firestore behind it.
+class _FakeChatService extends ChatService {
+  final List<ChatMessage> sent = <ChatMessage>[];
+  final StreamController<List<ChatMessage>> _controller =
+      StreamController<List<ChatMessage>>.broadcast();
+
+  @override
+  Stream<List<ChatMessage>> watchMessages(String chatId) async* {
+    yield List<ChatMessage>.from(sent);
+    yield* _controller.stream;
+  }
+
+  @override
+  Future<void> sendMessage({
+    required String chatId,
+    required String senderId,
+    required String senderRole,
+    required String text,
+    required List<String> participantIds,
+  }) async {
+    sent.add(
+      ChatMessage(
+        id: 'm${sent.length}',
+        senderId: senderId,
+        senderRole: senderRole,
+        text: text.trim(),
+      ),
+    );
+    _controller.add(List<ChatMessage>.from(sent));
+  }
 }

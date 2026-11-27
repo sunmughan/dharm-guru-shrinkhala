@@ -3,25 +3,27 @@ import 'package:material_ui/material_ui.dart';
 import '../core/theme/design_tokens.dart';
 import '../models/kundli.dart';
 import '../services/astro.dart';
+import '../services/premium_service.dart';
 
 /// Planet details table with degrees, rashi, bhava and swami.
-/// Renders any kundli it is given. The defaults are the old
-/// sample values, used only before the profile is complete.
+/// Renders the kundli it is given, calculated by the engine.
 class PlanetDetails extends StatelessWidget {
-  /// Defaults are the sample values: Kanya rashi, Hasta
-  /// nakshatra, matching BirthDetails.sample.
   const PlanetDetails({
     super.key,
-    this.planets = SampleKundli.planets,
-    this.lagna = SampleKundli.lagna,
-    this.rashi = 'Kanya',
-    this.nakshatra = 'Hasta',
+    required this.planets,
+    required this.lagna,
+    required this.rashi,
+    required this.nakshatra,
+    this.premiumService,
   });
 
   final List<PlanetDetail> planets;
   final String lagna;
   final String rashi;
   final String nakshatra;
+
+  /// Premium gate. Tests pass their own flag reader.
+  final PremiumService? premiumService;
 
   @override
   Widget build(BuildContext context) {
@@ -124,10 +126,14 @@ class PlanetDetails extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
+                    final bool enabled = (premiumService ?? PremiumService())
+                        .isPremiumEnabled;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text(
-                          'Premium upgrade is a later phase.',
+                          enabled
+                              ? 'Premium is on. Full planet detail opens here.'
+                              : 'Premium is not available yet. Pricing to be decided.',
                         ),
                       ),
                     );
@@ -234,28 +240,5 @@ class PlanetDetails extends StatelessWidget {
     return degree
         .replaceAll('°', ' degrees')
         .replaceAll('′', ' minutes');
-  }
-}
-
-/// Small banner used on every screen that shows sample data.
-class SampleDataBanner extends StatelessWidget {
-  const SampleDataBanner({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.saffron.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppSpacing.sm),
-        border: Border.all(color: AppColors.saffron),
-      ),
-      child: Text(
-        'Sample data only. No real prediction.',
-        style: AppTextStyles.themed(context, AppTextStyles.caption),
-        textAlign: TextAlign.center,
-      ),
-    );
   }
 }
