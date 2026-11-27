@@ -1,5 +1,9 @@
 import 'astro.dart';
+import 'festivals.dart';
+import '../models/festival_day.dart';
 import '../models/kundli.dart';
+
+export '../models/festival_day.dart';
 
 /// Library content: real computed Vedic reference material.
 /// Nothing here is stored text pretending to be an article.
@@ -17,19 +21,6 @@ String formatDay(DateTime day) {
   return '${day.day} ${months[day.month - 1]} ${day.year}';
 }
 
-/// One festival day found by scanning the Panchang engine.
-class FestivalDay {
-  const FestivalDay({
-    required this.date,
-    required this.tithi,
-    required this.observance,
-  });
-
-  final DateTime date;
-  final String tithi;
-  final String observance;
-}
-
 /// Tithi base names worth marking, with the observance line
 /// shown for each. The engine tithi carries a Shukla or
 /// Krishna prefix; the base name is matched after stripping it.
@@ -44,7 +35,10 @@ const Map<String, String> kFestivalTithis = <String, String>{
 
 /// Festival days in the next [days] days from [from],
 /// computed day by day with the Panchang engine. Dates are
-/// ascending and every entry lies inside the window.
+/// ascending and every entry lies inside the window. Named
+/// festivals from the rule engine in festivals.dart are
+/// merged in, so Diwali or Holi show by name instead of
+/// only as a new moon or full moon day.
 List<FestivalDay> festivalDays({
   required DateTime from,
   int days = 30,
@@ -52,6 +46,7 @@ List<FestivalDay> festivalDays({
 }) {
   final List<FestivalDay> found = <FestivalDay>[];
   final DateTime start = DateTime(from.year, from.month, from.day);
+  final DateTime end = start.add(Duration(days: days));
   for (int i = 0; i < days; i++) {
     final DateTime day = start.add(Duration(days: i));
     final String tithi = PanchangCalculator.forDate(day, place).tithi;
@@ -64,6 +59,31 @@ List<FestivalDay> festivalDays({
       );
     }
   }
+  final Set<int> years = <int>{start.year, end.year};
+  for (final int year in years) {
+    for (final FestivalDay named in namedFestivals(
+      year: year,
+      place: place,
+    )) {
+      if (named.date.isBefore(start) || !named.date.isBefore(end)) {
+        continue;
+      }
+      final int duplicateIndex = found.indexWhere(
+        (FestivalDay d) =>
+            d.date == named.date && d.observance == named.observance,
+      );
+      if (duplicateIndex >= 0) {
+        // The tithi scan already marked this day, for
+        // example every Shukla Chaturthi is Ganesh
+        // Chaturthi. The named entry carries the rule, so
+        // it replaces the plain one.
+        found[duplicateIndex] = named;
+      } else {
+        found.add(named);
+      }
+    }
+  }
+  found.sort((FestivalDay a, FestivalDay b) => a.date.compareTo(b.date));
   return found;
 }
 
