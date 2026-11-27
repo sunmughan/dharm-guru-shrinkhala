@@ -1,3 +1,4 @@
+import '../models/kundli.dart';
 import 'astro.dart';
 import 'divisional.dart';
 
