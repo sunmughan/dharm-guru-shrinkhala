@@ -1136,9 +1136,9 @@ class _MatchingScreenState extends State<MatchingScreen> {
             const Card(
               child: Column(
                 children: <Widget>[
-                  const _GunaRow(label: 'Varna', score: '1 / 1'),
-                  const _GunaRow(label: 'Bhakoot', score: '7 / 7'),
-                  const _GunaRow(label: 'Nadi', score: '8 / 8'),
+                  _GunaRow(label: 'Varna', score: '1 / 1'),
+                  _GunaRow(label: 'Bhakoot', score: '7 / 7'),
+                  _GunaRow(label: 'Nadi', score: '8 / 8'),
                 ],
               ),
             ),
