@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../core/build_info.dart';
@@ -7,200 +9,509 @@ import '../models/panchang.dart';
 import '../models/remedies.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../widgets/brand_mark.dart';
 import '../widgets/kundli_chart.dart';
 import '../widgets/planet_details.dart';
 
-/// Splash screen. Wordmark only, no button, no link. Auto
-/// advances after two seconds, per design/screens/01-splash.md.
-/// The small build stamp at the bottom tells the installed
-/// build apart on the phone. The sun mark uses the closest
-/// line icon, Icons.wb_sunny, because Flutter has no drawn
-/// sun mark.
+/// Splash screen. Logo, wordmark and tagline, with a calm
+/// entrance: the logo fades and settles in, a gold rays ring
+/// turns a little behind it, the three dots pulse, then the
+/// whole screen fades out. Auto advances after two seconds,
+/// per design/screens/01-splash.md. The small build stamp at
+/// the bottom tells the installed build apart on the phone,
+/// and the developer credit sits just above it.
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key, required this.onDone});
+  const SplashScreen({super.key, required this.onDone, this.caption});
 
   final VoidCallback onDone;
+
+  /// Short line under the tagline, used by the admin app to
+  /// say Admin. Null on the user app.
+  final String? caption;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _entrance;
+  late final Animation<double> _turns;
+  late final Animation<double> _exitFade;
   bool _advanced = false;
 
   @override
   void initState() {
     super.initState();
-    Future<void>.delayed(const Duration(seconds: 2), () {
-      if (!mounted || _advanced) {
-        return;
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+    _entrance = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.35, curve: Curves.easeOutCubic),
+    );
+    // The rays ring turns a small part of a full circle while
+    // the splash is up. It is driven by the same controller so
+    // no animation runs forever and tests can settle.
+    _turns = Tween<double>(begin: 0, end: 0.08).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 1.0, curve: Curves.easeInOut),
+      ),
+    );
+    _exitFade = Tween<double>(begin: 1, end: 0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.85, 1.0, curve: Curves.easeIn),
+      ),
+    );
+    _controller.addStatusListener((AnimationStatus status) {
+      if (status == AnimationStatus.completed && !_advanced) {
+        _advanced = true;
+        widget.onDone();
       }
-      _advanced = true;
-      widget.onDone();
     });
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    const Icon(
-                      Icons.wb_sunny,
-                      size: 64,
-                      color: AppColors.saffron,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Text(
-                      'Dharm Guru',
-                      style: AppTextStyles.themed(context, AppTextStyles.display),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'Your kundli. Your guidance. Every single day.',
-                      style: AppTextStyles.themed(context, AppTextStyles.body.copyWith(
-                        color: AppColors.ink2,
-                      )),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.space3),
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        _SplashDot(active: false),
-                        SizedBox(width: AppSpacing.sm),
-                        _SplashDot(active: true),
-                        SizedBox(width: AppSpacing.sm),
-                        _SplashDot(active: false),
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (BuildContext context, Widget? child) {
+            final double t = _controller.value;
+            return Opacity(
+              opacity: _exitFade.value,
+              child: child,
+            );
+          },
+          child: Column(
+            children: <Widget>[
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      FadeTransition(
+                        opacity: _entrance,
+                        child: ScaleTransition(
+                          scale: Tween<double>(begin: 0.9, end: 1.0)
+                              .animate(_entrance),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: <Widget>[
+                              SplashRaysRing(turns: _turns, size: 168),
+                              const BrandMark(size: 96),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      FadeTransition(
+                        opacity: _entrance,
+                        child: Text(
+                          'Dharm Guru',
+                          style: AppTextStyles.themed(
+                              context, AppTextStyles.display),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      FadeTransition(
+                        opacity: _entrance,
+                        child: Text(
+                          'Your kundli. Your guidance. Every single day.',
+                          style: AppTextStyles.themed(
+                              context,
+                              AppTextStyles.body.copyWith(
+                                color: AppColors.ink2,
+                              )),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      if (widget.caption != null) ...<Widget>[
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          widget.caption!,
+                          style: AppTextStyles.themed(
+                              context,
+                              AppTextStyles.caption.copyWith(
+                                color: AppColors.saffron2,
+                              )),
+                          textAlign: TextAlign.center,
+                        ),
                       ],
-                    ),
-                  ],
+                      const SizedBox(height: AppSpacing.space3),
+                      _SplashDots(progress: _controller),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Text(
-              kBuildStamp,
-              style: AppTextStyles.themed(context, AppTextStyles.body.copyWith(
-                color: AppColors.ink2,
-              )),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-          ],
+              Text(
+                'Developed by Codeair Software Solutions',
+                style: AppTextStyles.themed(
+                    context,
+                    AppTextStyles.caption.copyWith(
+                      color: AppColors.ink3,
+                    )),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.space3),
+              Text(
+                kBuildStamp,
+                style: AppTextStyles.themed(context, AppTextStyles.body.copyWith(
+                  color: AppColors.ink2,
+                )),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Three calm dots, centre dot saffron, outer dots line2. The
+/// dots pulse one after another while the splash timer runs.
+class _SplashDots extends StatelessWidget {
+  const _SplashDots({required this.progress});
+
+  final Animation<double> progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: progress,
+      builder: (BuildContext context, Widget? child) {
+        final double t = progress.value;
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            for (int i = 0; i < 3; i++) ...<Widget>[
+              if (i > 0) const SizedBox(width: AppSpacing.sm),
+              _SplashDot(
+                active: i == 1,
+                opacity: 0.35 +
+                    0.65 *
+                        (0.5 +
+                            0.5 *
+                                math.sin(
+                                    (t * 2 + i / 3) * 2 * math.pi)),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }
 
 class _SplashDot extends StatelessWidget {
-  const _SplashDot({required this.active});
+  const _SplashDot({required this.active, this.opacity = 1});
 
   final bool active;
+  final double opacity;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: active ? AppColors.saffron : AppColors.line2,
-        shape: BoxShape.circle,
-      ),
-    );
-  }
-}
-
-/// Onboarding screen. Three short steps, then the home shell.
-class OnboardingScreen extends StatelessWidget {
-  const OnboardingScreen({super.key, required this.onDone});
-
-  final VoidCallback onDone;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Welcome')),
-      body: Padding(
-        padding: const EdgeInsets.all(AppSpacing.screenPadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'Your kundli, horoscope and panchang in one place.',
-              style: AppTextStyles.themed(context, AppTextStyles.display),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            const _OnboardingStep(
-              number: '1',
-              title: 'Enter birth details',
-              body: 'Name, date, time and place of birth.',
-            ),
-            const _OnboardingStep(
-              number: '2',
-              title: 'See your kundli',
-              body: 'North Indian chart with planet details.',
-            ),
-            const _OnboardingStep(
-              number: '3',
-              title: 'Read daily guidance',
-              body: 'Horoscope, panchang and remedies.',
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onDone,
-                child: const Text('Continue'),
-              ),
-            ),
-          ],
+    final bool dark =
+        Theme.of(context).brightness == Brightness.dark;
+    final Color dotColor = active
+        ? (dark ? AppColorsDark.saffron : AppColors.saffron)
+        : (dark ? AppColorsDark.line2 : AppColors.line2);
+    return Opacity(
+      opacity: opacity,
+      child: Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: dotColor,
+          shape: BoxShape.circle,
         ),
       ),
     );
   }
 }
 
+/// Onboarding screen, per design/screens/02-onboarding.md.
+/// Three steps, one per swipe page, then the sign in screen.
+/// Skip, Begin My Journey on the last page, and I Have an
+/// Account all move to sign in, never to Home, because a
+/// kundli needs an account to save. Shown only on the first
+/// launch; the app shell remembers it in SharedPreferences.
+class _OnboardingStepData {
+  const _OnboardingStepData({
+    required this.number,
+    required this.label,
+    required this.text,
+  });
+
+  final String number;
+  final String label;
+  final String text;
+}
+
+const List<_OnboardingStepData> _onboardingSteps =
+    <_OnboardingStepData>[
+  _OnboardingStepData(
+    number: '1',
+    label: 'Step one',
+    text: 'Share your birth details once and your kundli stays saved forever.',
+  ),
+  _OnboardingStepData(
+    number: '2',
+    label: 'Step two',
+    text: 'Read your horoscope and panchang every morning with one tap.',
+  ),
+  _OnboardingStepData(
+    number: '3',
+    label: 'Step three',
+    text: 'Talk to an astrologer live when you want a human answer.',
+  ),
+];
+
+class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key, required this.onDone});
+
+  final VoidCallback onDone;
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  final PageController _pageController = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _nextOrDone() {
+    if (_page < _onboardingSteps.length - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      widget.onDone();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool dark =
+        Theme.of(context).brightness == Brightness.dark;
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.screenPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  const Spacer(),
+                  TextButton(
+                    onPressed: widget.onDone,
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(44, 44),
+                    ),
+                    child: Text(
+                      'Skip',
+                      style: AppTextStyles.themed(
+                          context,
+                          AppTextStyles.button.copyWith(
+                            color: dark
+                                ? AppColorsDark.saffron2
+                                : AppColors.saffron2,
+                          )),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              const BrandMark(size: 48),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Know your stars in one minute',
+                style: AppTextStyles.themed(context, AppTextStyles.title),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: _onboardingSteps.length,
+                  onPageChanged: (int page) =>
+                      setState(() => _page = page),
+                  itemBuilder:
+                      (BuildContext context, int index) {
+                    final _OnboardingStepData step =
+                        _onboardingSteps[index];
+                    return _OnboardingStep(
+                      number: step.number,
+                      label: step.label,
+                      body: step.text,
+                    );
+                  },
+                ),
+              ),
+              Semantics(
+                label: 'Page ${_page + 1} of ${_onboardingSteps.length}',
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    for (int i = 0; i < _onboardingSteps.length; i++)
+                      _OnboardingDot(active: i == _page),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _nextOrDone,
+                  child: const Text('Begin My Journey'),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.space3),
+              SizedBox(
+                width: double.infinity,
+                height: AppSpacing.buttonHeight,
+                child: OutlinedButton(
+                  onPressed: widget.onDone,
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: dark
+                        ? AppColorsDark.surface
+                        : AppColors.surface,
+                    foregroundColor:
+                        dark ? AppColorsDark.ink : AppColors.ink,
+                    side: BorderSide(
+                      color: dark
+                          ? AppColorsDark.line2
+                          : AppColors.line2,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                          AppSpacing.buttonRadius),
+                    ),
+                    textStyle: AppTextStyles.button.copyWith(
+                      color: dark ? AppColorsDark.ink : AppColors.ink,
+                    ),
+                  ),
+                  child: const Text('I Have an Account'),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.space3),
+              Center(
+                child: Text(
+                  'Sign in with phone OTP or Google.',
+                  style: AppTextStyles.themed(
+                      context,
+                      AppTextStyles.caption.copyWith(
+                        color: AppColors.ink3,
+                      )),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One onboarding page: number pill, step label, step text.
+/// Left aligned, per the spec.
 class _OnboardingStep extends StatelessWidget {
   const _OnboardingStep({
     required this.number,
-    required this.title,
+    required this.label,
     required this.body,
   });
 
   final String number;
-  final String title;
+  final String label;
   final String body;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          CircleAvatar(
-            backgroundColor: AppColors.saffron,
-            child: Text(number, style: AppTextStyles.themed(context, AppTextStyles.button)),
+    final bool dark =
+        Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: dark ? AppColorsDark.saffron : AppColors.saffron,
+            shape: BoxShape.circle,
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(title, style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
-                Text(body, style: AppTextStyles.themed(context, AppTextStyles.bodySmall)),
-              ],
-            ),
+          alignment: Alignment.center,
+          child: Text(
+            number,
+            style: AppTextStyles.themed(
+                context,
+                AppTextStyles.button.copyWith(
+                  color: dark ? AppColorsDark.bg : AppColors.textOnSaffron,
+                )),
           ),
-        ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          label,
+          style: AppTextStyles.themed(
+              context,
+              AppTextStyles.caption.copyWith(
+                color: dark ? AppColorsDark.saffron2 : AppColors.saffron2,
+              )),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          body,
+          style: AppTextStyles.themed(context, AppTextStyles.body),
+        ),
+      ],
+    );
+  }
+}
+
+/// Page dots. Active dot is a 24 wide saffron pill, inactive
+/// dots are 8 round in line2.
+class _OnboardingDot extends StatelessWidget {
+  const _OnboardingDot({required this.active});
+
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool dark =
+        Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: active ? 24 : 8,
+      height: 8,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: active
+            ? (dark ? AppColorsDark.saffron : AppColors.saffron)
+            : (dark ? AppColorsDark.line2 : AppColors.line2),
+        borderRadius: BorderRadius.circular(4),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../core/build_info.dart';
 import '../core/theme/design_tokens.dart';
 import 'auth_screen.dart';
+import 'screens.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 
@@ -85,14 +86,17 @@ bool inRange(DateTime? day, String range) {
 }
 
 /// Root widget for the admin entrypoint. Firebase is initialised
-/// by main_admin before this runs. Signed out users see only the
-/// sign in screen. Signed in users who are not the owner see the
-/// denied screen, never the admin screens.
+/// by main_admin before this runs. Shows the same animated
+/// splash as the user app, then the auth gate. Signed out users
+/// see only the sign in screen. Signed in users who are not the
+/// owner see the denied screen, never the admin screens. Set
+/// showSplash false in tests to skip the splash screen.
 class DharmGuruAdminApp extends StatefulWidget {
   const DharmGuruAdminApp({
     super.key,
     this.firebaseReady = true,
     this.firebaseError,
+    this.showSplash = true,
     this.authService,
     this.firestoreService,
     this.featureFlags,
@@ -103,6 +107,7 @@ class DharmGuruAdminApp extends StatefulWidget {
   /// The init error text, shown on the setup screen when Firebase
   /// failed to initialise, so the phone names the failing call.
   final String? firebaseError;
+  final bool showSplash;
   final AuthService? authService;
   final FirestoreService? firestoreService;
 
@@ -115,9 +120,16 @@ class DharmGuruAdminApp extends StatefulWidget {
 }
 
 class _DharmGuruAdminAppState extends State<DharmGuruAdminApp> {
+  bool _splashDone = false;
   late final AuthService _auth = widget.authService ?? AuthService();
   late final FirestoreService _firestore =
       widget.firestoreService ?? FirestoreService();
+
+  @override
+  void initState() {
+    super.initState();
+    _splashDone = !widget.showSplash;
+  }
 
   MaterialApp _app({required Widget home}) {
     return MaterialApp(
@@ -134,6 +146,14 @@ class _DharmGuruAdminAppState extends State<DharmGuruAdminApp> {
     if (!widget.firebaseReady) {
       return _app(
         home: _FirebaseSetupNeededScreen(errorText: widget.firebaseError),
+      );
+    }
+    if (!_splashDone) {
+      return _app(
+        home: SplashScreen(
+          caption: 'Admin',
+          onDone: () => setState(() => _splashDone = true),
+        ),
       );
     }
     return StreamBuilder<bool>(

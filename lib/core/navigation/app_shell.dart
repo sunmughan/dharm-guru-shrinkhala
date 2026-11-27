@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../build_info.dart';
 import '../theme/design_tokens.dart';
@@ -6,6 +7,10 @@ import '../../screens/auth_screen.dart';
 import '../../screens/screens.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+
+/// SharedPreferences key that remembers the user saw onboarding.
+/// Once set, onboarding never shows again on that phone.
+const String kOnboardingSeenKey = 'onboarding_seen';
 
 /// Bottom tab navigation shell.
 /// Tabs in fixed order: Home, Kundli, Panchang, Consult, Profile.
@@ -71,11 +76,16 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
-/// Root widget. Shows splash, then the auth gate, then onboarding,
-/// then the tab shell. Signed out users see only the sign in
-/// screen: no kundli, matching, remedies or any other screen opens
-/// without a signed in user. Set showSplash false in tests to skip
-/// the splash screen. Pass authService in tests to fake the stream.
+/// Root widget. Shows splash, then onboarding on the first
+/// launch only, then the auth gate, then the tab shell. Signed
+/// out users see only the sign in screen: no kundli, matching,
+/// remedies or any other screen opens without a signed in user.
+/// Onboarding never breaks the gate: Skip and Begin both land
+/// on the sign in screen, and the tab shell still needs a
+/// signed in user. Set showSplash false in tests to skip the
+/// splash screen. Pass authService in tests to fake the stream.
+/// Pass onboardingSeen in tests to skip the SharedPreferences
+/// read.
 class DharmGuruApp extends StatefulWidget {
   const DharmGuruApp({
     super.key,
@@ -83,6 +93,7 @@ class DharmGuruApp extends StatefulWidget {
     this.firebaseError,
     this.showSplash = true,
     this.authService,
+    this.onboardingSeen,
   });
 
   final bool firebaseReady;
@@ -93,13 +104,17 @@ class DharmGuruApp extends StatefulWidget {
   final bool showSplash;
   final AuthService? authService;
 
+  /// First launch flag. Null in production, where it is read
+  /// from SharedPreferences. Tests pass it in directly.
+  final bool? onboardingSeen;
+
   @override
   State<DharmGuruApp> createState() => _DharmGuruAppState();
 }
 
 class _DharmGuruAppState extends State<DharmGuruApp> {
   bool _splashDone = false;
-  bool _onboardingDone = false;
+  bool? _onboardingSeen;
   late final AuthService _auth = widget.authService ?? AuthService();
   late final Stream<bool> _signedIn = _auth.signedIn;
 
@@ -107,6 +122,29 @@ class _DharmGuruAppState extends State<DharmGuruApp> {
   void initState() {
     super.initState();
     _splashDone = !widget.showSplash;
+    if (widget.onboardingSeen != null) {
+      _onboardingSeen = widget.onboardingSeen;
+    } else {
+      SharedPreferences.getInstance().then((SharedPreferences prefs) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _onboardingSeen =
+              prefs.getBool(kOnboardingSeenKey) ?? false;
+        });
+      });
+    }
+  }
+
+  Future<void> _finishOnboarding() async {
+    final SharedPreferences prefs =
+        await SharedPreferences.getInstance();
+    await prefs.setBool(kOnboardingSeenKey, true);
+    if (!mounted) {
+      return;
+    }
+    setState(() => _onboardingSeen = true);
   }
 
   MaterialApp _app({required Widget home}) {
@@ -133,6 +171,18 @@ class _DharmGuruAppState extends State<DharmGuruApp> {
         ),
       );
     }
+    if (_onboardingSeen == null) {
+      return _app(
+        home: const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+    if (_onboardingSeen == false) {
+      return _app(
+        home: OnboardingScreen(onDone: _finishOnboarding),
+      );
+    }
     return StreamBuilder<bool>(
       stream: _signedIn,
       builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
@@ -145,13 +195,6 @@ class _DharmGuruAppState extends State<DharmGuruApp> {
         }
         if (snapshot.data == false) {
           return _app(home: AuthScreen(authService: _auth));
-        }
-        if (!_onboardingDone) {
-          return _app(
-            home: OnboardingScreen(
-              onDone: () => setState(() => _onboardingDone = true),
-            ),
-          );
         }
         return _app(home: const AppShell());
       },

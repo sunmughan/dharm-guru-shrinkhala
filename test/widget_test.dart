@@ -9,6 +9,7 @@ import 'package:dharm_guru_shrinkhala/widgets/kundli_chart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Fake auth that never touches Firebase. The base constructor
 /// takes no real FirebaseAuth, and every member used here is
@@ -45,22 +46,93 @@ class _FakeAuthService extends AuthService {
 }
 
 void main() {
-  testWidgets('App shows onboarding when splash is skipped',
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
+
+  testWidgets('App shows onboarding on first launch',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       DharmGuruApp(
         showSplash: false,
         firebaseReady: true,
         authService: _FakeAuthService(signedInValue: true),
+        onboardingSeen: false,
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Enter birth details'), findsOneWidget);
-    expect(find.text('Welcome'), findsOneWidget);
+    expect(find.text('Know your stars in one minute'), findsOneWidget);
+    expect(find.text('Step one'), findsOneWidget);
+    expect(
+      find.text(
+          'Share your birth details once and your kundli stays saved forever.'),
+      findsOneWidget,
+    );
+    expect(find.text('Skip'), findsOneWidget);
+    expect(find.text('Begin My Journey'), findsOneWidget);
+    expect(find.text('I Have an Account'), findsOneWidget);
+    // Skip moves to the tab shell for a signed in user, never
+    // past the auth gate on its own.
+    await tester.tap(find.text('Skip'));
+    await tester.pumpAndSettle();
+    expect(find.text('Namaste, Aarav Sharma'), findsOneWidget);
   });
 
-  testWidgets('Signed out app shows only the sign in screen',
+  testWidgets('Onboarding Skip goes to sign in when signed out',
       (WidgetTester tester) async {
+    await tester.pumpWidget(
+      DharmGuruApp(
+        showSplash: false,
+        firebaseReady: true,
+        authService: _FakeAuthService(),
+        onboardingSeen: false,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Know your stars in one minute'), findsOneWidget);
+    await tester.tap(find.text('Skip'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('Know your stars in one minute'), findsNothing);
+  });
+
+  testWidgets('Onboarding Begin moves through the three steps',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      DharmGuruApp(
+        showSplash: false,
+        firebaseReady: true,
+        authService: _FakeAuthService(),
+        onboardingSeen: false,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Step one'), findsOneWidget);
+    await tester.tap(find.text('Begin My Journey'));
+    await tester.pumpAndSettle();
+    expect(find.text('Step two'), findsOneWidget);
+    expect(
+      find.text(
+          'Read your horoscope and panchang every morning with one tap.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Begin My Journey'));
+    await tester.pumpAndSettle();
+    expect(find.text('Step three'), findsOneWidget);
+    expect(
+      find.text(
+          'Talk to an astrologer live when you want a human answer.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Begin My Journey'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sign in'), findsOneWidget);
+  });
+
+  testWidgets('Onboarding seen in prefs skips to sign in',
+      (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues(
+        <String, Object>{'onboarding_seen': true});
     await tester.pumpWidget(
       DharmGuruApp(
         showSplash: false,
@@ -70,20 +142,59 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Sign in'), findsOneWidget);
-    expect(find.text('Welcome'), findsNothing);
-    expect(find.text('Enter birth details'), findsNothing);
+    expect(find.text('Know your stars in one minute'), findsNothing);
+  });
+
+  testWidgets('Signed out app shows only the sign in screen',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      DharmGuruApp(
+        showSplash: false,
+        firebaseReady: true,
+        authService: _FakeAuthService(),
+        onboardingSeen: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('Know your stars in one minute'), findsNothing);
     expect(find.text('Home'), findsNothing);
     expect(find.text('Kundli'), findsNothing);
   });
 
-  testWidgets('Splash shows the build stamp',
+  testWidgets('Splash shows the build stamp and developer credit',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(home: SplashScreen(onDone: () {})),
     );
     await tester.pump();
     expect(find.text(kBuildStamp), findsOneWidget);
+    expect(
+      find.text('Developed by Codeair Software Solutions'),
+      findsOneWidget,
+    );
+    expect(find.text('Dharm Guru'), findsOneWidget);
     await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('Admin splash shows and advances to sign in',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      DharmGuruAdminApp(
+        firebaseReady: true,
+        authService: _FakeAuthService(),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Dharm Guru'), findsOneWidget);
+    expect(find.text('Admin'), findsOneWidget);
+    expect(
+      find.text('Developed by Codeair Software Solutions'),
+      findsOneWidget,
+    );
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.text('Sign in'), findsOneWidget);
   });
 
   testWidgets('Setup screen shows the build stamp',
@@ -359,6 +470,7 @@ void main() {
       (WidgetTester tester) async {
     await tester.pumpWidget(
       DharmGuruAdminApp(
+        showSplash: false,
         authService: _FakeAuthService(signedInValue: true),
         firestoreService: _FakeFirestore(admin: false),
       ),
@@ -375,6 +487,7 @@ void main() {
       (WidgetTester tester) async {
     await tester.pumpWidget(
       DharmGuruAdminApp(
+        showSplash: false,
         authService: _FakeAuthService(signedInValue: true),
         firestoreService: _FakeFirestore(admin: true),
       ),
