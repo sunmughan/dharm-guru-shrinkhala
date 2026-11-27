@@ -1,7 +1,9 @@
 import 'package:dharm_guru_shrinkhala/core/navigation/app_shell.dart';
+import 'package:dharm_guru_shrinkhala/screens/admin_screens.dart';
 import 'package:dharm_guru_shrinkhala/screens/auth_screen.dart';
 import 'package:dharm_guru_shrinkhala/screens/screens.dart';
 import 'package:dharm_guru_shrinkhala/services/auth_service.dart';
+import 'package:dharm_guru_shrinkhala/services/firestore_service.dart';
 import 'package:dharm_guru_shrinkhala/widgets/kundli_chart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:material_ui/material_ui.dart';
@@ -19,6 +21,13 @@ class _FakeAuthService extends AuthService {
 
   @override
   Stream<bool> get signedIn => Stream.value(signedInValue);
+
+  @override
+  String? get currentUserId => signedInValue ? 'test-uid' : null;
+
+  @override
+  String? get currentUserEmail =>
+      signedInValue ? 'owner@example.com' : null;
 
   @override
   Future<void> signInWithEmailAndPassword({
@@ -276,4 +285,197 @@ void main() {
     await tester.pump();
     expect(find.text('Live chat is not ready yet.'), findsOneWidget);
   });
+
+  testWidgets('Admin gate denies a signed in non owner',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      DharmGuruAdminApp(
+        authService: _FakeAuthService(signedInValue: true),
+        firestoreService: _FakeFirestore(admin: false),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('You do not have admin access.'),
+      findsOneWidget,
+    );
+    expect(find.text('Users'), findsNothing);
+  });
+
+  testWidgets('Admin gate allows the owner to the dashboard',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      DharmGuruAdminApp(
+        authService: _FakeAuthService(signedInValue: true),
+        firestoreService: _FakeFirestore(admin: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Users'), findsOneWidget);
+    expect(find.text('Astrologers'), findsOneWidget);
+  });
+
+  testWidgets('Admin astrologers list shows approved and waiting',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AstrologersScreen(
+            firestore: _FakeFirestore(
+              docs: <String, List<Map<String, dynamic>>>{
+                'astrologers': <Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'id': 'a1',
+                    'name': 'Guru Dev',
+                    'languages': 'Hindi, English',
+                    'bio': 'Vedic astrologer.',
+                    'rate': 'Rs 99/min',
+                    'status': 'approved',
+                    'chatAvailable': true,
+                    'callAvailable': true,
+                  },
+                  <String, dynamic>{
+                    'id': 'a2',
+                    'name': 'New Guru',
+                    'languages': 'Hindi',
+                    'bio': 'New here.',
+                    'rate': '',
+                    'status': 'waiting',
+                    'chatAvailable': true,
+                    'callAvailable': false,
+                  },
+                ],
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Guru Dev'), findsOneWidget);
+    expect(find.text('New Guru'), findsOneWidget);
+    expect(find.text('Approve'), findsOneWidget);
+  });
+
+  testWidgets('Admin daily content shows empty states with no docs',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DailyContentScreen(firestore: _FakeFirestore()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('No horoscopes published yet'), findsOneWidget);
+    expect(find.text('No panchang published yet'), findsOneWidget);
+  });
+
+  testWidgets('User horoscope shows the published admin content',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HoroscopeScreen(
+          firestore: _FakeFirestore(
+            docs: <String, List<Map<String, dynamic>>>{
+              'horoscopes': <Map<String, dynamic>>[
+                <String, dynamic>{
+                  'id': 'h1',
+                  'rashi': 'Kanya',
+                  'date': '2026-11-27',
+                  'summary': 'A strong day for money talks.',
+                  'career': 'Good progress.',
+                  'money': 'Steady.',
+                  'health': 'Take rest.',
+                  'love': 'Warm.',
+                  'luckyNumber': '5',
+                  'luckyColour': 'Green',
+                  'status': 'published',
+                },
+              ],
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Rashi: Kanya'), findsOneWidget);
+    expect(find.text('A strong day for money talks.'), findsOneWidget);
+    expect(
+      find.text(
+        'No horoscope prediction is shown in Phase 1. Content is published from the admin panel in a later phase.',
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('User consult lists only approved astrologers',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConsultScreen(
+          firestore: _FakeFirestore(
+            docs: <String, List<Map<String, dynamic>>>{
+              'astrologers': <Map<String, dynamic>>[
+                <String, dynamic>{
+                  'id': 'a1',
+                  'name': 'Guru Dev',
+                  'languages': 'Hindi, English',
+                  'rate': 'Rs 99/min',
+                  'status': 'approved',
+                  'chatAvailable': true,
+                  'callAvailable': true,
+                },
+                <String, dynamic>{
+                  'id': 'a2',
+                  'name': 'New Guru',
+                  'languages': 'Hindi',
+                  'rate': '',
+                  'status': 'waiting',
+                  'chatAvailable': true,
+                  'callAvailable': false,
+                },
+              ],
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Guru Dev'), findsOneWidget);
+    expect(find.text('New Guru'), findsNothing);
+  });
+}
+
+/// Fake Firestore that never touches Firebase. Every method the
+/// screens use is overridden, so no real Firestore object is
+/// needed.
+class _FakeFirestore extends FirestoreService {
+  _FakeFirestore({
+    this.admin = false,
+    this.docs = const <String, List<Map<String, dynamic>>>{},
+  });
+
+  final bool admin;
+  final Map<String, List<Map<String, dynamic>>> docs;
+
+  @override
+  Future<bool> isAdmin(String uid) async => admin;
+
+  @override
+  Stream<List<Map<String, dynamic>>> watchDocs(String collection) =>
+      Stream<List<Map<String, dynamic>>>.value(
+        docs[collection] ?? <Map<String, dynamic>>[],
+      );
+
+  @override
+  Future<void> saveDoc(
+    String collection,
+    String id,
+    Map<String, Object?> data, {
+    bool isNew = false,
+  }) async {}
+
+  @override
+  Future<void> deleteDoc(String collection, String id) async {}
 }

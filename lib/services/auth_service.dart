@@ -21,6 +21,13 @@ class AuthService {
 
   User? get currentUser => _firebaseAuth.currentUser;
 
+  /// Signed in user id and email, or null. Separate getters so
+  /// tests can override them without building a fake Firebase
+  /// User object.
+  String? get currentUserId => _firebaseAuth.currentUser?.uid;
+
+  String? get currentUserEmail => _firebaseAuth.currentUser?.email;
+
   Future<void> signUpWithEmailAndPassword({
     required String email,
     required String password,

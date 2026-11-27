@@ -32,10 +32,21 @@ jobs:
           channel: stable
       - name: Install dependencies
         run: flutter pub get
-      - name: Build release APK
+      - name: Build user release APK
         run: flutter build apk --release
-      - name: Upload APK
+      - name: Move user APK aside
+        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-release-user.apk
+      - name: Build admin release APK
+        run: flutter build apk --release -t lib/main_admin.dart
+      - name: Move admin APK aside
+        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-release-admin.apk
+      - name: Upload user APK
         uses: actions/upload-artifact@v4
         with:
           name: dharm-guru-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/app-release-user.apk
+      - name: Upload admin APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: dharm-guru-admin-release-apk
+          path: build/app/outputs/flutter-apk/app-release-admin.apk

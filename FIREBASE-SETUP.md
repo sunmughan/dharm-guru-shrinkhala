@@ -83,6 +83,37 @@ Flutter app direct to Firebase, no backend. Follow these console steps in order.
 * This generates real values in `lib/firebase_options.dart`. Replace the placeholder values in that file only with the generated values
 * Verify the generated file has no placeholder text left, then run `flutter run`
 
+## 11. Enable your own admin access
+
+The admin app has no hardcoded admin and no open gate. Access is
+owner only, through a record in Firestore:
+
+1. Sign in to the admin app once with your own account (email
+   password, Google, or phone OTP). Signing in works, but the app
+   shows "Admin access is not enabled for this account" until the
+   record below exists.
+2. In the Firebase console, open Firestore Database, open the
+   `admins` collection, and add a document. The document ID must
+   be your Firebase Auth user ID (the `uid` shown in
+   Authentication > Users for your account).
+3. Give that document one field: `role` with the string value
+   `owner`.
+4. Sign out and sign in again. The admin dashboard opens.
+
+Only that one account can write admin content. The Firestore rules
+in `firebase/firestore.rules` enforce it: every admin write checks
+that the signed in user has an `admins` record with role `owner`.
+Publish the rules in the console (Firestore Database > Rules >
+Publish) after any change to that file.
+
+## 12. Publish the Firestore rules
+
+* Open the Firebase console > Firestore Database > Rules
+* Paste the contents of `firebase/firestore.rules`
+* Click Publish
+* Without this step the admin writes are denied and the admin app
+  shows its write error message
+
 ## Checklist
 
 * Project created, Analytics on
@@ -92,5 +123,7 @@ Flutter app direct to Firebase, no backend. Follow these console steps in order.
 * Firestore created, locked mode rules in place
 * Cloud Messaging reachable from the console composer
 * Remote Config parameters published
+* `admins/{your uid}` document created with role `owner`
+* `firebase/firestore.rules` published in the console
 * Crashlytics enabled
 * `lib/firebase_options.dart` holds generated values only

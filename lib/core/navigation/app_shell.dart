@@ -4,6 +4,7 @@ import '../theme/design_tokens.dart';
 import '../../screens/auth_screen.dart';
 import '../../screens/screens.dart';
 import '../../services/auth_service.dart';
+import '../../services/firestore_service.dart';
 
 /// Bottom tab navigation shell.
 /// Tabs in fixed order: Home, Kundli, Panchang, Consult, Profile.
@@ -17,6 +18,10 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
+  // One shared Firestore service for every tab, so the admin
+  // published content reaches Home, Panchang, Consult and Profile
+  // through the same live streams.
+  final FirestoreService _firestore = FirestoreService();
 
   void _goToTab(int index) {
     setState(() {
@@ -27,11 +32,11 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> tabs = <Widget>[
-      HomeScreen(onOpenTab: _goToTab),
+      HomeScreen(onOpenTab: _goToTab, firestore: _firestore),
       const KundliInputScreen(),
-      const PanchangScreen(),
-      const ConsultScreen(),
-      const ProfileScreen(),
+      PanchangScreen(firestore: _firestore),
+      ConsultScreen(firestore: _firestore),
+      ProfileScreen(firestore: _firestore),
     ];
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: tabs),

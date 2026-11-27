@@ -28,7 +28,9 @@ class DefaultFirebaseOptions {
     }
   }
 
-  // Replace every placeholder below with the generated values.
+  // Android and iOS values come from google-services.json and
+// GoogleService-Info.plist. Web, macOS, Windows and Linux have
+// no app registered yet, so they stay placeholders.
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'WEB_API_KEY_PLACEHOLDER',
     appId: 'WEB_APP_ID_PLACEHOLDER',
@@ -39,20 +41,21 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'ANDROID_API_KEY_PLACEHOLDER',
-    appId: 'ANDROID_APP_ID_PLACEHOLDER',
-    messagingSenderId: 'MESSAGING_SENDER_ID_PLACEHOLDER',
-    projectId: 'PROJECT_ID_PLACEHOLDER',
-    storageBucket: 'STORAGE_BUCKET_PLACEHOLDER',
+    apiKey: 'AIzaSyBp0Ae4dgQE3GTsHz73OxhNDV0ndIBpDLo',
+    appId: '1:987289079284:android:913871be9f5be889143da1',
+    messagingSenderId: '987289079284',
+    projectId: 'dharm-guru-shrinkhala',
+    storageBucket: 'dharm-guru-shrinkhala.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'IOS_API_KEY_PLACEHOLDER',
-    appId: 'IOS_APP_ID_PLACEHOLDER',
-    messagingSenderId: 'MESSAGING_SENDER_ID_PLACEHOLDER',
-    projectId: 'PROJECT_ID_PLACEHOLDER',
-    storageBucket: 'STORAGE_BUCKET_PLACEHOLDER',
-    iosBundleId: 'IOS_BUNDLE_ID_PLACEHOLDER',
+    apiKey: 'AIzaSyCuxtfLnWAKSS710aRkWRUzyjtR5cmi0IY',
+    appId: '1:987289079284:ios:7cea32f975fc66fc143da1',
+    messagingSenderId: '987289079284',
+    projectId: 'dharm-guru-shrinkhala',
+    storageBucket: 'dharm-guru-shrinkhala.firebasestorage.app',
+    iosBundleId: 'com.codeair.dharmgurushrinkhala',
+    iosClientId: '987289079284-3m55jp1guo9vmkce2k4a40flm2r6fmfn.apps.googleusercontent.com',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(

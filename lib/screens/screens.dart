@@ -5,6 +5,7 @@ import '../models/kundli.dart';
 import '../models/panchang.dart';
 import '../models/remedies.dart';
 import '../services/auth_service.dart';
+import '../services/firestore_service.dart';
 import '../widgets/kundli_chart.dart';
 import '../widgets/planet_details.dart';
 
@@ -199,9 +200,10 @@ class _OnboardingStep extends StatelessWidget {
 /// Home screen. Cards lead to kundli, horoscope, panchang,
 /// matching, remedies and live consult.
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, required this.onOpenTab});
+  const HomeScreen({super.key, required this.onOpenTab, this.firestore});
 
   final void Function(int tabIndex) onOpenTab;
+  final FirestoreService? firestore;
 
   @override
   Widget build(BuildContext context) {
@@ -231,11 +233,25 @@ class HomeScreen extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => const HoroscopeScreen(),
+                  builder: (_) => HoroscopeScreen(firestore: firestore),
                 ),
               );
             },
           ),
+          if (firestore != null)
+            _HomeCard(
+              title: 'Notifications',
+              body: 'Horoscope alerts, festival wishes and offers.',
+              icon: Icons.notifications,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        NotificationsScreen(firestore: firestore!),
+                  ),
+                );
+              },
+            ),
           _HomeCard(
             title: 'Panchang',
             body: 'Tithi, vaar, nakshatra and shubh muhurat.',
@@ -790,20 +806,97 @@ class PlanetDetailsScreen extends StatelessWidget {
   }
 }
 
-/// Daily horoscope screen. No prediction text in Phase 1.
+/// Daily horoscope screen. With a Firestore service, it shows the
+/// latest published horoscope from the admin panel. Without one
+/// (tests, or before any content is published) it shows the sample
+/// state, honestly marked as sample.
 class HoroscopeScreen extends StatelessWidget {
-  const HoroscopeScreen({super.key});
+  const HoroscopeScreen({super.key, this.firestore});
+
+  final FirestoreService? firestore;
 
   @override
   Widget build(BuildContext context) {
-    const HoroscopeEntry entry = HoroscopeEntry.sample;
+    if (firestore == null) {
+      return _HoroscopeView(entry: HoroscopeEntry.sample);
+    }
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: firestore!.watchDocs('horoscopes'),
+      builder: (
+        BuildContext context,
+        AsyncSnapshot<List<Map<String, dynamic>>> snap,
+      ) {
+        if (snap.hasError) {
+          return const _HoroscopeView(entry: HoroscopeEntry.sample);
+        }
+        if (!snap.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final List<Map<String, dynamic>> published = snap.data!
+            .where((Map<String, dynamic> d) => str(d, 'status') == 'published')
+            .toList();
+        if (published.isEmpty) {
+          return const _HoroscopeView(entry: HoroscopeEntry.sample);
+        }
+        published.sort((Map<String, dynamic> a, Map<String, dynamic> b) =>
+            str(b, 'date').compareTo(str(a, 'date')));
+        final Map<String, dynamic> doc = published.first;
+        return _HoroscopeView(
+          entry: HoroscopeEntry(
+            rashi: str(doc, 'rashi'),
+            date: str(doc, 'date'),
+            summary: str(doc, 'summary'),
+          ),
+          career: str(doc, 'career'),
+          money: str(doc, 'money'),
+          health: str(doc, 'health'),
+          love: str(doc, 'love'),
+          luckyNumber: str(doc, 'luckyNumber'),
+          luckyColour: str(doc, 'luckyColour'),
+          isLive: true,
+        );
+      },
+    );
+  }
+}
+
+String str(Map<String, dynamic> doc, String key) {
+  final Object? value = doc[key];
+  return value is String ? value : '';
+}
+
+class _HoroscopeView extends StatelessWidget {
+  const _HoroscopeView({
+    required this.entry,
+    this.career = '',
+    this.money = '',
+    this.health = '',
+    this.love = '',
+    this.luckyNumber = '',
+    this.luckyColour = '',
+    this.isLive = false,
+  });
+
+  final HoroscopeEntry entry;
+  final String career;
+  final String money;
+  final String health;
+  final String love;
+  final String luckyNumber;
+  final String luckyColour;
+  final bool isLive;
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Daily Horoscope')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          const SampleDataBanner(),
-          const SizedBox(height: AppSpacing.md),
+          if (!isLive) const SampleDataBanner(),
+          if (!isLive) const SizedBox(height: AppSpacing.md),
           Text('Rashi: ${entry.rashi}', style: AppTextStyles.themed(context, AppTextStyles.title)),
           Text(entry.date, style: AppTextStyles.themed(context, AppTextStyles.bodySmall)),
           const SizedBox(height: AppSpacing.md),
@@ -813,10 +906,60 @@ class HoroscopeScreen extends StatelessWidget {
               child: Text(entry.summary, style: AppTextStyles.themed(context, AppTextStyles.body)),
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'No horoscope prediction is shown in Phase 1. Content is published from the admin panel in a later phase.',
-            style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+          if (isLive) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            _HoroscopeArea(label: 'Career', value: career),
+            _HoroscopeArea(label: 'Money', value: money),
+            _HoroscopeArea(label: 'Health', value: health),
+            _HoroscopeArea(label: 'Love', value: love),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Lucky Number $luckyNumber  •  Lucky Colour $luckyColour',
+              style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+            ),
+          ],
+          if (!isLive) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'No horoscope prediction is shown in Phase 1. Content is published from the admin panel in a later phase.',
+              style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _HoroscopeArea extends StatelessWidget {
+  const _HoroscopeArea({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    if (value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: AppTextStyles.themed(
+                context,
+                AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: AppTextStyles.themed(context, AppTextStyles.body),
+            ),
           ),
         ],
       ),
@@ -826,14 +969,82 @@ class HoroscopeScreen extends StatelessWidget {
 
 /// Panchang screen: tithi, vaar, nakshatra, yoga, karana,
 /// sunrise, sunset, shubh muhurat and rahu kaal, per
-/// design/screens/08-panchang.md. Sample date is Saturday
-/// 14 March 1998, Jaipur. Values are marked sample.
+/// design/screens/08-panchang.md. With a Firestore service, it
+/// shows the latest panchang published from the admin panel.
+/// Without one it shows the sample values, honestly marked.
 class PanchangScreen extends StatelessWidget {
-  const PanchangScreen({super.key});
+  const PanchangScreen({super.key, this.firestore});
+
+  final FirestoreService? firestore;
 
   @override
   Widget build(BuildContext context) {
-    const Panchang panchang = Panchang.sample;
+    if (firestore == null) {
+      return const _PanchangBody(panchang: Panchang.sample);
+    }
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: firestore!.watchDocs('panchang'),
+      builder: (
+        BuildContext context,
+        AsyncSnapshot<List<Map<String, dynamic>>> snap,
+      ) {
+        if (snap.hasError) {
+          return const _PanchangBody(panchang: Panchang.sample);
+        }
+        if (!snap.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final List<Map<String, dynamic>> docs = snap.data!;
+        if (docs.isEmpty) {
+          return const _PanchangBody(panchang: Panchang.sample);
+        }
+        docs.sort((Map<String, dynamic> a, Map<String, dynamic> b) =>
+            str(b, 'date').compareTo(str(a, 'date')));
+        return _PanchangBody(
+          panchang: _panchangFromDoc(docs.first),
+          isLive: true,
+        );
+      },
+    );
+  }
+}
+
+Panchang _panchangFromDoc(Map<String, dynamic> doc) {
+  const List<String> weekdays = <String>[
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+  ];
+  final DateTime? date = DateTime.tryParse(str(doc, 'date'));
+  final String shubh =
+      '${str(doc, 'shubhStart')} to ${str(doc, 'shubhEnd')} and ${str(doc, 'shubh2Start')} to ${str(doc, 'shubh2End')}';
+  final String nakshatra = str(doc, 'nakshatraTill').isEmpty
+      ? str(doc, 'nakshatra')
+      : '${str(doc, 'nakshatra')} till ${str(doc, 'nakshatraTill')}';
+  return Panchang(
+    weekday: date == null ? '' : weekdays[date.weekday - 1],
+    city: str(doc, 'city'),
+    tithi: str(doc, 'tithi'),
+    vaar: str(doc, 'vaar'),
+    nakshatra: nakshatra,
+    yoga: str(doc, 'yoga'),
+    karana: str(doc, 'karana'),
+    sunrise: str(doc, 'sunrise'),
+    sunset: str(doc, 'sunset'),
+    shubhMuhurat: shubh,
+    rahuKaal:
+        '${str(doc, 'rahuStart')} to ${str(doc, 'rahuEnd')}. Avoid starting new work in this window.',
+  );
+}
+
+class _PanchangBody extends StatelessWidget {
+  const _PanchangBody({required this.panchang, this.isLive = false});
+
+  final Panchang panchang;
+  final bool isLive;
+
+  @override
+  Widget build(BuildContext context) {
     final List<String> muhuratWindows =
         panchang.shubhMuhurat.split(' and ');
     return Scaffold(
@@ -862,8 +1073,8 @@ class PanchangScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.screenPadding),
         children: <Widget>[
-          const SampleDataBanner(),
-          const SizedBox(height: AppSpacing.md),
+          if (!isLive) const SampleDataBanner(),
+          if (!isLive) const SizedBox(height: AppSpacing.md),
           Text(
             panchang.dateLine,
             style: AppTextStyles.themed(context, AppTextStyles.body.copyWith(
@@ -966,10 +1177,11 @@ class PanchangScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text(
-            'Panchang values are sample values in Phase 1. Real panchang calculation is a later phase.',
-            style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
-          ),
+          if (!isLive)
+            Text(
+              'Panchang values are sample values in Phase 1. Real panchang calculation is a later phase.',
+              style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+            ),
         ],
       ),
     );
@@ -1293,8 +1505,12 @@ class _GunaRow extends StatelessWidget {
 /// the Ask About a Remedy button lead to live consult, which is
 /// premium, so they say so honestly instead of opening a fake
 /// chat.
+/// Remedies screen. With a Firestore service, it also lists the
+/// remedies the admin approved, below the sample set.
 class RemediesScreen extends StatefulWidget {
-  const RemediesScreen({super.key});
+  const RemediesScreen({super.key, this.firestore});
+
+  final FirestoreService? firestore;
 
   @override
   State<RemediesScreen> createState() => _RemediesScreenState();
@@ -1464,6 +1680,75 @@ class _RemediesScreenState extends State<RemediesScreen> {
             },
           ),
           const SizedBox(height: AppSpacing.lg),
+          if (widget.firestore != null) ...<Widget>[
+            Text(
+              'Approved remedies',
+              style: AppTextStyles.themed(context, AppTextStyles.title),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: widget.firestore!.watchDocs('moderation'),
+              builder: (
+                BuildContext context,
+                AsyncSnapshot<List<Map<String, dynamic>>> snap,
+              ) {
+                if (snap.hasError) {
+                  return const Text('Remedies could not be loaded.');
+                }
+                if (!snap.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final List<Map<String, dynamic>> approved = snap.data!
+                    .where((Map<String, dynamic> d) =>
+                        str(d, 'type') == 'remedy' &&
+                        str(d, 'status') == 'approved')
+                    .toList();
+                if (approved.isEmpty) {
+                  return Text(
+                    'No approved remedies yet.',
+                    style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+                  );
+                }
+                return Column(
+                  children: approved
+                      .map(
+                        (Map<String, dynamic> doc) => Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: AppSpacing.space3,
+                          ),
+                          child: Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    str(doc, 'title'),
+                                    style: AppTextStyles.themed(
+                                      context,
+                                      AppTextStyles.cardTitle,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    str(doc, 'body'),
+                                    style: AppTextStyles.themed(
+                                      context,
+                                      AppTextStyles.body,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -1477,10 +1762,13 @@ class _RemediesScreenState extends State<RemediesScreen> {
   }
 }
 
-/// Live consult screen. Chat and call with an astrologer.
-/// Layout only in Phase 1. No astrologer names. Pricing to be decided.
+/// Consult screen. With a Firestore service, it lists the
+/// astrologers the admin approved, in real time. Without one it
+/// shows the Phase 1 state: no astrologers yet.
 class ConsultScreen extends StatelessWidget {
-  const ConsultScreen({super.key});
+  const ConsultScreen({super.key, this.firestore});
+
+  final FirestoreService? firestore;
 
   @override
   Widget build(BuildContext context) {
@@ -1495,6 +1783,87 @@ class ConsultScreen extends StatelessWidget {
             'Chat and call with an astrologer.',
             style: AppTextStyles.themed(context, AppTextStyles.body),
           ),
+          const SizedBox(height: AppSpacing.md),
+          if (firestore == null)
+            Text(
+              'No astrologers yet. Astrologers appear here once the admin adds and approves them.',
+              style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+            )
+          else
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: firestore!.watchDocs('astrologers'),
+              builder: (
+                BuildContext context,
+                AsyncSnapshot<List<Map<String, dynamic>>> snap,
+              ) {
+                if (snap.hasError) {
+                  return Text(
+                    'Astrologers could not be loaded.',
+                    style: AppTextStyles.themed(context, AppTextStyles.body),
+                  );
+                }
+                if (!snap.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final List<Map<String, dynamic>> approved = snap.data!
+                    .where((Map<String, dynamic> d) =>
+                        str(d, 'status') == 'approved')
+                    .toList();
+                if (approved.isEmpty) {
+                  return Text(
+                    'No astrologers yet. Astrologers appear here once the admin adds and approves them.',
+                    style:
+                        AppTextStyles.themed(context, AppTextStyles.bodySmall),
+                  );
+                }
+                return Column(
+                  children: approved
+                      .map(
+                        (Map<String, dynamic> doc) => Card(
+                          child: ListTile(
+                            leading: const Icon(
+                              Icons.person,
+                              color: AppColors.deepSaffron,
+                            ),
+                            title: Text(
+                              str(doc, 'name'),
+                              style: AppTextStyles.themed(
+                                context,
+                                AppTextStyles.subtitle,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '${str(doc, 'languages')}${str(doc, 'rate').isEmpty ? '' : '  •  ${str(doc, 'rate')}'}',
+                              style: AppTextStyles.themed(
+                                context,
+                                AppTextStyles.bodySmall,
+                              ),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                if (doc['chatAvailable'] == true)
+                                  const Icon(Icons.chat, size: 20),
+                                if (doc['callAvailable'] == true)
+                                  const Icon(Icons.call, size: 20),
+                              ],
+                            ),
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Live chat and call are not ready yet.',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            ),
           const SizedBox(height: AppSpacing.md),
           Card(
             child: ListTile(
@@ -1539,8 +1908,12 @@ class ConsultScreen extends StatelessWidget {
 }
 
 /// Profile screen. Free and premium plan. Pricing to be decided.
+/// With a Firestore service, it shows the active plan the admin
+/// set, instead of assuming the free plan.
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, this.firestore});
+
+  final FirestoreService? firestore;
 
   @override
   Widget build(BuildContext context) {
@@ -1574,10 +1947,48 @@ class ProfileScreen extends StatelessWidget {
           Card(
             child: ListTile(
               title: Text('Plan', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
-              subtitle: Text(
-                'Free plan. Premium pricing to be decided.',
-                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
-              ),
+              subtitle: firestore == null
+                  ? Text(
+                      'Free plan. Premium pricing to be decided.',
+                      style: AppTextStyles.themed(
+                          context, AppTextStyles.bodySmall),
+                    )
+                  : StreamBuilder<List<Map<String, dynamic>>>(
+                      stream: firestore!.watchDocs('plans'),
+                      builder: (
+                        BuildContext context,
+                        AsyncSnapshot<List<Map<String, dynamic>>> snap,
+                      ) {
+                        if (snap.hasError || !snap.hasData) {
+                          return Text(
+                            'Plan could not be loaded.',
+                            style: AppTextStyles.themed(
+                                context, AppTextStyles.bodySmall),
+                          );
+                        }
+                        final List<Map<String, dynamic>> active = snap.data!
+                            .where((Map<String, dynamic> d) =>
+                                str(d, 'status') == 'active')
+                            .toList();
+                        if (active.isEmpty) {
+                          return Text(
+                            'Free plan. Premium pricing to be decided.',
+                            style: AppTextStyles.themed(
+                                context, AppTextStyles.bodySmall),
+                          );
+                        }
+                        final Map<String, dynamic> plan = active.first;
+                        final String price =
+                            numVal(plan, 'monthlyPrice') == 0
+                                ? ''
+                                : '  •  Rs ${numVal(plan, 'monthlyPrice').toInt()}/month';
+                        return Text(
+                          '${str(plan, 'name')} plan$price',
+                          style: AppTextStyles.themed(
+                              context, AppTextStyles.bodySmall),
+                        );
+                      },
+                    ),
             ),
           ),
           Card(
@@ -1599,6 +2010,95 @@ class ProfileScreen extends StatelessWidget {
             child: const Text('Sign Out'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Notifications inbox. Shows the notifications the admin sent
+/// or scheduled, in real time. Tapping one opens the screen the
+/// admin chose for it.
+class NotificationsScreen extends StatelessWidget {
+  const NotificationsScreen({super.key, required this.firestore});
+
+  final FirestoreService firestore;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Notifications')),
+      body: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: firestore.watchDocs('notifications'),
+        builder: (
+          BuildContext context,
+          AsyncSnapshot<List<Map<String, dynamic>>> snap,
+        ) {
+          if (snap.hasError) {
+            return const Center(
+              child: Text('Notifications could not be loaded.'),
+            );
+          }
+          if (!snap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final List<Map<String, dynamic>> visible = snap.data!
+              .where((Map<String, dynamic> d) =>
+                  str(d, 'status') == 'sent' ||
+                  str(d, 'status') == 'scheduled')
+              .toList();
+          if (visible.isEmpty) {
+            return const Center(
+              child: Text('No notifications yet.'),
+            );
+          }
+          return ListView(
+            padding: const EdgeInsets.all(AppSpacing.screenPadding),
+            children: visible
+                .map(
+                  (Map<String, dynamic> doc) => Card(
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.notifications,
+                        color: AppColors.deepSaffron,
+                      ),
+                      title: Text(
+                        str(doc, 'title'),
+                        style: AppTextStyles.themed(
+                          context,
+                          AppTextStyles.subtitle,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${str(doc, 'message')}\n${str(doc, 'audience')}  •  ${str(doc, 'type')}',
+                        style: AppTextStyles.themed(
+                          context,
+                          AppTextStyles.bodySmall,
+                        ),
+                      ),
+                      isThreeLine: true,
+                      onTap: () {
+                        final String open = str(doc, 'openScreen');
+                        final Widget? target = open == 'Daily Horoscope'
+                            ? HoroscopeScreen(firestore: firestore)
+                            : open == 'Panchang'
+                                ? PanchangScreen(firestore: firestore)
+                                : open == 'Consult'
+                                    ? ConsultScreen(firestore: firestore)
+                                    : null;
+                        if (target != null) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => target,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                )
+                .toList(),
+          );
+        },
       ),
     );
   }
