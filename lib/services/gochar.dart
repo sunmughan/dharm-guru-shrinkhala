@@ -117,7 +117,6 @@ List<TransitPosition> gocharFor({
     final double lon = transit[planet.name]!;
     final int signIndex = (lon ~/ 30.0) % 12;
     final String transitSign = kRashis[signIndex];
-    final int natalSignIndex = kRashis.indexOf(planet.rashi);
     final int houseFromLagna =
         ((signIndex - lagnaIndex) % 12 + 12) % 12 + 1;
     final int natalHouse =

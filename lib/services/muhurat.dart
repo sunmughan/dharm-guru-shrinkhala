@@ -189,7 +189,7 @@ List<MuhuratWindow> findMuhurat({
         startHours: sunTimesFor(day, place).noon - 24.0 / 60.0,
         endHours: sunTimesFor(day, place).noon + 24.0 / 60.0,
       ),
-      ...timings.choghadiyaDay
+      ...windows.choghadiyaDay
           .where((ChoghadiyaSegment s) => s.isGood)
           .map(
             (ChoghadiyaSegment s) => TimeWindow(

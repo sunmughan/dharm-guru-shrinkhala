@@ -551,11 +551,11 @@ List<ChoghadiyaSegment> _choghadiya(
           math.cos(latR) * math.cos(dec) * math.cos(hourR),
     ) * 180.0 / math.pi;
     if (prevAlt != null) {
-      final bool wasBelow = prevAlt! < threshold;
+      final bool wasBelow = prevAlt < threshold;
       final bool isBelow = alt < threshold;
       if (wasBelow != isBelow) {
         final double frac =
-            (threshold - prevAlt!) / (alt - prevAlt!);
+            (threshold - prevAlt) / (alt - prevAlt);
         final double minutes = (i - 1) * 10.0 + frac * 10.0;
         final String text = formatClockHours(minutes / 60.0);
         if (isBelow && set == null) {
