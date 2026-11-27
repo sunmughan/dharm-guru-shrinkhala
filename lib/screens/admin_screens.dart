@@ -1633,7 +1633,31 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
                   'Session history',
                   style: AppTextStyles.themed(context, AppTextStyles.subtitle),
                 ),
-                const Text('No sessions yet.'),
+                StreamBuilder<List<Map<String, dynamic>>>(
+                  stream: widget.firestore.watchDocs('consultations'),
+                  builder: (
+                    BuildContext context,
+                    AsyncSnapshot<List<Map<String, dynamic>>> snap,
+                  ) {
+                    if (!snap.hasData) {
+                      return const Text('Loading sessions');
+                    }
+                    final List<Map<String, dynamic>> sessions = snap.data!
+                        .where((Map<String, dynamic> d) =>
+                            str(d, 'astrologer') == str(doc, 'name'))
+                        .toList();
+                    if (sessions.isEmpty) {
+                      return const Text('No sessions yet.');
+                    }
+                    int minutes = 0;
+                    for (final Map<String, dynamic> d in sessions) {
+                      minutes += numVal(d, 'durationMinutes').toInt();
+                    }
+                    return Text(
+                      '${sessions.length} sessions, $minutes minutes in total.',
+                    );
+                  },
+                ),
               ],
             ),
           ),

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dharm_guru_shrinkhala/screens/admin_phase9_screens.dart';
+import 'package:dharm_guru_shrinkhala/screens/admin_screens.dart';
 import 'package:dharm_guru_shrinkhala/services/admin_metrics.dart';
 import 'package:dharm_guru_shrinkhala/services/auth_service.dart';
 import 'package:dharm_guru_shrinkhala/services/firestore_service.dart';
@@ -359,6 +360,47 @@ void main() {
       expect(docs.length, 1);
       expect(docs.first['title'], 'Diwali Festival Notes');
       expect(docs.first['status'], 'published');
+    });
+  });
+
+  group('Astrologers', () {
+    testWidgets('detail shows session history from consultations',
+        (WidgetTester tester) async {
+      final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
+      final FirestoreService service = FirestoreService(firestore: fake);
+      await fake.collection('astrologers').doc('a1').set(
+        <String, Object?>{
+          'name': 'Guru Dev',
+          'status': 'offline',
+          'languages': 'Hindi',
+          'bio': 'Vedic astrologer',
+          'phone': '9876543210',
+          'rate': '',
+          'kycStatus': 'approved',
+          'expertise': 'Vedic',
+          'availability': 'Mon to Sat',
+        },
+      );
+      await fake.collection('consultations').doc('c1').set(
+        <String, Object?>{
+          'user': 'Test User',
+          'astrologer': 'Guru Dev',
+          'note': '',
+          'status': 'completed',
+          'durationMinutes': 30,
+          'createdAt': Timestamp.fromDate(DateTime.now()),
+        },
+      );
+      await _pump(tester, AstrologersScreen(firestore: service));
+      expect(find.text('Guru Dev'), findsOneWidget);
+      await tester.tap(find.text('View'));
+      await tester.pumpAndSettle();
+      expect(find.text('KYC: approved'), findsOneWidget);
+      expect(find.text('Expertise: Vedic'), findsOneWidget);
+      expect(
+        find.text('1 sessions, 30 minutes in total.'),
+        findsOneWidget,
+      );
     });
   });
 
