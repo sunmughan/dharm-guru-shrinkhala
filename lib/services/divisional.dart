@@ -14,7 +14,7 @@ class Divisional {
   /// Degrees inside the rashi, parsed from the engine degree
   /// text "DD° MM′". Returns 0 when the text does not parse.
   static double degreesWithinRashi(String degreeText) {
-    final RegExp match =
+    final RegExpMatch? match =
         RegExp(r'(\d+)\D+(\d+)').firstMatch(degreeText);
     if (match == null) return 0;
     final int deg = int.tryParse(match.group(1)!) ?? 0;

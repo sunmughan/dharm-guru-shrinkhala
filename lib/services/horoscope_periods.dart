@@ -1,8 +1,5 @@
 import '../models/kundli.dart';
-import '../models/panchang.dart';
 import 'astro.dart';
-import 'library_content.dart';
-import 'numerology.dart';
 
 /// Rule based horoscope periods. The daily horoscope stays
 /// published content only. Weekly, monthly and yearly views

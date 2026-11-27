@@ -1,4 +1,3 @@
-import 'package:dharm_guru_shrinkhala/models/kundli.dart';
 import 'package:dharm_guru_shrinkhala/screens/user_modules.dart';
 import 'package:dharm_guru_shrinkhala/services/astro.dart';
 import 'package:dharm_guru_shrinkhala/services/auth_service.dart';
@@ -11,7 +10,7 @@ import 'package:dharm_guru_shrinkhala/services/horoscope_periods.dart';
 import 'package:dharm_guru_shrinkhala/services/notification_prefs.dart';
 import 'package:dharm_guru_shrinkhala/services/numerology.dart';
 import 'package:dharm_guru_shrinkhala/services/report_builder.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

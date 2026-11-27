@@ -366,12 +366,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
     setState(() => _busy = true);
     try {
       final Map<String, dynamic>? map = await firestore.getUserProfile(uid);
+      if (!mounted) return;
       if (map == null) {
         _showMsg(context, 'Complete your profile first.');
         return;
       }
       final AppUserProfile profile = AppUserProfile.fromMap(map);
       if (!profile.isComplete) {
+        if (!mounted) return;
         _showMsg(context, 'Complete your profile first.');
         return;
       }
@@ -382,6 +384,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             : AppUserProfile.displayTime(profile.timeOfBirth!),
       );
       if (birth == null) {
+        if (!mounted) return;
         _showMsg(context, 'Your birth details could not be read.');
         return;
       }
@@ -860,8 +863,7 @@ class _BirthProfileFormState extends State<_BirthProfileForm> {
                     }
                     return;
                   }
-                  if (!mounted) return;
-                  Navigator.of(context).pop(true);
+                  if (context.mounted) Navigator.of(context).pop(true);
                 },
           child: const Text('Save'),
         ),
@@ -946,6 +948,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         data: <String, Object?>{'language': value},
       );
     }
+    if (!mounted) return;
     setState(() => _language = value);
     _showMsg(context, 'Language saved. Hindi copy is not ready yet, so the app stays in English.');
   }
@@ -1479,7 +1482,7 @@ class _BookConsultDialogState extends State<BookConsultDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Book ${_mode} with ${widget.astrologerName}'),
+      title: Text('Book $_mode with ${widget.astrologerName}'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
