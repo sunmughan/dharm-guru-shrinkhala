@@ -273,16 +273,45 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
             const SizedBox(height: AppSpacing.md),
           ],
-          if (_mode == _AuthMode.signIn) ...<Widget>[
-            TextButton(
-              onPressed: _busy ? null : () => _showMode(_AuthMode.forgot),
-              child: const Text('Forgot password?'),
+          if (_mode == _AuthMode.signIn)
+            // One tight row: Forgot password on the left, Create
+            // account on the right. Never stacked full width links
+            // with dead space between them.
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Flexible(
+                  child: TextButton(
+                    onPressed:
+                        _busy ? null : () => _showMode(_AuthMode.forgot),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      'Forgot password?',
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: TextButton(
+                    onPressed:
+                        _busy ? null : () => _showMode(_AuthMode.signUp),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      'Create account',
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            TextButton(
-              onPressed: _busy ? null : () => _showMode(_AuthMode.signUp),
-              child: const Text('Create account'),
-            ),
-          ],
           if (_mode != _AuthMode.signIn)
             TextButton(
               onPressed: _busy ? null : () => _showMode(_AuthMode.signIn),

@@ -708,6 +708,28 @@ void main() {
     expect(find.text('Continue with Google'), findsOneWidget);
   });
 
+  testWidgets(
+      'Sign in links sit side by side on one row, Forgot password left',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: AuthScreen()),
+    );
+    await tester.pumpAndSettle();
+    final Offset forgot =
+        tester.getCenter(find.text('Forgot password?'));
+    final Offset create = tester.getCenter(find.text('Create account'));
+    expect(forgot.dy, moreOrLessEquals(create.dy, epsilon: 1));
+    expect(forgot.dx, lessThan(create.dx));
+    expect(
+      tester.getSize(find.text('Forgot password?')).height,
+      lessThanOrEqualTo(20),
+    );
+    expect(
+      tester.getSize(find.text('Create account')).height,
+      lessThanOrEqualTo(20),
+    );
+  });
+
   testWidgets('Google sign in with an existing email asks for the password',
       (WidgetTester tester) async {
     await tester.pumpWidget(
