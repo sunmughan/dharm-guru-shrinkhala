@@ -269,7 +269,7 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           DropdownButtonFormField<String>(
-            value: _gender,
+            initialValue: _gender,
             decoration: const InputDecoration(labelText: 'Gender'),
             items: AppUserProfile.genders
                 .map(
@@ -284,7 +284,7 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           DropdownButtonFormField<String>(
-            value: _maritalStatus,
+            initialValue: _maritalStatus,
             decoration:
                 const InputDecoration(labelText: 'Marital status'),
             items: AppUserProfile.maritalStatuses
@@ -381,7 +381,7 @@ class _ProfileFormScreenState extends State<ProfileFormScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           DropdownButtonFormField<String>(
-            value: _language,
+            initialValue: _language,
             decoration:
                 const InputDecoration(labelText: 'Horoscope language'),
             items: AppUserProfile.languages

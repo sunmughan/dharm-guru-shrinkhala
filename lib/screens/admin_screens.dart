@@ -3488,7 +3488,7 @@ class _AdminAccountScreenState extends State<AdminAccountScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           DropdownButtonFormField<String>(
-            value: _language,
+            initialValue: _language,
             decoration:
                 const InputDecoration(labelText: 'Horoscope language'),
             items: AppUserProfile.languages

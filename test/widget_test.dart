@@ -823,7 +823,11 @@ void main() {
           body: SingleChildScrollView(
             child: AdminAccountScreen(
               firestore: _FakeFirestore(),
-              auth: _FakeAuthService(signedInValue: true),
+              auth: _FakeAuthService(
+                signedInValue: true,
+                hasGoogleValue: false,
+                hasPasswordValue: true,
+              ),
             ),
           ),
         ),
@@ -854,6 +858,24 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.text('Users'), findsOneWidget);
+  });
+
+  testWidgets('Admin gate allows a Google account that signs in to the admin app',
+      (WidgetTester tester) async {
+    final _FakeFirestore firestore = _FakeFirestore(admin: false);
+    await tester.pumpWidget(
+      DharmGuruAdminApp(
+        showSplash: false,
+        authService: _FakeAuthService(
+          signedInValue: true,
+          hasGoogleValue: true,
+        ),
+        firestoreService: firestore,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(firestore.lastEnsuredAdminUid, 'test-uid');
     expect(find.text('Users'), findsOneWidget);
   });
 
@@ -938,8 +960,12 @@ class _FakeFirestore extends FirestoreService {
   Map<String, Object?>? lastSavedProfile;
   String? lastEnsuredAdminUid;
 
+  /// Set by ensureAdminDoc, so the fake gate can allow a Google
+  /// account that just got its owner record, like the real gate.
+  bool adminGranted = false;
+
   @override
-  Future<bool> isAdmin(String uid) async => admin;
+  Future<bool> isAdmin(String uid) async => admin || adminGranted;
 
   @override
   Future<Map<String, dynamic>?> getUserProfile(String uid) async =>
@@ -963,6 +989,7 @@ class _FakeFirestore extends FirestoreService {
   @override
   Future<void> ensureAdminDoc(String uid, String email) async {
     lastEnsuredAdminUid = uid;
+    adminGranted = true;
   }
 
   @override
