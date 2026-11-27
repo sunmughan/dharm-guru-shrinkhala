@@ -1,3 +1,5 @@
+// material.dart is deprecated in Flutter 3.50; migrate to package:material_ui as a separate task.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 
 import 'core/navigation/app_shell.dart';
