@@ -1,8 +1,8 @@
-/// Retry with backoff for transient failures, and a small
+/// Backoff retry for transient failures, and a small
 /// in memory memo cache for pure calculations. Both are pure
 /// Dart, no Flutter, no network. No user data is ever logged.
-class Retry {
-  Retry._();
+class BackoffRetry {
+  BackoffRetry._();
 
   /// Runs [work] up to [maxAttempts] times. Retries only when
   /// [shouldRetry] says so; by default every error except

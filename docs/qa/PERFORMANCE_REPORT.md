@@ -46,7 +46,7 @@ stays NOT_TESTED.
   PanchangCalculator.clearCache for tests.
 * Calculation caching: bounded memo cache, 64 entries, keyed by
   inputs only, never by name, email or any personal data.
-* Retry behaviour: Retry.run, 3 attempts by default, backoff
+* Retry behaviour: BackoffRetry.run, 3 attempts by default, backoff
   doubling from 200 ms, no retry for ArgumentError. Covered by
   RET-01 to RET-05.
 * Input validation: InputValidation for email, password, display

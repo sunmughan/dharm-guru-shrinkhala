@@ -49,7 +49,7 @@ are PASS, FAIL, BLOCKED and NOT_TESTED only.
 | Firestore pagination | lib/services/firestore_service.dart getDocsPaged | Firestore orderBy and limit | test/pagination_test.dart PAGE-01 to PAGE-04 | None | PASS in CI, no screen uses it yet |
 | Calculation caching | lib/services/astro.dart, lib/core/performance.dart | None, local memo cache | test/performance_cache_test.dart PERF-03 to PERF-05, test/retry_test.dart CACHE-01 to CACHE-04 | None | PASS in CI |
 | Input validation | lib/core/input_validation.dart | None | test/input_validation_test.dart VAL-01 to VAL-09 | BT-USER-08 | PASS in CI |
-| Retry behaviour | lib/core/performance.dart Retry | None | test/retry_test.dart RET-01 to RET-05 | None | PASS in CI |
+| BackoffRetry | lib/core/performance.dart | None | test/retry_test.dart RET-01 to RET-05 | None | PASS in CI |
 | Redacted logging | lib/core/app_logger.dart | None | test/app_logger_test.dart LOG-01 to LOG-04 | None | PASS in CI |
 | Model serialisation | lib/models/kundli.dart, lib/models/panchang.dart, lib/models/remedies.dart | Firestore maps | test/model_serialization_test.dart SER-01 to SER-07 | None | PASS in CI |
 | Cloud Functions | None, functions/ does not exist | None | None | None | BLOCKED |

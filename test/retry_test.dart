@@ -5,9 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// CACHE-04. Retry behaviour and the memo cache that backs
 /// calculation caching.
 void main() {
-  group('Retry.run', () {
+  group('BackoffRetry.run', () {
     test('RET-01 returns the value when the first attempt works', () async {
-      final String value = await Retry.run(
+      final String value = await BackoffRetry.run(
         () async => 'ok',
         delay: const Duration(milliseconds: 1),
       );
@@ -16,7 +16,7 @@ void main() {
 
     test('RET-02 retries a transient failure and then succeeds', () async {
       int attempts = 0;
-      final String value = await Retry.run(() async {
+      final String value = await BackoffRetry.run(() async {
         attempts++;
         if (attempts < 3) throw StateError('UNAVAILABLE');
         return 'ok';
@@ -28,7 +28,7 @@ void main() {
     test('RET-03 gives up after maxAttempts and rethrows', () async {
       int attempts = 0;
       await expectLater(
-        Retry.run(() async {
+        BackoffRetry.run(() async {
           attempts++;
           throw StateError('UNAVAILABLE');
         }, maxAttempts: 2, delay: const Duration(milliseconds: 1)),
@@ -40,7 +40,7 @@ void main() {
     test('RET-04 never retries an ArgumentError, a caller bug', () async {
       int attempts = 0;
       await expectLater(
-        Retry.run(() async {
+        BackoffRetry.run(() async {
           attempts++;
           throw ArgumentError('bad input');
         }, delay: const Duration(milliseconds: 1)),
@@ -52,7 +52,7 @@ void main() {
     test('RET-05 honours a custom shouldRetry predicate', () async {
       int attempts = 0;
       await expectLater(
-        Retry.run(
+        BackoffRetry.run(
           () async {
             attempts++;
             throw StateError('PERMISSION_DENIED');
