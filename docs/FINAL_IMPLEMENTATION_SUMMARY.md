@@ -108,34 +108,42 @@ done here. The work is:
 
 ## 11. Automated test results
 
-* Status: NOT_COMPLETE until the CI run on this branch lands
+* Status: PARTIAL, test and build jobs verified, iOS and gate not verified yet
 * Baseline: 111 tests, CI run 46043847890 green
 * This phase: 51 new test cases in 8 new files
-* New total, CI run number and job results: to be filled from the
-  CI run on branch phase1218-ci after push.
+* New total: 162 tests passed, 0 failed, CI run 46058625875
+  on branch phase1218-ci, commit c86cd0a.
 * Full detail in docs/qa/REGRESSION_REPORT.md.
 
 ## 12. CI results
 
-* Status: NOT_COMPLETE until the CI run on this branch lands
+* Status: PARTIAL, see docs/qa/FINAL_RELEASE_REPORT.md
 * Workflow: .github/workflows/flutter-analyze.yml
 * Jobs: analyze, format, test with coverage, rules-gate,
   cloud-functions, build-web user and admin, browser-smoke,
   build-apk user and admin, build-ios user and admin, release-gate.
-* Expected: every job PASS except cloud-functions BLOCKED, because
-  functions/ does not exist yet, and release-gate FAIL until it lands.
-* Run number and per job results: to be filled from the CI run.
+* Verified on run 46058625875: analyze PASS, format PASS, test
+  PASS with 162 tests, rules-gate PASS, build-web PASS,
+  browser-smoke PASS, build-apk PASS, cloud-functions BLOCKED
+  because functions/ does not exist yet.
+* build-ios was still running at the last check and release-gate
+  had not run yet. Their results are NOT_VERIFIED here. Further
+  live status checks stopped on a GitHub API rate limit, HTTP 403,
+  during polling. Recheck run 46058625875 after the limit resets.
+* Run number and per job results: run 46058625875, branch phase1218-ci.
 
 ## 13. Build artifact locations
 
-* Status: NOT_COMPLETE until the CI run on this branch lands
+* Status: PARTIAL, artifacts confirmed on run 46058625875
 * CI artifacts on the run: dharm-guru-release-apk, dharm-guru-admin-release-apk,
   dharm-guru-web-user, dharm-guru-web-admin, test-coverage.
+  All five were listed as present on the run.
 * Release 10 artifacts, for reference: user APK 56,607,226 bytes,
   admin APK 55,508,558 bytes, both permanent release key SHA 1
   D9:1A:02:84:0D:FE:F5:82:D3:3E:3E:9C:21:5A:77:D2:73:D7:89:A3.
-* Artifact URLs and SHA 256 values for this branch: to be filled
-  from the CI run.
+* Artifact download URLs and SHA 256 values for this branch:
+  NOT_VERIFIED, the artifacts live on CI run 46058625875 and were
+  not downloaded in this phase.
 
 ## 14. Remaining limitations
 

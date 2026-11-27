@@ -13,18 +13,26 @@ runs have not happened, and the P1 security defects are still open.
 
 ## CI on this branch
 
-* To be filled from the CI run on branch phase1218-ci after push.
-  Run number, job results and test counts go here, copied from the
-  run, never guessed.
-* Expected: analyze PASS, format PASS, test PASS, rules-gate PASS,
-  build-web PASS, browser-smoke PASS, build-apk PASS, build-ios PASS,
-  cloud-functions BLOCKED, release-gate FAIL until functions land.
+* CI run 46058625875 on branch phase1218-ci, commit c86cd0a
+* analyze PASS, 50s
+* format PASS, 52s
+* test PASS, 162 tests passed, 0 failed, 1m22s
+* rules-gate PASS, 5s
+* build-web PASS, 2m32s, user and admin web builds uploaded
+* browser-smoke PASS, 1m29s, widget tests on headless Chrome
+* build-apk PASS, 6m36s, user and admin APKs uploaded
+* cloud-functions BLOCKED, functions/ does not exist yet, exit 1 by design
+* build-ios: still running at the last check, final result NOT_VERIFIED
+* release-gate: not run yet, it needs build-ios, final result NOT_VERIFIED
+* Note: further live status checks stopped on a GitHub API rate
+  limit, HTTP 403, during polling. The parent can recheck
+  build-ios and release-gate on run 46058625875 after the limit resets.
 
 ## Automated test totals
 
 * Baseline: 111 tests on release 10, CI run 46043847890 green
 * This phase adds 51 new test cases in 8 new files
-* New total: to be filled from the CI run on this branch
+* New total: 162 tests passed, 0 failed, CI run 46058625875
 
 ## Browser verdict
 
@@ -56,6 +64,7 @@ runs have not happened, and the P1 security defects are still open.
 5. No emulator rules tests
 6. Astrologer identity, pricing, Hindi copy still undecided
 7. Phone proof still owed by the user: install release APKs, sign in to admin app, tap publish live
+8. build-ios and release-gate results NOT_VERIFIED on run 46058625875, recheck after the GitHub API rate limit resets
 
 ## What this phase delivered
 
