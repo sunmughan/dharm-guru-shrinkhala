@@ -27,11 +27,13 @@ import '../services/library_content.dart';
 import '../services/matching.dart';
 import '../services/notification_schedule.dart';
 import '../services/panchang_extra.dart';
+import '../services/place_autocomplete.dart';
 import '../services/remedies_engine.dart';
 import '../services/user_profile.dart';
 import '../widgets/birth_pickers.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/kundli_chart.dart';
+import '../widgets/place_autocomplete_field.dart';
 import '../widgets/planet_details.dart';
 import 'astrologer_workspace_screen.dart';
 import 'profile_form_screen.dart';
@@ -1004,6 +1006,12 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
   final TextEditingController _timeController = TextEditingController();
   final TextEditingController _placeController = TextEditingController();
 
+  /// Exact coordinates from place autocomplete, when the user
+  /// picked a suggestion. Null means the engine resolves the
+  /// place text from the city list.
+  double? _placeLatitude;
+  double? _placeLongitude;
+
   @override
   void initState() {
     super.initState();
@@ -1073,12 +1081,12 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          TextField(
+          PlaceAutocompleteField(
             controller: _placeController,
-            decoration: const InputDecoration(
-              labelText: 'Place of birth',
-              hintText: 'City, State',
-            ),
+            onPlaceSelected: (PlaceDetails details) {
+              _placeLatitude = details.latitude;
+              _placeLongitude = details.longitude;
+            },
           ),
           const SizedBox(height: AppSpacing.lg),
           ElevatedButton(
@@ -1107,6 +1115,8 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
                 rashi: '',
                 nakshatra: '',
                 tithiAtBirth: '',
+                latitude: _placeLatitude,
+                longitude: _placeLongitude,
               );
               final DateTime? birth = parseBirthDateTime(
                 date,
@@ -1165,31 +1175,40 @@ class KundliChartScreen extends StatefulWidget {
 class _KundliChartScreenState extends State<KundliChartScreen> {
   int _chartMode = 0;
 
-  /// The real kundli for the entered birth details. Null
-  /// only when the date or time text does not parse, which
-  /// the input screen already rejects.
-  KundliResult? get _kundli {
+  /// The real kundli for the entered birth details, plus the
+  /// honest reason when it cannot be calculated: 'date' when
+  /// the date or time text does not parse, otherwise the place
+  /// error from the engine (an unknown place used to be blamed
+  /// on the date and time, which is why every saved profile
+  /// with a small town showed "could not be read").
+  ({KundliResult? result, String? error}) get _kundli {
     final DateTime? birth = parseBirthDateTime(
       widget.birth.dateOfBirth,
       widget.birth.timeOfBirth.isEmpty
           ? '12:00 PM'
           : widget.birth.timeOfBirth,
     );
-    if (birth == null) return null;
+    if (birth == null) return (result: null, error: 'date');
     try {
-      return KundliCalculator.calculate(
-        birthLocal: birth,
-        placeText: widget.birth.placeOfBirth,
-        timeKnown: widget.birth.timeOfBirth.isNotEmpty,
+      return (
+        result: KundliCalculator.calculate(
+          birthLocal: birth,
+          placeText: widget.birth.placeOfBirth,
+          timeKnown: widget.birth.timeOfBirth.isNotEmpty,
+          latitude: widget.birth.latitude,
+          longitude: widget.birth.longitude,
+        ),
+        error: null,
       );
-    } on ArgumentError {
-      return null;
+    } on ArgumentError catch (e) {
+      return (result: null, error: e.message.toString());
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final KundliResult? kundli = _kundli;
+    final ({KundliResult? result, String? error}) resolved = _kundli;
+    final KundliResult? kundli = resolved.result;
     return Scaffold(
       appBar: AppBar(title: const Text('Birth Kundli')),
       body: ListView(
@@ -1219,8 +1238,13 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'These birth details could not be read. '
-                      'Enter a valid date and time.',
+                      resolved.error == 'date'
+                          ? 'These birth details could not be read. '
+                              'Enter a valid date and time.'
+                          : 'Birth place could not be recognised: '
+                              '${resolved.error} Pick the place from '
+                              'the suggestions on the Birth Details '
+                              'screen, so its exact location is used.',
                       style: AppTextStyles.themed(
                         context,
                         AppTextStyles.bodySmall,

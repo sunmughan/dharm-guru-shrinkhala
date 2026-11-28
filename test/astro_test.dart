@@ -199,5 +199,55 @@ void main() {
       // The typed text from the bug report never parsed.
       expect(parseBirthDateTime('29071995', '12:05 AM'), isNull);
     });
+    test('parses legacy stored formats from older profiles', () {
+      // The owners own profile carried a slash date, which the
+      // old parser rejected and the form showed as a readOnly
+      // prefill with the same "Enter a valid date and time."
+      // error. Every stored shape must parse now.
+      expect(
+        parseBirthDateTime('29/07/1995', '12:00 AM'),
+        DateTime(1995, 7, 29, 0, 0),
+      );
+      expect(
+        parseBirthDateTime('1995-07-29', '00:05'),
+        DateTime(1995, 7, 29, 0, 5),
+      );
+      expect(
+        parseBirthDateTime('29 July 1995', '12:05 am'),
+        DateTime(1995, 7, 29, 0, 5),
+      );
+      expect(
+        parseBirthDateTime('29-07-1995', '12:05'),
+        DateTime(1995, 7, 29, 12, 5),
+      );
+      expect(parseBirthDateTime('31 February 2000', '12:00 AM'), isNull);
+    });
+    test('Gautam Bhavsar saved profile parses and Jirapur resolves', () {
+      // The saved profile that showed "These birth details
+      // could not be read" on every open: its date and time
+      // parsed fine, but Jirapur was missing from the city
+      // list, so the engine threw and the screen blamed the
+      // date and time.
+      expect(
+        parseBirthDateTime('29 January 2001', '09:45 PM'),
+        DateTime(2001, 1, 29, 21, 45),
+      );
+      expect(placeFor('Jirapur, Madhya Pradesh'), isNotNull);
+      final KundliResult result = KundliCalculator.calculate(
+        birthLocal: DateTime(2001, 1, 29, 21, 45),
+        placeText: 'Jirapur, Madhya Pradesh',
+      );
+      expect(result.lagna, isNotEmpty);
+      expect(result.moonRashi, isNotEmpty);
+    });
+    test('calculator accepts exact coordinates from autocomplete', () {
+      final KundliResult result = KundliCalculator.calculate(
+        birthLocal: DateTime(2001, 1, 29, 21, 45),
+        placeText: 'Somewhere, Madhya Pradesh',
+        latitude: 24.0214,
+        longitude: 76.3764,
+      );
+      expect(result.lagna, isNotEmpty);
+    });
   });
 }

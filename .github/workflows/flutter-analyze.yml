@@ -102,13 +102,13 @@ jobs:
           DHARM_GURU_KEYSTORE_PASSWORD: ${{ secrets.DHARM_GURU_KEYSTORE_PASSWORD }}
           DHARM_GURU_KEY_PASSWORD: ${{ secrets.DHARM_GURU_KEY_PASSWORD }}
           DHARM_GURU_KEY_ALIAS: ${{ secrets.DHARM_GURU_KEY_ALIAS }}
-        run: flutter build apk --release --flavor user --dart-define="BUILD_STAMP=$BUILD_STAMP"
+        run: flutter build apk --release --flavor user --dart-define="BUILD_STAMP=$BUILD_STAMP" --dart-define="GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_API_KEY }}"
       - name: Build admin release APK
         env:
           DHARM_GURU_KEYSTORE_PASSWORD: ${{ secrets.DHARM_GURU_KEYSTORE_PASSWORD }}
           DHARM_GURU_KEY_PASSWORD: ${{ secrets.DHARM_GURU_KEY_PASSWORD }}
           DHARM_GURU_KEY_ALIAS: ${{ secrets.DHARM_GURU_KEY_ALIAS }}
-        run: flutter build apk --release --flavor admin -t lib/main_admin.dart --dart-define="BUILD_STAMP=$BUILD_STAMP"
+        run: flutter build apk --release --flavor admin -t lib/main_admin.dart --dart-define="BUILD_STAMP=$BUILD_STAMP" --dart-define="GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_API_KEY }}"
       - name: Verify APK signing fingerprint is the release key
         # Both APKs must carry the permanent release key, never a
         # debug key. Prints the SHA-1 fingerprint for the console

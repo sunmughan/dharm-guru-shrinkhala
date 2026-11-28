@@ -10,6 +10,8 @@ class BirthDetails {
     required this.rashi,
     required this.nakshatra,
     required this.tithiAtBirth,
+    this.latitude,
+    this.longitude,
   });
 
   final String name;
@@ -19,6 +21,12 @@ class BirthDetails {
   final String rashi;
   final String nakshatra;
   final String tithiAtBirth;
+
+  /// Exact coordinates from place autocomplete, when the place
+  /// was picked from suggestions. Null means the engine falls
+  /// back to the city list for the place text.
+  final double? latitude;
+  final double? longitude;
 }
 
 class PlanetDetail {

@@ -89,21 +89,31 @@ class AppUserProfile {
     return parts.join(', ');
   }
 
-  /// "2000-01-15" becomes "15 January 2000". Falls back to the
-  /// stored string when it does not parse.
+  /// "2000-01-15" becomes "15 January 2000". Older stored
+  /// values "15/01/2000" and "15-01-2000" become the same.
+  /// Falls back to the stored string when it does not parse.
   static String displayDate(String stored) {
-    final List<String> bits = stored.split('-');
-    if (bits.length != 3) return stored;
-    const List<String> months = <String>[
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
-    final int? month = int.tryParse(bits[1]);
-    final int? day = int.tryParse(bits[2]);
-    if (month == null || day == null || month < 1 || month > 12) {
-      return stored;
+    final String text = stored.trim();
+    final List<String> slash = text.split(RegExp(r'[/-]'));
+    if (slash.length == 3) {
+      final int? first = int.tryParse(slash[0]);
+      final int? second = int.tryParse(slash[1]);
+      final int? third = int.tryParse(slash[2]);
+      if (first != null && second != null && third != null) {
+        const List<String> months = <String>[
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December',
+        ];
+        if (slash[0].length == 4) {
+          if (second >= 1 && second <= 12) {
+            return '$third ${months[second - 1]} $first';
+          }
+        } else if (second >= 1 && second <= 12) {
+          return '$first ${months[second - 1]} $third';
+        }
+      }
     }
-    return '$day ${months[month - 1]} ${bits[0]}';
+    return stored;
   }
 
   /// "07:30" becomes "07:30 AM". Falls back to the stored string.
@@ -118,10 +128,27 @@ class AppUserProfile {
     return '${shown.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $suffix';
   }
 
-  /// "15 January 2000" becomes "2000-01-15" for storage. Returns
-  /// null when the text does not parse, so the form can reject it.
+  /// "15 January 2000" becomes "2000-01-15" for storage.
+  /// "15/01/2000", "15-01-2000" and "2000-01-15" become the
+  /// same. Returns null when the text does not parse, so the
+  /// form can reject it.
   static String? storeDate(String text) {
-    final List<String> bits = text.trim().split(' ');
+    final String trimmed = text.trim();
+    final List<String> slash = trimmed.split(RegExp(r'[/-]'));
+    if (slash.length == 3) {
+      final int? first = int.tryParse(slash[0]);
+      final int? second = int.tryParse(slash[1]);
+      final int? third = int.tryParse(slash[2]);
+      if (first != null && second != null && third != null) {
+        if (slash[0].length == 4 && second >= 1 && second <= 12) {
+          return '$first-${second.toString().padLeft(2, '0')}-${third.toString().padLeft(2, '0')}';
+        }
+        if (slash[2].length == 4 && second >= 1 && second <= 12) {
+          return '$third-${second.toString().padLeft(2, '0')}-${first.toString().padLeft(2, '0')}';
+        }
+      }
+    }
+    final List<String> bits = trimmed.split(' ');
     if (bits.length != 3) return null;
     const Map<String, String> months = <String, String>{
       'January': '01', 'February': '02', 'March': '03', 'April': '04',

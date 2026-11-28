@@ -265,6 +265,28 @@ const List<AstroPlace> kIndianCities = <AstroPlace>[
   AstroPlace('Thane', 19.2183, 72.9781),
   AstroPlace('Shimla', 31.1048, 77.1734),
   AstroPlace('Meerut', 28.9845, 77.7064),
+  AstroPlace('Jirapur', 24.0214, 76.3764),
+  AstroPlace('Rajgarh', 24.0072, 76.7297),
+  AstroPlace('Vidisha', 23.5252, 77.8087),
+  AstroPlace('Sagar', 23.8388, 78.7378),
+  AstroPlace('Rewa', 24.5364, 81.3037),
+  AstroPlace('Satna', 24.5759, 80.8324),
+  AstroPlace('Ujjain', 23.1765, 75.7885),
+  AstroPlace('Ratlam', 23.3315, 75.0367),
+  AstroPlace('Mandsaur', 24.0760, 75.0679),
+  AstroPlace('Neemuch', 24.4719, 74.8684),
+  AstroPlace('Chhindwara', 22.0574, 78.9382),
+  AstroPlace('Seoni', 22.0837, 79.5418),
+  AstroPlace('Balaghat', 21.8122, 80.3412),
+  AstroPlace('Dhamtari', 20.7089, 81.5483),
+  AstroPlace('Rajnandgaon', 21.0978, 81.0336),
+  AstroPlace('Mahasamund', 21.1094, 82.0993),
+  AstroPlace('Korba', 22.3595, 82.6873),
+  AstroPlace('Raigarh', 21.8983, 83.3978),
+  AstroPlace('Jagdalpur', 19.0816, 82.0200),
+  AstroPlace('Ambikapur', 23.1222, 83.1946),
+  AstroPlace('Kanker', 20.2719, 81.4930),
+  AstroPlace('Kawardha', 22.0104, 81.2426),
 ];
 
 /// Finds a city by name inside free text like "Jaipur,
@@ -973,15 +995,22 @@ class KundliCalculator {
     required DateTime birthLocal,
     required String placeText,
     bool timeKnown = true,
+    double? latitude,
+    double? longitude,
   }) {
-    final AstroPlace? found = placeFor(placeText);
-    if (found == null) {
-      throw ArgumentError(
-        'Unknown birth place "$placeText". Pick a city from '
-        'the list or enter latitude and longitude manually.',
-      );
+    final AstroPlace place;
+    if (latitude != null && longitude != null) {
+      place = AstroPlace(placeText, latitude, longitude);
+    } else {
+      final AstroPlace? found = placeFor(placeText);
+      if (found == null) {
+        throw ArgumentError(
+          'Unknown birth place "$placeText". Pick a city from '
+          'the list or enter latitude and longitude manually.',
+        );
+      }
+      place = found;
     }
-    final AstroPlace place = found;
     final DateTime local = timeKnown
         ? birthLocal
         : DateTime(
@@ -1370,38 +1399,107 @@ List<DashaInfo> vimshottariTimeline({required DateTime birthLocal}) {
   return spans;
 }
 
-/// Parses the birth form text the app already uses:
-/// date "1 January 2000", time "07:30 AM". Null when the
-/// text does not parse, so the form can reject it.
+/// Parses the birth form text the app already uses, plus the
+/// formats older stored profiles carry: date "1 January 2000",
+/// "29/07/1995", "29-07-1995" and "2000-01-15"; time "07:30 AM"
+/// or 24 hour "07:30". Null when the text does not parse, so
+/// the form can reject it.
 DateTime? parseBirthDateTime(String dateText, String timeText) {
-  final List<String> dateBits = dateText.trim().split(' ');
-  if (dateBits.length != 3) return null;
+  final DateTime? date = parseBirthDate(dateText);
+  if (date == null) return null;
+  final ({int hour, int minute})? time = parseBirthTime(timeText);
+  if (time == null) return null;
+  final DateTime parsed = DateTime(
+    date.year,
+    date.month,
+    date.day,
+    time.hour,
+    time.minute,
+  );
+  if (parsed.year != date.year ||
+      parsed.month != date.month ||
+      parsed.day != date.day) {
+    return null;
+  }
+  return parsed;
+}
+
+/// One birth date in any format the app has ever stored.
+/// Null when it does not parse to a real calendar date.
+DateTime? parseBirthDate(String dateText) {
+  final String text = dateText.trim();
+  if (text.isEmpty) return null;
+  final DateTime? iso = DateTime.tryParse(text);
+  if (iso != null && text.contains('-') && text.split('-').first.length == 4) {
+    return DateTime(iso.year, iso.month, iso.day);
+  }
   const Map<String, int> months = <String, int>{
     'January': 1, 'February': 2, 'March': 3, 'April': 4,
     'May': 5, 'June': 6, 'July': 7, 'August': 8,
     'September': 9, 'October': 10, 'November': 11,
     'December': 12,
+    'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4,
+    'Jun': 6, 'Jul': 7, 'Aug': 8,
+    'Sep': 9, 'Sept': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12,
   };
-  final int? month = months[dateBits[1]];
-  final int? day = int.tryParse(dateBits[0]);
-  final int? year = int.tryParse(dateBits[2]);
-  if (month == null || day == null || year == null) return null;
-  final List<String> timeBits = timeText.trim().split(' ');
-  if (timeBits.length != 2) return null;
-  final List<String> hm = timeBits[0].split(':');
-  if (hm.length != 2) return null;
-  final int? hour12 = int.tryParse(hm[0]);
-  final int? minute = int.tryParse(hm[1]);
-  if (hour12 == null || minute == null) return null;
-  if (hour12 < 1 || hour12 > 12 || minute < 0 || minute > 59) return null;
-  final String suffix = timeBits[1].toUpperCase();
-  if (suffix != 'AM' && suffix != 'PM') return null;
-  if (day < 1 || day > 31) return null;
-  int hour = hour12 % 12;
-  if (suffix == 'PM') hour += 12;
-  final DateTime parsed = DateTime(year, month, day, hour, minute);
-  if (parsed.year != year || parsed.month != month || parsed.day != day) {
+  final List<String> slash = text.split(RegExp(r'[/-]'));
+  if (slash.length == 3) {
+    final int? first = int.tryParse(slash[0]);
+    final int? second = int.tryParse(slash[1]);
+    final int? third = int.tryParse(slash[2]);
+    if (first != null && second != null && third != null) {
+      if (slash[0].length == 4) {
+        return _realDate(third, second, first);
+      }
+      return _realDate(first, second, third);
+    }
+  }
+  final List<String> words = text.split(' ');
+  if (words.length == 3) {
+    final int? day = int.tryParse(words[0]);
+    final int? month = months[words[1]];
+    final int? year = int.tryParse(words[2]);
+    if (day != null && month != null && year != null) {
+      return _realDate(day, month, year);
+    }
+  }
+  return null;
+}
+
+DateTime? _realDate(int day, int month, int year) {
+  if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+  final DateTime date = DateTime(year, month, day);
+  if (date.year != year || date.month != month || date.day != day) {
     return null;
   }
-  return parsed;
+  return date;
+}
+
+/// One birth time: "07:30 AM" (case does not matter, the space
+/// before AM/PM is optional) or 24 hour "21:45". Null when it
+/// does not parse.
+({int hour, int minute})? parseBirthTime(String timeText) {
+  String text = timeText.trim().toUpperCase();
+  if (text.isEmpty) return null;
+  bool pm = false;
+  bool hasSuffix = false;
+  if (text.endsWith('AM') || text.endsWith('PM')) {
+    pm = text.endsWith('PM');
+    hasSuffix = true;
+    text = text.substring(0, text.length - 2).trim();
+  }
+  final List<String> hm = text.split(':');
+  if (hm.length != 2) return null;
+  final int? hour = int.tryParse(hm[0]);
+  final int? minute = int.tryParse(hm[1]);
+  if (hour == null || minute == null) return null;
+  if (minute < 0 || minute > 59) return null;
+  if (hasSuffix) {
+    if (hour < 1 || hour > 12) return null;
+    int hour24 = hour % 12;
+    if (pm) hour24 += 12;
+    return (hour: hour24, minute: minute);
+  }
+  if (hour < 0 || hour > 23) return null;
+  return (hour: hour, minute: minute);
 }

@@ -728,6 +728,108 @@ void main() {
     expect(find.byType(KundliChartScreen), findsOneWidget);
   });
 
+  testWidgets('Saved Gautam Bhavsar profile opens its chart, no read error',
+      (WidgetTester tester) async {
+    // The saved profile that showed "These birth details could
+    // not be read" on every open: 29 January 2001, 09:45 PM,
+    // Jirapur, Madhya Pradesh.
+    const BirthDetails gautam = BirthDetails(
+      name: 'Gautam Bhavsar',
+      dateOfBirth: '29 January 2001',
+      timeOfBirth: '09:45 PM',
+      placeOfBirth: 'Jirapur, Madhya Pradesh',
+      rashi: '',
+      nakshatra: '',
+      tithiAtBirth: '',
+    );
+    await tester.pumpWidget(
+      const MaterialApp(home: KundliChartScreen(birth: gautam)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('These birth details could not be read.'), findsNothing);
+    expect(find.text('Birth place could not be recognised:'), findsNothing);
+    final KundliResult expected = KundliCalculator.calculate(
+      birthLocal: DateTime(2001, 1, 29, 21, 45),
+      placeText: 'Jirapur, Madhya Pradesh',
+    );
+    expect(find.text('Lagna ${expected.lagna}'), findsOneWidget);
+  });
+
+  testWidgets('Legacy slash date profile opens its chart, no read error',
+      (WidgetTester tester) async {
+    // The owners own stored profile carried "29/07/1995" and
+    // "12:00 AM": the old parser rejected the slash date, so
+    // the prefilled form showed the valid date error.
+    const BirthDetails legacy = BirthDetails(
+      name: 'Sunmughan Swamy',
+      dateOfBirth: '29/07/1995',
+      timeOfBirth: '12:00 AM',
+      placeOfBirth: 'Durg, Chhattisgarh',
+      rashi: '',
+      nakshatra: '',
+      tithiAtBirth: '',
+    );
+    await tester.pumpWidget(
+      const MaterialApp(home: KundliChartScreen(birth: legacy)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('These birth details could not be read.'), findsNothing);
+    final KundliResult expected = KundliCalculator.calculate(
+      birthLocal: DateTime(1995, 7, 29, 0, 0),
+      placeText: 'Durg, Chhattisgarh',
+    );
+    expect(find.text('Lagna ${expected.lagna}'), findsOneWidget);
+  });
+
+  testWidgets('Back from the Birth Kundli chart returns to Birth Details',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: KundliInputScreen()),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'Sunmughan Swamy');
+    await _acceptPicker(tester, find.byType(TextField).at(1));
+    await _acceptPicker(tester, find.byType(TextField).at(2));
+    await tester.enterText(
+      find.byType(TextField).at(3),
+      'Durg, Chhattisgarh',
+    );
+    await tester.tap(find.text('Show Kundli'));
+    await tester.pumpAndSettle();
+    expect(find.byType(KundliChartScreen), findsOneWidget);
+    final bool didPop = await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(didPop, isTrue);
+    expect(find.byType(KundliInputScreen), findsOneWidget);
+    expect(find.text('Birth Details'), findsOneWidget);
+  });
+
+  testWidgets('Back from the Kundli tab returns to Home, never exits',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      DharmGuruApp(
+        showSplash: false,
+        firebaseReady: true,
+        authService: _FakeAuthService(signedInValue: true),
+        firestoreService: _FakeFirestore(),
+        onboardingSeen: true,
+        askNotifications: false,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kundli'));
+    await tester.pumpAndSettle();
+    expect(find.text('Birth Details'), findsOneWidget);
+    // The pop is consumed by the shell: the route does not
+    // pop (the app stays open) and the tab switches home.
+    // handlePopRoute reports the gesture as handled, so the
+    // proof is the visible screen, not its return value.
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Namaste, Test User'), findsOneWidget);
+    expect(find.text('Birth Details'), findsNothing);
+  });
+
   testWidgets('Matching calculates a real score from two real charts',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(800, 2600);
