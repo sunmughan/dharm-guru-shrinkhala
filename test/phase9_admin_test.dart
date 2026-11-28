@@ -393,7 +393,16 @@ void main() {
       );
       await _pump(tester, AstrologersScreen(firestore: service));
       expect(find.text('Guru Dev'), findsOneWidget);
-      await tester.tap(find.text('View'));
+      // Phase 10: opening Manage Astrologers also creates the
+      // Hans Ojha record, so the list has two rows and two
+      // View buttons. Tap the one on Guru Dev's row.
+      await tester.tap(find.descendant(
+        of: find.ancestor(
+          of: find.text('Guru Dev'),
+          matching: find.byType(ListTile),
+        ),
+        matching: find.text('View'),
+      ));
       await tester.pumpAndSettle();
       expect(find.text('KYC: approved'), findsOneWidget);
       expect(find.text('Expertise: Vedic'), findsOneWidget);

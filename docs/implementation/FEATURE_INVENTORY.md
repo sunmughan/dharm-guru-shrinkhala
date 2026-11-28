@@ -88,14 +88,14 @@ Test proof: `test/widget_test.dart`, `test/proof_test.dart`, `test/firestore_flo
 
 Status: WORKING.
 Evidence: `lib/screens/screens.dart` ConsultScreen and ChatScreen; `lib/services/chat_service.dart`; real Firestore backed chat room, one chat per user (`user_<uid>`), messages stream live oldest first, send stores sender id, sender role, server timestamp plus client sentAt millis. Admin app reads and replies in every chat.
-Test proof: `test/chat_test.dart` (2 cases), `test/firestore_flow_test.dart`, `test/admin_proof_test.dart` (13 cases).
-Limit: no astrologer identity exists yet. The admin answers until one is added. No astrologer name, photo or reply is invented anywhere.
+Test proof: `test/chat_test.dart` (2 cases), `test/firestore_flow_test.dart`, `test/admin_proof_test.dart` (13 cases), `test/astrologer_workspace_test.dart` (Phase 10: Hans Ojha record, chat assignment, astrologer replies).
+Limit: the astrologer is Hans Ojha, a real record in the astrologers collection (`test/astrologer_workspace_test.dart`). He has no sign in yet, so the admin answers his chats until one exists. No astrologer photo or reply is invented anywhere; his phone, photo, bio, qualifications, languages, experience and rate are still not provided.
 
 ### 1.14 Live consult call (design 13)
 
 Status: PARTIALLY IMPLEMENTED.
 Evidence: `lib/screens/screens.dart` ConsultScreen call button calls `_callAstrologer`, which dials the phone number the admin saved for that astrologer through url_launcher when `callAvailable` is true, and says plainly when none is saved. There is NO in app voice call and NO in app video call.
-Test proof: none for a call itself. The consult list rendering is covered by `test/widget_test.dart`; the dial path has no test and no device proof.
+Test proof: `test/astrologer_workspace_test.dart` (Phase 10: call has no phone saved, dials the saved phone once provided). The consult list rendering is covered by `test/widget_test.dart`; a real dial has no device proof.
 What is missing: in app calling, call scheduling, call billing, call history.
 
 ### 1.15 Premium upgrade (design 14)
@@ -140,9 +140,9 @@ Test proof: `test/admin_proof_test.dart` (13 cases), `test/admin_gate_test.dart`
 ### 2.2 Manage astrologers (design 17)
 
 Status: WORKING.
-Evidence: `lib/screens/admin_screens.dart` AstrologersScreen; create, read, update, delete astrologer records in the astrologers collection: name, languages, chatAvailable, callAvailable, phone.
-Test proof: `test/admin_proof_test.dart`, `test/admin_gate_test.dart`.
-Limit: no real astrologer identity exists yet. Records are whatever the admin enters. Astrologer identity decision is undecided (design section 16 question 4).
+Evidence: `lib/screens/admin_screens.dart` AstrologersScreen; create, read, update, delete astrologer records in the astrologers collection: name, languages, chatAvailable, callAvailable, phone. Phase 10: the astrologer is Hans Ojha, document id `hans-ojha`, created with his name only by `lib/services/astrologer_service.dart` when the owner opens Manage Astrologers; the detail view edits his record (name, languages, bio, qualifications, experience, phone, rate, chat/call availability) and the admin chat view routes chats assigned to him by name.
+Test proof: `test/admin_proof_test.dart`, `test/admin_gate_test.dart`, `test/astrologer_workspace_test.dart` (Phase 10: record creation, admin list shows him, edit persists).
+Limit: only his name is settled. His phone, photo, bio, qualifications, languages, experience and rate are still not provided, and he has no sign in yet.
 
 ### 2.3 Publish daily horoscope (design 18)
 

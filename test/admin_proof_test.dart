@@ -119,7 +119,16 @@ void main() {
       );
       await _pump(tester, AstrologersScreen(firestore: service));
       expect(find.text('Guru Dev'), findsOneWidget);
-      await tester.tap(find.text('View'));
+      // Phase 10: opening Manage Astrologers also creates
+      // the Hans Ojha record, so there are two View buttons.
+      // Tap the one on the Guru Dev tile.
+      final Finder guruTile = find.ancestor(
+        of: find.text('Guru Dev'),
+        matching: find.byType(ListTile),
+      );
+      await tester.tap(
+        find.descendant(of: guruTile, matching: find.text('View')),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Status: waiting'), findsOneWidget);
       expect(find.text('Phone: 9876543210'), findsOneWidget);

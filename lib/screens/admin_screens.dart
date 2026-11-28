@@ -10,6 +10,7 @@ import '../services/admin_metrics.dart';
 import 'admin_phase9_screens.dart';
 import 'auth_screen.dart';
 import 'screens.dart';
+import '../services/astrologer_service.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/notification_schedule.dart';
@@ -1313,6 +1314,27 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
   String _filter = 'All';
 
   @override
+  void initState() {
+    super.initState();
+    _ensureHansOjha();
+  }
+
+  // Phase 10: the owner opening Manage Astrologers creates
+  // the Hans Ojha record when it does not exist yet, so he
+  // always shows in this list. Ensure is idempotent and
+  // never overwrites the record. A failure, offline or
+  // rules not published yet, only leaves the honest empty
+  // state; the list still works.
+  Future<void> _ensureHansOjha() async {
+    try {
+      await AstrologerService(firestore: widget.firestore)
+          .ensureHansOjhaRecord();
+    } catch (_) {
+      // The list below still shows the honest empty state.
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1603,6 +1625,12 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
                 Text(str(doc, 'bio')),
                 const SizedBox(height: AppSpacing.md),
                 Text('Languages: ${str(doc, 'languages')}'),
+                Text(
+                  'Qualifications: ${str(doc, 'qualifications').isEmpty ? 'Not provided yet' : str(doc, 'qualifications')}',
+                ),
+                Text(
+                  'Experience: ${str(doc, 'experience').isEmpty ? 'Not provided yet' : str(doc, 'experience')}',
+                ),
                 Text('Status: ${str(doc, 'status')}'),
                 Text(
                   'KYC: ${str(doc, 'kycStatus').isEmpty ? 'pending' : str(doc, 'kycStatus')}',
@@ -1662,6 +1690,18 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
             ),
           ),
           actions: <Widget>[
+            // Phase 10: edit the record. The owner fills in
+            // the details only Hans Ojha can provide, phone,
+            // bio, qualifications, experience, when he
+            // provides them. Nothing is prefilled with
+            // invented content.
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _showEditForm(context, doc);
+              },
+              child: const Text('Edit details'),
+            ),
             TextButton(
               onPressed: () async {
                 await widget.firestore.saveDoc('astrologers', id,
@@ -1739,13 +1779,154 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
       },
     );
   }
+  // Phase 10: edit form for one astrologer record. Every
+  // field is prefilled from the record itself; fields Hans
+  // Ojha has not provided yet open blank, never with
+  // invented content. Saving merges only these fields.
+  Future<void> _showEditForm(
+    BuildContext context,
+    Map<String, dynamic> doc,
+  ) async {
+    final String id = str(doc, 'id');
+    final TextEditingController name =
+        TextEditingController(text: str(doc, 'name'));
+    final TextEditingController languages =
+        TextEditingController(text: str(doc, 'languages'));
+    final TextEditingController bio =
+        TextEditingController(text: str(doc, 'bio'));
+    final TextEditingController qualifications =
+        TextEditingController(text: str(doc, 'qualifications'));
+    final TextEditingController experience =
+        TextEditingController(text: str(doc, 'experience'));
+    final TextEditingController phone =
+        TextEditingController(text: str(doc, 'phone'));
+    final TextEditingController rate =
+        TextEditingController(text: str(doc, 'rate'));
+    bool chat = doc['chatAvailable'] is bool
+        ? doc['chatAvailable'] as bool
+        : true;
+    bool call = doc['callAvailable'] is bool
+        ? doc['callAvailable'] as bool
+        : true;
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setDialog) {
+            return AlertDialog(
+              title: Text('Edit ${str(doc, 'name')}'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    _adminField(label: 'Full name', controller: name),
+                    _adminField(
+                      label: 'Languages',
+                      controller: languages,
+                      hint: 'Hindi, English',
+                    ),
+                    _adminField(
+                      label: 'Short bio',
+                      controller: bio,
+                      maxLines: 3,
+                    ),
+                    _adminField(
+                      label: 'Qualifications',
+                      controller: qualifications,
+                      maxLines: 2,
+                    ),
+                    _adminField(
+                      label: 'Experience',
+                      controller: experience,
+                      maxLines: 2,
+                    ),
+                    _adminField(
+                      label: 'Phone for calls',
+                      controller: phone,
+                      hint: 'Saved with the astrologer. Users call this number.',
+                    ),
+                    _adminField(
+                      label: 'Rate',
+                      controller: rate,
+                      hint: 'Pricing is to be decided. Leave blank until rates are set.',
+                    ),
+                    SwitchListTile(
+                      title: const Text('Chat available'),
+                      value: chat,
+                      onChanged: (bool value) =>
+                          setDialog(() => chat = value),
+                    ),
+                    SwitchListTile(
+                      title: const Text('Call available'),
+                      value: call,
+                      onChanged: (bool value) =>
+                          setDialog(() => call = value),
+                    ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: name,
+                  builder: (
+                    BuildContext context,
+                    TextEditingValue value,
+                    Widget? child,
+                  ) {
+                    return ElevatedButton(
+                      onPressed: value.text.trim().isEmpty
+                          ? null
+                          : () async {
+                              await widget.firestore.saveDoc(
+                                'astrologers',
+                                id,
+                                <String, Object?>{
+                                  'name': name.text.trim(),
+                                  'languages': languages.text.trim(),
+                                  'bio': bio.text.trim(),
+                                  'qualifications':
+                                      qualifications.text.trim(),
+                                  'experience': experience.text.trim(),
+                                  'phone': phone.text.trim(),
+                                  'rate': rate.text.trim(),
+                                  'chatAvailable': chat,
+                                  'callAvailable': call,
+                                },
+                              );
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                                _toast(
+                                  context,
+                                  'Astrologer updated.',
+                                );
+                              }
+                            },
+                      child: const Text('Save changes'),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
 }
 
 /// Admin chats: every user chat room, newest first.
 /// Tapping one opens the same real chat room as the admin,
-/// so the admin can read and reply to user messages. No
-/// astrologer is assigned yet, so the admin answers here
-/// until one is added.
+/// so the admin can read and reply to user messages.
+/// Phase 10: chats assigned to Hans Ojha carry his id and
+/// name on the chat document, and the list shows his name
+/// with the user, so the admin sees which chats route to
+/// him. He has no sign in yet, so the admin answers his
+/// chats here until one exists.
 class AdminChatsScreen extends StatelessWidget {
   const AdminChatsScreen({
     super.key,
@@ -1794,9 +1975,18 @@ class AdminChatsScreen extends StatelessWidget {
                               <dynamic>[])
                           .map((dynamic e) => e.toString())
                           .toList();
-                  final String who = participants.isEmpty
+                  // Phase 10: a chat assigned to Hans Ojha
+                  // shows his name with the user it belongs
+                  // to, so the admin sees the routing at a
+                  // glance. Unassigned chats show the user.
+                  final String astrologerName =
+                      str(doc, 'astrologerName');
+                  final String userId = participants.isEmpty
                       ? str(doc, 'id')
                       : participants.first;
+                  final String who = astrologerName.isEmpty
+                      ? userId
+                      : '$astrologerName with $userId';
                   return ListTile(
                     leading: const Icon(
                       Icons.chat,
@@ -1815,6 +2005,9 @@ class AdminChatsScreen extends StatelessWidget {
                                   title: who,
                                   currentUserId: uid,
                                   senderRole: 'admin',
+                                  astrologerName: astrologerName.isEmpty
+                                      ? null
+                                      : astrologerName,
                                   firestore: firestore,
                                 ),
                               ),
