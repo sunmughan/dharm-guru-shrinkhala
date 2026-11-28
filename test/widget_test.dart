@@ -424,6 +424,7 @@ void main() {
         degree: '01° 00′',
         swami: 'Mars',
         note: 'Sun in Mesha, Bhava 1.',
+        longitude: 1.0,
       ),
       PlanetDetail(
         name: 'Moon',
@@ -432,6 +433,7 @@ void main() {
         degree: '02° 00′',
         swami: 'Venus',
         note: 'Moon in Vrishabha, Bhava 2.',
+        longitude: 32.0,
       ),
       PlanetDetail(
         name: 'Mars',
@@ -440,6 +442,7 @@ void main() {
         degree: '03° 00′',
         swami: 'Mercury',
         note: 'Mars in Mithuna, Bhava 3.',
+        longitude: 63.0,
       ),
       PlanetDetail(
         name: 'Mercury',
@@ -448,6 +451,7 @@ void main() {
         degree: '04° 00′',
         swami: 'Moon',
         note: 'Mercury in Karka, Bhava 4.',
+        longitude: 94.0,
       ),
       PlanetDetail(
         name: 'Jupiter',
@@ -456,6 +460,7 @@ void main() {
         degree: '05° 00′',
         swami: 'Sun',
         note: 'Jupiter in Simha, Bhava 5.',
+        longitude: 125.0,
       ),
       PlanetDetail(
         name: 'Venus',
@@ -464,6 +469,7 @@ void main() {
         degree: '06° 00′',
         swami: 'Mercury',
         note: 'Venus in Kanya, Bhava 6.',
+        longitude: 156.0,
       ),
       PlanetDetail(
         name: 'Saturn',
@@ -472,6 +478,7 @@ void main() {
         degree: '07° 00′',
         swami: 'Venus',
         note: 'Saturn in Tula, Bhava 7.',
+        longitude: 187.0,
       ),
       PlanetDetail(
         name: 'Rahu',
@@ -480,6 +487,7 @@ void main() {
         degree: '08° 00′',
         swami: 'Mars',
         note: 'Rahu in Vrishchika, Bhava 8.',
+        longitude: 218.0,
       ),
       PlanetDetail(
         name: 'Ketu',
@@ -488,6 +496,7 @@ void main() {
         degree: '09° 00′',
         swami: 'Jupiter',
         note: 'Ketu in Dhanu, Bhava 9.',
+        longitude: 249.0,
       ),
     ];
     await tester.pumpWidget(

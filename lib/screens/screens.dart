@@ -838,11 +838,22 @@ class _HomeKundliCard extends StatelessWidget {
             onTap: onTap,
           );
         }
-        final KundliResult kundli = KundliCalculator.calculate(
-          birthLocal: birth,
-          placeText: profile.placeLine,
-          timeKnown: !profile.birthTimeUnknown,
-        );
+        KundliResult kundli;
+        try {
+          kundli = KundliCalculator.calculate(
+            birthLocal: birth,
+            placeText: profile.placeLine,
+            timeKnown: !profile.birthTimeUnknown,
+          );
+        } on ArgumentError {
+          return _HomeCard(
+            title: 'Your Kundli',
+            body: 'Your birth place is not in the list. '
+                'Check it in your profile.',
+            icon: Icons.grid_on,
+            onTap: onTap,
+          );
+        }
         return _HomeCard(
           title: 'Your Kundli',
           body: 'Lagna ${kundli.lagna} · Rashi ${kundli.moonRashi} · '
@@ -1157,11 +1168,15 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
           : widget.birth.timeOfBirth,
     );
     if (birth == null) return null;
-    return KundliCalculator.calculate(
-      birthLocal: birth,
-      placeText: widget.birth.placeOfBirth,
-      timeKnown: widget.birth.timeOfBirth.isNotEmpty,
-    );
+    try {
+      return KundliCalculator.calculate(
+        birthLocal: birth,
+        placeText: widget.birth.placeOfBirth,
+        timeKnown: widget.birth.timeOfBirth.isNotEmpty,
+      );
+    } on ArgumentError {
+      return null;
+    }
   }
 
   @override
@@ -2290,11 +2305,15 @@ class _MatchingScreenState extends State<MatchingScreen> {
       time.isEmpty ? '12:00 PM' : time,
     );
     if (birth == null) return null;
-    return KundliCalculator.calculate(
-      birthLocal: birth,
-      placeText: place,
-      timeKnown: time.isNotEmpty,
-    );
+    try {
+      return KundliCalculator.calculate(
+        birthLocal: birth,
+        placeText: place,
+        timeKnown: time.isNotEmpty,
+      );
+    } on ArgumentError {
+      return null;
+    }
   }
 
   void _calculate() {
@@ -2766,16 +2785,21 @@ class _RemediesScreenState extends State<RemediesScreen> {
                 : AppUserProfile.displayTime(profile.timeOfBirth!),
           );
           if (birth != null) {
-            final KundliResult kundli = KundliCalculator.calculate(
-              birthLocal: birth,
-              placeText: profile.placeLine,
-              timeKnown: !profile.birthTimeUnknown,
-            );
-            remedies = RemedyEngine.derive(
-              kundli: kundli,
-              birthLocal: birth,
-              asOf: DateTime.now(),
-            );
+            try {
+              final KundliResult kundli = KundliCalculator.calculate(
+                birthLocal: birth,
+                placeText: profile.placeLine,
+                timeKnown: !profile.birthTimeUnknown,
+              );
+              remedies = RemedyEngine.derive(
+                kundli: kundli,
+                birthLocal: birth,
+                asOf: DateTime.now(),
+              );
+            } on ArgumentError {
+              // Unknown birth place: no remedies, the kundli
+              // screen shows the error.
+            }
           }
         }
       }
@@ -3122,11 +3146,15 @@ class _LibraryBody extends StatelessWidget {
           : AppUserProfile.displayTime(p.timeOfBirth!),
     );
     if (birth == null) return null;
-    return KundliCalculator.calculate(
-      birthLocal: birth,
-      placeText: p.placeLine,
-      timeKnown: !p.birthTimeUnknown,
-    );
+    try {
+      return KundliCalculator.calculate(
+        birthLocal: birth,
+        placeText: p.placeLine,
+        timeKnown: !p.birthTimeUnknown,
+      );
+    } on ArgumentError {
+      return null;
+    }
   }
 
   DateTime? _birth() {

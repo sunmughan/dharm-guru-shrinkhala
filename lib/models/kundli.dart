@@ -29,6 +29,7 @@ class PlanetDetail {
     required this.degree,
     required this.swami,
     required this.note,
+    required this.longitude,
   });
 
   final String name;
@@ -37,6 +38,11 @@ class PlanetDetail {
   final String degree;
   final String swami;
   final String note;
+
+  /// Sidereal longitude in degrees, 0 to 360. The rashi and
+  /// degree strings above are views of this one number, so
+  /// divisional charts and dignity never re parse text.
+  final double longitude;
 }
 
 /// Planet abbreviations used in the chart and the planet list,
