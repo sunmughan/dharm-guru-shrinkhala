@@ -8,6 +8,7 @@ import '../../screens/screens.dart';
 import '../../services/auth_service.dart';
 import '../../services/firebase_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/notification_service.dart';
 
 /// SharedPreferences key that remembers the user saw onboarding.
 /// Once set, onboarding never shows again on that phone.
@@ -67,6 +68,9 @@ class _AppShellState extends State<AppShell> {
       return;
     }
     if (await FirebaseService.notificationPromptShown()) {
+      // Prompt already shown on an earlier launch: no dialog,
+      // but the token still needs storing for this user.
+      await NotificationService.initialise(uid: _auth.currentUserId);
       return;
     }
     if (!mounted) {
@@ -99,6 +103,9 @@ class _AppShellState extends State<AppShell> {
     } else {
       await FirebaseService.markNotificationPromptShown();
     }
+    // Token is fetched and stored only when the user allowed
+    // notifications, the service checks authorisation itself.
+    await NotificationService.initialise(uid: _auth.currentUserId);
   }
 
   void _goToTab(int index) {

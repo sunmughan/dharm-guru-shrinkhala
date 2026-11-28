@@ -94,6 +94,7 @@ There are two iOS apps in this project, one per flavor:
 * Open Cloud Messaging in the Firebase console
 * No extra console step is needed to send from the console. The app requests permission and fetches a token on start, see `lib/services/notification_service.dart`
 * To send a test message, use the console messaging composer and target the app
+* Web push is not configured: the web Firebase options are placeholders and there is no messaging service worker, so web has no push token. Native Android and iOS fetch a token, and the app stores it on the user document only when notifications are authorised.
 * Permission timing: the app asks for notification permission once,
   on the main screen after onboarding and sign in, with the reason
   shown first. No permission dialog appears at app open, during

@@ -1332,7 +1332,7 @@ class MyBookingsScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                final String? error = ConsultBooking.validateReview(
+                final String? error = ConsultBookingForm.validateReview(
                   rating: rating,
                   text: text.text,
                 );
@@ -1353,7 +1353,7 @@ class MyBookingsScreen extends StatelessWidget {
     if (saved != true || !context.mounted) return;
     await firestore.addDoc(
       'reviews',
-      ConsultBooking.reviewPayload(
+      ConsultBookingForm.reviewPayload(
         userId: uid,
         astrologerId: _docStr(booking, 'astrologerId'),
         rating: rating,
@@ -1415,7 +1415,7 @@ class MyBookingsScreen extends StatelessWidget {
                             const SizedBox(height: AppSpacing.sm),
                             Row(
                               children: <Widget>[
-                                if (ConsultBooking.canCancel(status))
+                                if (ConsultBookingForm.canCancel(status))
                                   TextButton(
                                     onPressed: () async {
                                       await firestore.saveDoc(
@@ -1528,7 +1528,7 @@ class _BookConsultDialogState extends State<BookConsultDialog> {
             final String storedDate = _date.text.trim().contains('-')
                 ? _date.text.trim()
                 : AppUserProfile.storeDate(_date.text.trim()) ?? _date.text.trim();
-            final String? error = ConsultBooking.validate(
+            final String? error = ConsultBookingForm.validate(
               date: storedDate,
               time: _time.text.trim(),
               mode: _mode,

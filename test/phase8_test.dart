@@ -231,7 +231,7 @@ void main() {
   group('Booking and review', () {
     test('P8C1 past booking date fails', () {
       expect(
-        ConsultBooking.validate(
+        ConsultBookingForm.validate(
           date: '2020-01-01',
           time: '10:00',
           mode: 'chat',
@@ -241,7 +241,7 @@ void main() {
     });
     test('P8C2 bad mode fails', () {
       expect(
-        ConsultBooking.validate(
+        ConsultBookingForm.validate(
           date: '2999-01-01',
           time: '10:00',
           mode: 'video',
@@ -250,22 +250,22 @@ void main() {
       );
     });
     test('P8C3 requested booking can be cancelled, cancelled cannot', () {
-      expect(ConsultBooking.canCancel('requested'), isTrue);
-      expect(ConsultBooking.canCancel('confirmed'), isTrue);
-      expect(ConsultBooking.canCancel('cancelled'), isFalse);
+      expect(ConsultBookingForm.canCancel('requested'), isTrue);
+      expect(ConsultBookingForm.canCancel('confirmed'), isTrue);
+      expect(ConsultBookingForm.canCancel('cancelled'), isFalse);
     });
     test('P8C4 review rating out of range fails', () {
       expect(
-        ConsultBooking.validateReview(rating: 0, text: 'Good'),
+        ConsultBookingForm.validateReview(rating: 0, text: 'Good'),
         'Choose a rating from 1 to 5.',
       );
       expect(
-        ConsultBooking.validateReview(rating: 5, text: '  '),
+        ConsultBookingForm.validateReview(rating: 5, text: '  '),
         'Write a short review.',
       );
     });
     test('P8C5 booking payload carries status requested', () {
-      final Map<String, Object?> payload = ConsultBooking.payload(
+      final Map<String, Object?> payload = ConsultBookingForm.payload(
         userId: 'u1',
         astrologerId: 'a1',
         astrologerName: 'Test Astrologer',

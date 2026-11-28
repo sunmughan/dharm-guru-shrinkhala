@@ -210,6 +210,21 @@ jobs:
           name: dharm-guru-admin-release-apk
           path: build/app/outputs/flutter-apk/app-admin-release.apk
 
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Build web release
+        # Proves the PDF and printing code compiles for web.
+        # Web Firebase options are placeholders, so this is a
+        # compile check only, not a live Firebase check.
+        run: flutter build web --release
+
   build-ios:
     runs-on: macos-latest
     steps:
