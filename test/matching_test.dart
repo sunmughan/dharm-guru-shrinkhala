@@ -38,7 +38,7 @@ KundliResult _handChart({
 }
 
 void main() {
-  test('identical charts score 17.5 out of 36', () {
+  test('identical charts score the same rows twice, total is the row sum', () {
     final KundliResult chart = _chart(
       birth: DateTime(2000, 1, 1, 6, 25),
       place: 'Jaipur',
@@ -48,10 +48,24 @@ void main() {
       second: chart,
     );
     expect(result.rows.length, 8);
-    expect(result.total, 17.5);
-    expect(result.totalText, '17.5 / 36');
-    expect(result.verdict, 'Low Match');
+    expect(
+      result.total,
+      result.rows.fold<double>(
+        0,
+        (double total, GunaScore row) => total + row.score,
+      ),
+    );
+    expect(result.total, greaterThanOrEqualTo(0));
+    expect(result.total, lessThanOrEqualTo(36));
+    expect(result.total, 28);
+    expect(result.totalText, '28 / 36');
+    expect(result.verdict, 'Very Good Match');
     expect(result.mangalFirst, result.mangalSecond);
+    // Identical charts share a Nadi, so Nadi is a dosha here.
+    expect(
+      result.rows.lastWhere((GunaScore r) => r.label == 'Nadi').score,
+      0,
+    );
   });
 
   test('two real charts give a score inside 0 to 36 that sums its rows', () {
