@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/build_info.dart';
 import '../core/theme/design_tokens.dart';
+import '../models/astrologer.dart';
 import '../models/kundli.dart';
 import '../models/panchang.dart';
 import '../models/remedies.dart';
@@ -23,6 +24,7 @@ import '../services/user_profile.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/kundli_chart.dart';
 import '../widgets/planet_details.dart';
+import 'astrologer_workspace_screen.dart';
 import 'profile_form_screen.dart';
 
 /// Splash screen. Logo, wordmark and tagline, with a calm
@@ -3082,10 +3084,13 @@ class _LibraryBody extends StatelessWidget {
 /// path for each one. Chat opens a Firestore backed room
 /// that stores and reads messages. Call dials the phone
 /// number the admin saved for that astrologer, and says so
-/// plainly when none is saved. No astrologer is on the other
-/// side yet: the general chat room stores the user messages
-/// and the admin app reads and replies there, but no
-/// astrologer name, photo or reply is invented.
+/// plainly when none is saved. Phase 10: the astrologer is
+/// Hans Ojha, a real record in the astrologers collection.
+/// His workspace opens from the card at the top of the
+/// list. Chats with him are assigned to his record, so the
+/// admin chat view routes them to him. He has no sign in
+/// yet, so the admin answers his chats until one exists;
+/// no astrologer name, photo or reply is invented.
 class ConsultScreen extends StatelessWidget {
   const ConsultScreen({
     super.key,
@@ -3123,10 +3128,14 @@ class ConsultScreen extends StatelessWidget {
     );
   }
 
-  void _openAstrologerChat(
+  // Phase 10: opening a chat with an astrologer assigns
+  // the chat to that astrologer first, so the chat document
+  // carries the astrologer id and name and the admin chat
+  // view routes it to them.
+  Future<void> _openAstrologerChat(
     BuildContext context,
     Map<String, dynamic> doc,
-  ) {
+  ) async {
     final String? uid = authService?.currentUserId;
     if (uid == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -3135,16 +3144,46 @@ class ConsultScreen extends StatelessWidget {
       return;
     }
     final String astrologerId = str(doc, 'id');
+    final String chatId = ChatService.astrologerChatId(astrologerId, uid);
+    await _chat.assignAstrologer(
+      chatId: chatId,
+      astrologerId: astrologerId,
+      astrologerName: str(doc, 'name'),
+      participantIds: <String>[uid, astrologerId],
+    );
+    if (!context.mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => ChatScreen(
-          chatId: ChatService.astrologerChatId(astrologerId, uid),
+          chatId: chatId,
           title: str(doc, 'name'),
           currentUserId: uid,
           senderRole: 'user',
           participantIds: <String>[uid, astrologerId],
+          astrologerName: str(doc, 'name'),
           firestore: firestore,
           chatService: _chat,
+        ),
+      ),
+    );
+  }
+
+  // Phase 10: opens the Hans Ojha workspace.
+  void _openWorkspace(BuildContext context) {
+    final FirestoreService? fs = firestore;
+    if (fs == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('The astrologer could not be loaded.'),
+        ),
+      );
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AstrologerWorkspaceScreen(
+          firestore: fs,
+          currentUserId: authService?.currentUserId,
         ),
       ),
     );
@@ -3229,9 +3268,15 @@ class ConsultScreen extends StatelessWidget {
                 if (!snap.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
+                // Phase 10: approved means approved, online
+                // or offline. Approve in Manage Astrologers
+                // stores 'offline', so a plain 'approved'
+                // check would hide every approved astrologer.
                 final List<Map<String, dynamic>> approved = snap.data!
                     .where((Map<String, dynamic> d) =>
-                        str(d, 'status') == 'approved')
+                        Astrologer.isListedForConsultStatus(
+                          str(d, 'status'),
+                        ))
                     .toList();
                 if (approved.isEmpty) {
                   return Text(
@@ -3240,9 +3285,48 @@ class ConsultScreen extends StatelessWidget {
                         AppTextStyles.themed(context, AppTextStyles.bodySmall),
                   );
                 }
+                // Phase 10: the Hans Ojha workspace card sits
+                // at the top of the list when his record is
+                // listed, ahead of the per astrologer rows.
+                // His own row is left out then, so he does
+                // not appear twice.
+                final bool hasHansOjha = approved.any(
+                  (Map<String, dynamic> d) =>
+                      str(d, 'id') == kHansOjhaDocId,
+                );
+                final List<Map<String, dynamic>> rows = approved
+                    .where((Map<String, dynamic> d) =>
+                        str(d, 'id') != kHansOjhaDocId)
+                    .toList();
                 return Column(
-                  children: approved
-                      .map(
+                  children: <Widget>[
+                    if (hasHansOjha)
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(
+                            Icons.person,
+                            color: AppColors.deepSaffron,
+                          ),
+                          title: Text(
+                            kHansOjhaName,
+                            style: AppTextStyles.themed(
+                              context,
+                              AppTextStyles.subtitle,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Chat and call with Hans Ojha.',
+                            style: AppTextStyles.themed(
+                              context,
+                              AppTextStyles.bodySmall,
+                            ),
+                          ),
+                          trailing:
+                              const Icon(Icons.chevron_right),
+                          onTap: () => _openWorkspace(context),
+                        ),
+                      ),
+                    ...rows.map(
                         (Map<String, dynamic> doc) => Card(
                           child: ListTile(
                             leading: const Icon(
@@ -3283,8 +3367,8 @@ class ConsultScreen extends StatelessWidget {
                             onTap: () => _openAstrologerChat(context, doc),
                           ),
                         ),
-                      )
-                      .toList(),
+                      ),
+                  ],
                 );
               },
             ),
@@ -3298,7 +3382,9 @@ class ConsultScreen extends StatelessWidget {
 /// oldest first. Sending stores the message with the sender
 /// id, the sender role and a server timestamp, and keeps the
 /// chat document current. The empty state names the honest
-/// boundary: no astrologer has joined yet.
+/// boundary: when the chat is assigned to Hans Ojha it says
+/// he has not joined yet; otherwise it says no astrologer
+/// has joined yet.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
     super.key,
@@ -3307,6 +3393,7 @@ class ChatScreen extends StatefulWidget {
     required this.currentUserId,
     required this.senderRole,
     this.participantIds,
+    this.astrologerName,
     this.firestore,
     this.chatService,
   });
@@ -3316,6 +3403,12 @@ class ChatScreen extends StatefulWidget {
   final String currentUserId;
   final String senderRole;
   final List<String>? participantIds;
+
+  /// Name of the assigned astrologer, when the chat is
+  /// assigned to one. Used in the empty state so the user
+  /// sees whose reply they are waiting for.
+  final String? astrologerName;
+
   final FirestoreService? firestore;
   final ChatService? chatService;
 
@@ -3380,7 +3473,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: Text(
                         isAdmin
                             ? 'No messages yet.'
-                            : 'No astrologer has joined yet. Your messages are saved here and the astrologer will reply once added.',
+                            : widget.astrologerName != null
+                                ? '${widget.astrologerName} has not joined the chat yet. Your messages are saved here.'
+                                : 'No astrologer has joined yet. Your messages are saved here and the astrologer will reply once added.',
                         style: AppTextStyles.themed(
                           context,
                           AppTextStyles.body,

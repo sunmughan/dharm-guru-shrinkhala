@@ -56,8 +56,10 @@ service cloud.firestore {
     // Consult chats. A signed in user reads and writes only
     // the chats they take part in, and sends only as
     // themselves. The owner reads and replies in every chat.
-    // No astrologer identity exists yet, so the admin answers
-    // until one is added.
+    // Phase 10: chats with Hans Ojha carry astrologerId
+    // "hans-ojha" and astrologerName on the chat document.
+    // He has no sign in yet, so the admin answers his chats
+    // until one exists; no astrologer reply is invented.
     match /chats/{chatId} {
       allow read: if request.auth != null &&
         (request.auth.uid in resource.data.participantIds || isOwner());

@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'screens/admin_screens.dart';
 import 'services/admin_seed_service.dart';
+import 'services/astrologer_service.dart';
 import 'services/firebase_service.dart';
 
 /// Admin entrypoint. Build or run with:
@@ -20,6 +21,16 @@ Future<void> main() async {
   try {
     await FirebaseService.initialise();
     await AdminSeedService.ensureDefaultAdmin();
+    // Phase 10, best effort: create the Hans Ojha record
+    // when it does not exist yet. The app is signed out at
+    // this point, so the rules may refuse the write; Manage
+    // Astrologers creates it once the owner is signed in.
+    // A failure here never blocks the app from starting.
+    try {
+      await AstrologerService().ensureHansOjhaRecord();
+    } catch (_) {
+      // Created later from Manage Astrologers instead.
+    }
   } catch (error) {
     firebaseReady = false;
     firebaseError = FirebaseService.lastInitError ?? error.toString();

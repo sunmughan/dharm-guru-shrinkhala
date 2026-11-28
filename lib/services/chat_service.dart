@@ -2,7 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'firestore_service.dart';
 
-/// One chat message. senderRole is 'user' or 'admin'.
+/// One chat message. senderRole is 'user', 'admin' or
+/// 'astrologer'. 'astrologer' is a reply from the assigned
+/// astrologer, Hans Ojha; until he signs in and replies, the
+/// admin answers in the same chat with role 'admin'.
 class ChatMessage {
   const ChatMessage({
     required this.id,
@@ -47,10 +50,13 @@ class ChatMessage {
 /// Real consult chat over Firestore. Chats live in
 /// chats/{chatId}/messages, one chat per user. The user side
 /// uses chat id "user_<uid>"; a chat with one astrologer uses
-/// "chat_<astrologerId>_<uid>". There is no astrologer on the
-/// other side yet: messages are stored and the admin app reads
-/// and replies in the same chat, but no astrologer identity is
-/// invented anywhere.
+/// "chat_<astrologerId>_<uid>". Phase 10: the astrologer is
+/// Hans Ojha, document id "hans-ojha". A chat assigned to
+/// him carries astrologerId and astrologerName on the chat
+/// document, so the admin chat view routes it to him. He has
+/// no sign in yet, so the admin app reads and replies in the
+/// same chat until one exists; no astrologer reply is ever
+/// invented.
 class ChatService {
   ChatService({FirestoreService? firestore})
       : _firestore = firestore ?? FirestoreService();
@@ -63,6 +69,29 @@ class ChatService {
   /// Chat id for one user with one astrologer document.
   static String astrologerChatId(String astrologerId, String uid) =>
       'chat_${astrologerId}_$uid';
+
+  /// Phase 10: assigns a chat to one astrologer. Merges the
+  /// astrologer id and name onto the chat document and sets
+  /// the participants, so the admin chat view can route the
+  /// chat to that astrologer. Existing fields such as the
+  /// last message are kept. Safe before the first message.
+  Future<void> assignAstrologer({
+    required String chatId,
+    required String astrologerId,
+    required String astrologerName,
+    required List<String> participantIds,
+  }) async {
+    await _firestore.saveDoc(
+      'chats',
+      chatId,
+      <String, Object?>{
+        'astrologerId': astrologerId,
+        'astrologerName': astrologerName,
+        'participantIds': participantIds,
+      },
+      isNew: (await _firestore.getDoc('chats', chatId)) == null,
+    );
+  }
 
   /// Messages oldest first, live.
   Stream<List<ChatMessage>> watchMessages(String chatId) {
