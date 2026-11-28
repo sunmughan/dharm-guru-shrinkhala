@@ -11,6 +11,7 @@ PlanetDetail _planet(String name, String rashi, String bhava) {
     degree: '10° 00′',
     swami: 'Jupiter',
     note: '$name in $rashi, $bhava.',
+    longitude: kRashis.indexOf(rashi) * 30.0 + 10.0,
   );
 }
 

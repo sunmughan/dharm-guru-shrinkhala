@@ -18,6 +18,7 @@ KundliResult _handChart({
       degree: '10° 00′',
       swami: 'Mars',
       note: 'Mars in $marsRashi, $marsBhava.',
+      longitude: kRashis.indexOf(marsRashi) * 30.0 + 10.0,
     ),
   ];
   if (jupiterRashi != null) {
@@ -29,6 +30,7 @@ KundliResult _handChart({
         degree: '10° 00′',
         swami: 'Jupiter',
         note: 'Jupiter in $jupiterRashi.',
+        longitude: kRashis.indexOf(jupiterRashi) * 30.0 + 10.0,
       ),
     );
   }

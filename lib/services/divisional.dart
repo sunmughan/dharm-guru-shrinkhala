@@ -596,6 +596,7 @@ class Divisional {
         degree: p.degree,
         swami: p.swami,
         note: '${p.name} in navamsa $rashi, Bhava $bhava.',
+        longitude: p.longitude,
       );
     }).toList();
     return KundliResult(
