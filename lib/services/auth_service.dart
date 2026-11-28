@@ -362,6 +362,54 @@ class AuthService {
     await _firebaseAuth.signInWithCredential(credential);
   }
 
+  /// Sends the Firebase email verification link to the signed
+  /// in user. Throws AuthMessageException when nobody is
+  /// signed in or the account has no email.
+  Future<void> sendEmailVerification() async {
+    final User? user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw AuthMessageException('Nobody is signed in.');
+    }
+    if (user.email == null) {
+      throw AuthMessageException('This account has no email address.');
+    }
+    await user.sendEmailVerification();
+  }
+
+  /// True when the signed in user already verified the email.
+  bool get isEmailVerified =>
+      _firebaseAuth.currentUser?.emailVerified ?? false;
+
+  /// Account creation and last sign in time, ISO text, or null
+  /// when nobody is signed in. Shown on the Settings screen
+  /// as the session record, never as a list of other sessions:
+  /// Firebase Auth has no client API to list sessions.
+  String? get accountCreatedAt =>
+      _firebaseAuth.currentUser?.metadata.creationTime?.toIso8601String();
+
+  String? get lastSignInAt =>
+      _firebaseAuth.currentUser?.metadata.lastSignInTime?.toIso8601String();
+
+  /// Deletes the signed in Firebase account and signs out of
+  /// Google too. Callers must delete the Firestore profile
+  /// first and confirm with the user, because this cannot be
+  /// undone.
+  Future<void> deleteAccount() async {
+    final User? user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw AuthMessageException('Nobody is signed in.');
+    }
+    await user.delete();
+    await GoogleSignIn().signOut();
+  }
+
+  /// Signs in with a phone credential after auto verification.
+  Future<void> signInWithPhoneCredential(
+    PhoneAuthCredential credential,
+  ) async {
+    await _firebaseAuth.signInWithCredential(credential);
+  }
+
   Future<void> signOut() async {
     await GoogleSignIn().signOut();
     await _firebaseAuth.signOut();

@@ -128,6 +128,7 @@ class NumerologyResult {
     required this.loShuCompleteLines,
     required this.name,
     required this.birthDate,
+    this.personalYear = 0,
   });
 
   /// Mulank, day of birth reduced.
@@ -164,10 +165,33 @@ class NumerologyResult {
   final String name;
   final DateTime birthDate;
 
+  /// Personal year number for the year the result was
+  /// calculated for. 0 when the calculation did not
+  /// set one, as in NumerologyCalculator results.
+  final int personalYear;
+
   /// Bhagyank, same value as life path by definition.
   int get bhagyank => lifePathNumber;
 
   String planetFor(int number) => kNumberPlanets[number] ?? '';
+
+  /// Phase 8 short names for the same numbers.
+  int get lifePath => lifePathNumber;
+  int get destiny => destinyNumber;
+  int get soulUrge => soulUrgeNumber;
+  int get personality => personalityNumber;
+  int get birthDay => birthNumber;
+
+  Map<String, Object?> toMap() {
+    return <String, Object?>{
+      'lifePath': lifePath,
+      'destiny': destiny,
+      'soulUrge': soulUrge,
+      'personality': personality,
+      'birthDay': birthDay,
+      'personalYear': personalYear,
+    };
+  }
 }
 
 int _digitSum(int value) {
@@ -339,4 +363,181 @@ class NumerologyCalculator {
     NumerologyResult second,
   ) =>
       compatibility(first.lifePathNumber, second.lifePathNumber);
+}
+
+/// Traditional reference line for one number. Guidance only,
+/// it promises no outcome.
+const Map<int, String> kNumerologyMeanings = <int, String>{
+  1: 'Leadership, independence and new beginnings.',
+  2: 'Cooperation, patience and balance in relationships.',
+  3: 'Expression, creativity and clear communication.',
+  4: 'Order, steady work and strong foundations.',
+  5: 'Change, freedom and learning through experience.',
+  6: 'Care, family and responsibility at home.',
+  7: 'Study, reflection and inner understanding.',
+  8: 'Ambition, organisation and material results.',
+  9: 'Compassion, completion and service to others.',
+  11: 'Insight and inspiration, with high sensitivity.',
+  22: 'Building large things step by step, with discipline.',
+  33: 'Care and teaching, with service to many people.',
+};
+
+class Numerology {
+  Numerology._();
+
+  /// Pythagorean letter value: A is 1 through I is 9, then
+  /// the cycle repeats, so J is 1 and Z is 8. Non letters
+  /// count for nothing.
+  static int letterValue(String letter) {
+    final int code = letter.toUpperCase().codeUnitAt(0);
+    if (code < 65 || code > 90) return 0;
+    return (code - 65) % 9 + 1;
+  }
+
+  static int _digitSum(int value) {
+    int sum = 0;
+    int left = value.abs();
+    while (left > 0) {
+      sum += left % 10;
+      left ~/= 10;
+    }
+    return sum;
+  }
+
+  /// Reduces to one digit, keeping master numbers 11, 22
+  /// and 33 untouched.
+  static int reduce(int value) {
+    int current = value;
+    while (current > 9 && current != 11 && current != 22 && current != 33) {
+      current = _digitSum(current);
+    }
+    return current;
+  }
+
+  /// Life Path from every digit of yyyy-MM-dd added together.
+  static int lifePath(String dateOfBirth) {
+    int sum = 0;
+    for (final String ch in dateOfBirth.split('')) {
+      sum += int.tryParse(ch) ?? 0;
+    }
+    return reduce(sum);
+  }
+
+  /// Destiny from every letter of the full name.
+  static int destiny(String fullName) {
+    int sum = 0;
+    for (final String ch in fullName.split('')) {
+      sum += letterValue(ch);
+    }
+    return reduce(sum);
+  }
+
+  static bool _isVowel(String ch) =>
+      'AEIOU'.contains(ch.toUpperCase());
+
+  /// Soul Urge from the vowels of the full name.
+  static int soulUrge(String fullName) {
+    int sum = 0;
+    for (final String ch in fullName.split('')) {
+      if (_isVowel(ch)) sum += letterValue(ch);
+    }
+    return reduce(sum);
+  }
+
+  /// Personality from the consonants of the full name.
+  static int personality(String fullName) {
+    int sum = 0;
+    for (final String ch in fullName.split('')) {
+      if (ch.toUpperCase() != ch.toLowerCase() && !_isVowel(ch)) {
+        sum += letterValue(ch);
+      }
+    }
+    return reduce(sum);
+  }
+
+  /// Birth Day number from the day of the month.
+  static int birthDay(String dateOfBirth) {
+    final DateTime? date = DateTime.tryParse(dateOfBirth);
+    if (date == null) return 0;
+    return reduce(date.day);
+  }
+
+  /// Personal Year for [asOfYear]: day plus month plus year,
+  /// reduced. Example: 15 January in 2026 is 1 + 5 + 1 + 2 + 0 + 2 + 6.
+  static int personalYear(String dateOfBirth, int asOfYear) {
+    final DateTime? date = DateTime.tryParse(dateOfBirth);
+    if (date == null) return 0;
+    int sum = _digitSum(date.day) + _digitSum(date.month) + _digitSum(asOfYear);
+    return reduce(sum);
+  }
+
+  static NumerologyResult calculate({
+    required String fullName,
+    required String dateOfBirth,
+    required DateTime asOf,
+  }) {
+    final DateTime? parsed = DateTime.tryParse(dateOfBirth);
+    final DateTime birthDate = parsed ?? DateTime(1970, 1, 1);
+    int nameTotal = 0;
+    int vowelTotal = 0;
+    int consonantTotal = 0;
+    for (final String ch in fullName.split('')) {
+      final int value = letterValue(ch);
+      if (value == 0) continue;
+      nameTotal += value;
+      if (_isVowel(ch)) {
+        vowelTotal += value;
+      } else {
+        consonantTotal += value;
+      }
+    }
+    int digitSum = 0;
+    for (final String ch in dateOfBirth.split('')) {
+      digitSum += int.tryParse(ch) ?? 0;
+    }
+    final int lifePathValue = lifePath(dateOfBirth);
+    final int destinyValue = reduce(nameTotal);
+    final int soulUrgeValue = reduce(vowelTotal);
+    final int personalityValue = reduce(consonantTotal);
+    final int birthDayValue = birthDay(dateOfBirth);
+    final int personalYearValue = personalYear(dateOfBirth, asOf.year);
+    final Map<int, int> counts = <int, int>{
+      for (int n = 1; n <= 9; n++) n: 0,
+    };
+    final String digits =
+        '${birthDate.day}${birthDate.month}${birthDate.year}';
+    for (final String ch in digits.split('')) {
+      final int? digit = int.tryParse(ch);
+      if (digit != null && digit >= 1 && digit <= 9) {
+        counts[digit] = (counts[digit] ?? 0) + 1;
+      }
+    }
+    final List<int> missing = <int>[
+      for (int n = 1; n <= 9; n++)
+        if ((counts[n] ?? 0) == 0) n,
+    ];
+    final List<List<int>> completeLines = <List<int>>[
+      for (final List<int> line in kLoShuLines)
+        if (line.every((int n) => (counts[n] ?? 0) > 0)) line,
+    ];
+    return NumerologyResult(
+      birthNumber: birthDayValue,
+      birthSteps: '${birthDate.day} = $birthDayValue',
+      lifePathNumber: lifePathValue,
+      lifePathSteps: '$digitSum = $lifePathValue',
+      destinyNumber: destinyValue,
+      destinySteps: nameTotal == 0
+          ? 'No letters with a value in the name.'
+          : '$nameTotal = $destinyValue',
+      soulUrgeNumber: soulUrgeValue,
+      personalityNumber: personalityValue,
+      system: NumerologySystem.pythagorean,
+      loShuCounts: counts,
+      loShuMissing: missing,
+      loShuCompleteLines: completeLines,
+      name: fullName,
+      birthDate: birthDate,
+      personalYear: personalYearValue,
+    );
+  }
 }
