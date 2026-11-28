@@ -114,12 +114,14 @@ Widget _field9({
   required TextEditingController controller,
   int maxLines = 1,
   String? hint,
+  TextInputType? keyboardType,
 }) {
   return Padding(
     padding: const EdgeInsets.only(bottom: AppSpacing.md),
     child: TextField(
       controller: controller,
       maxLines: maxLines,
+      keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -1809,6 +1811,7 @@ class _ConsultationsScreenState extends State<ConsultationsScreen> {
                         _field9(
                           label: 'Duration in minutes',
                           controller: minutes,
+                          keyboardType: TextInputType.number,
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         Text(

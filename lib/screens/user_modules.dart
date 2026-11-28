@@ -18,6 +18,7 @@ import '../services/notification_prefs.dart';
 import '../services/numerology.dart';
 import '../services/report_builder.dart';
 import '../services/user_profile.dart';
+import '../widgets/birth_pickers.dart';
 
 /// Phase 8 user modules. Every screen here reads and writes
 /// real user data only. No screen shows a price, no screen
@@ -145,9 +146,11 @@ class _NumerologyScreenState extends State<NumerologyScreen> {
           const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _dob,
+            readOnly: true,
+            onTap: () => pickBirthDate(context, _dob),
             decoration: const InputDecoration(
               labelText: 'Date of birth',
-              hintText: '15 January 2000',
+              hintText: 'Tap to pick a date',
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -763,8 +766,24 @@ class _BirthProfileFormState extends State<_BirthProfileForm> {
           children: <Widget>[
             TextField(controller: _name, decoration: const InputDecoration(labelText: 'Name')),
             TextField(controller: _relation, decoration: const InputDecoration(labelText: 'Relation, for example Son')),
-            TextField(controller: _dob, decoration: const InputDecoration(labelText: 'Date of birth', hintText: '15 January 2000')),
-            TextField(controller: _time, decoration: const InputDecoration(labelText: 'Time of birth', hintText: '07:30')),
+            TextField(
+              controller: _dob,
+              readOnly: true,
+              onTap: () => pickBirthDate(context, _dob),
+              decoration: const InputDecoration(
+                labelText: 'Date of birth',
+                hintText: 'Tap to pick a date',
+              ),
+            ),
+            TextField(
+              controller: _time,
+              readOnly: true,
+              onTap: () => pickTime24(context, _time),
+              decoration: const InputDecoration(
+                labelText: 'Time of birth',
+                hintText: 'Tap to pick a time',
+              ),
+            ),
             DropdownButton<String>(
               value: _accuracy,
               isExpanded: true,
@@ -1369,11 +1388,21 @@ class _BookConsultDialogState extends State<BookConsultDialog> {
           ),
           TextField(
             controller: _date,
-            decoration: const InputDecoration(labelText: 'Date', hintText: '29 November 2026'),
+            readOnly: true,
+            onTap: () => pickFutureDate(context, _date),
+            decoration: const InputDecoration(
+              labelText: 'Date',
+              hintText: 'Tap to pick a date',
+            ),
           ),
           TextField(
             controller: _time,
-            decoration: const InputDecoration(labelText: 'Time', hintText: '10:00'),
+            readOnly: true,
+            onTap: () => pickTime24(context, _time),
+            decoration: const InputDecoration(
+              labelText: 'Time',
+              hintText: 'Tap to pick a time',
+            ),
           ),
           TextField(
             controller: _note,

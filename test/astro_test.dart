@@ -189,5 +189,15 @@ void main() {
       expect(parseBirthDateTime('not a date', '06:25 AM'), isNull);
       expect(parseBirthDateTime('14 March 1998', '25:99 AM'), isNull);
     });
+    test('parses the picker output for 29 July 1995, 12:05 AM', () {
+      // The date and time pickers write exactly this text, so
+      // the values a user picks can never fail validation.
+      expect(
+        parseBirthDateTime('29 July 1995', '12:05 AM'),
+        DateTime(1995, 7, 29, 0, 5),
+      );
+      // The typed text from the bug report never parsed.
+      expect(parseBirthDateTime('29071995', '12:05 AM'), isNull);
+    });
   });
 }

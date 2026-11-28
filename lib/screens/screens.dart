@@ -29,6 +29,7 @@ import '../services/notification_schedule.dart';
 import '../services/panchang_extra.dart';
 import '../services/remedies_engine.dart';
 import '../services/user_profile.dart';
+import '../widgets/birth_pickers.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/kundli_chart.dart';
 import '../widgets/planet_details.dart';
@@ -1054,17 +1055,21 @@ class _KundliInputScreenState extends State<KundliInputScreen> {
           const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _dateController,
+            readOnly: true,
+            onTap: () => pickBirthDate(context, _dateController),
             decoration: const InputDecoration(
               labelText: 'Date of birth',
-              hintText: 'Day Month Year',
+              hintText: 'Tap to pick a date',
             ),
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _timeController,
+            readOnly: true,
+            onTap: () => pickBirthTime(context, _timeController),
             decoration: const InputDecoration(
               labelText: 'Time of birth',
-              hintText: 'HH:MM AM or PM',
+              hintText: 'Tap to pick a time',
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -2719,17 +2724,21 @@ class _PersonForm extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: date,
+              readOnly: true,
+              onTap: () => pickBirthDate(context, date),
               decoration: const InputDecoration(
                 labelText: 'Date of birth',
-                hintText: 'Day Month Year',
+                hintText: 'Tap to pick a date',
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: time,
+              readOnly: true,
+              onTap: () => pickBirthTime(context, time),
               decoration: const InputDecoration(
                 labelText: 'Time of birth',
-                hintText: 'HH:MM AM or PM',
+                hintText: 'Tap to pick a time',
               ),
             ),
             const SizedBox(height: AppSpacing.md),

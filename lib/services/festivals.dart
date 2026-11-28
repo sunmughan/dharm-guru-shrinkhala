@@ -173,14 +173,34 @@ const List<FestivalRule> kFestivalRules = <FestivalRule>[
   ),
 ];
 
+// Memoized named festivals: the scan is pure for one year
+// and place, and the Panchang and Library screens ask for
+// the same year on every build. Entries are shared and
+// must not be mutated.
+final Map<String, List<FestivalDay>> _namedFestivalsCache =
+    <String, List<FestivalDay>>{};
+
 /// Named festivals for a Gregorian year, computed day by
 /// day from the engine. Makar Sankranti is solar: the day
 /// the sidereal Sun enters Makara. The list is sorted by
-/// date and holds one entry per festival.
+/// date and holds one entry per festival. Memoized, see
+/// _namedFestivalsCache above.
 List<FestivalDay> namedFestivals({
   required int year,
   AstroPlace place = kDefaultPlace,
 }) {
+  final String key =
+      '$year|${place.name}|${place.latitude}|${place.longitude}';
+  final List<FestivalDay>? cached = _namedFestivalsCache[key];
+  if (cached != null) {
+    return cached;
+  }
+  final List<FestivalDay> found = _namedFestivals(year, place);
+  _namedFestivalsCache[key] = found;
+  return found;
+}
+
+List<FestivalDay> _namedFestivals(int year, AstroPlace place) {
   final List<FestivalDay> found = <FestivalDay>[];
   DateTime day = DateTime(year, 1, 1);
   final DateTime last = DateTime(year, 12, 31);
@@ -196,17 +216,31 @@ List<FestivalDay> namedFestivals({
     // day of its month and once on the last day of the
     // month before it. The month is computed once per
     // distinct moment, not once per rule.
+    //
+    // Sunrise and sunset are computed once per day and the
+    // tithi once per distinct moment, for the same reason:
+    // the twelve rules share five moments, and recomputing
+    // them per rule made the year scan seconds slow.
+    final SunTimes times = sunTimesFor(day, place);
     final Map<String, String> monthAtMoment = <String, String>{};
+    final Map<String, int> tithiAtMoment = <String, int>{};
     for (final FestivalRule rule in kFestivalRules) {
       final String month = monthAtMoment.putIfAbsent(
         rule.moment,
         () => lunarMonthAtUtc(
-          observanceMoment(day, place, rule.moment),
+          observanceMoment(day, place, rule.moment, times: times),
         ),
       );
       if (rule.lunarMonth != month) continue;
-      final int tithi =
-          tithiNumberAtMoment(day, place, rule.moment);
+      final int tithi = tithiAtMoment.putIfAbsent(
+        rule.moment,
+        () => tithiNumberAtMoment(
+          day,
+          place,
+          rule.moment,
+          times: times,
+        ),
+      );
       final String pakshaName = tithi <= 15 ? 'Shukla' : 'Krishna';
       if (rule.paksha != pakshaName) continue;
       if (tithi != rule.tithiNumber) continue;

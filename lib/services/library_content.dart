@@ -33,19 +33,33 @@ const Map<String, String> kFestivalTithis = <String, String>{
   'Navami': 'Navami',
 };
 
+// Memoized festival windows: the result is pure for one
+// window and place, and the Panchang screen asks for the
+// same month on every build. Entries are shared and must
+// not be mutated.
+final Map<String, List<FestivalDay>> _festivalDaysCache =
+    <String, List<FestivalDay>>{};
+
 /// Festival days in the next [days] days from [from],
 /// computed day by day with the Panchang engine. Dates are
 /// ascending and every entry lies inside the window. Named
 /// festivals from the rule engine in festivals.dart are
 /// merged in, so Diwali or Holi show by name instead of
-/// only as a new moon or full moon day.
+/// only as a new moon or full moon day. Memoized, see
+/// _festivalDaysCache above.
 List<FestivalDay> festivalDays({
   required DateTime from,
   int days = 30,
   AstroPlace place = kDefaultPlace,
 }) {
-  final List<FestivalDay> found = <FestivalDay>[];
   final DateTime start = DateTime(from.year, from.month, from.day);
+  final String key =
+      '${start.year}|${start.month}|${start.day}|$days|${place.name}|${place.latitude}|${place.longitude}';
+  final List<FestivalDay>? cached = _festivalDaysCache[key];
+  if (cached != null) {
+    return cached;
+  }
+  final List<FestivalDay> found = <FestivalDay>[];
   final DateTime end = start.add(Duration(days: days));
   for (int i = 0; i < days; i++) {
     final DateTime day = start.add(Duration(days: i));
@@ -84,6 +98,7 @@ List<FestivalDay> festivalDays({
     }
   }
   found.sort((FestivalDay a, FestivalDay b) => a.date.compareTo(b.date));
+  _festivalDaysCache[key] = found;
   return found;
 }
 

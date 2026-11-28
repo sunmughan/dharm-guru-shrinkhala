@@ -104,6 +104,36 @@ class _FakeAuthService extends AuthService {
   }
 }
 
+/// Tap a birth picker field and accept its default with OK,
+/// the way a user picks without choosing: the date picker
+/// opens on 25 years ago today, the time picker on noon.
+Future<void> _acceptPicker(
+  WidgetTester tester,
+  Finder field,
+) async {
+  await tester.tap(field);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('OK'));
+  await tester.pumpAndSettle();
+}
+
+/// Picked birth moment from a form date field and time
+/// field, read back from the fields themselves, so the test
+/// never assumes what the picker defaults to.
+DateTime _pickedBirth(
+  WidgetTester tester,
+  int dateIndex,
+  int timeIndex,
+) {
+  final String dateText =
+      tester.widget<TextField>(find.byType(TextField).at(dateIndex))
+          .controller!.text;
+  final String timeText =
+      tester.widget<TextField>(find.byType(TextField).at(timeIndex))
+          .controller!.text;
+  return parseBirthDateTime(dateText, timeText)!;
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -570,10 +600,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(0), 'Test User');
-    await tester.enterText(
-      find.byType(TextField).at(1),
-      '1 January 2000',
-    );
+    await _acceptPicker(tester, find.byType(TextField).at(1));
     await tester.enterText(
       find.byType(TextField).at(3),
       'Jaipur, Rajasthan',
@@ -598,26 +625,25 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(0), 'Test User');
-    await tester.enterText(
-      find.byType(TextField).at(1),
-      '1 January 2000',
-    );
-    await tester.enterText(
-      find.byType(TextField).at(2),
-      '06:25 AM',
-    );
+    await _acceptPicker(tester, find.byType(TextField).at(1));
+    await _acceptPicker(tester, find.byType(TextField).at(2));
     await tester.enterText(
       find.byType(TextField).at(3),
       'Jaipur, Rajasthan',
     );
+    // The picked values, read back from the fields: the
+    // chart is calculated from exactly what the pickers
+    // wrote, so the expected lagna and Moon rashi come
+    // from the engine, not from a fixed date.
+    final DateTime picked = _pickedBirth(tester, 1, 2);
+    final KundliResult expected = KundliCalculator.calculate(
+      birthLocal: picked,
+      placeText: 'Jaipur, Rajasthan',
+    );
     await tester.tap(find.text('Show Kundli'));
     await tester.pumpAndSettle();
-    // A real chart is calculated from the entered details:
-    // 1 January 2000, 06:25 AM, Jaipur is Lagna Dhanu,
-    // Moon in Tula. No not ready state, no sample banner.
-    expect(find.text('Lagna Dhanu'), findsOneWidget);
-    expect(find.text('Dhanu'), findsWidgets);
-    expect(find.text('Tula'), findsWidgets);
+    expect(find.text('Lagna ${expected.lagna}'), findsOneWidget);
+    expect(find.text(expected.moonRashi), findsWidgets);
     expect(
       find.text(
         'Kundli calculation for these birth details is not ready yet. No chart is shown for them.',
@@ -631,38 +657,75 @@ void main() {
     );
   });
 
-  testWidgets('Kundli form with the old details shows a real chart, never a sample chart',
+  testWidgets('Kundli form with picked details shows a real chart, never a sample chart',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(home: KundliInputScreen()),
     );
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(0), 'Test User');
-    await tester.enterText(
-      find.byType(TextField).at(1),
-      '14 March 1998',
-    );
-    await tester.enterText(
-      find.byType(TextField).at(2),
-      '06:25 AM',
-    );
+    await _acceptPicker(tester, find.byType(TextField).at(1));
+    await _acceptPicker(tester, find.byType(TextField).at(2));
     await tester.enterText(
       find.byType(TextField).at(3),
       'Jaipur, Rajasthan',
     );
+    final DateTime picked = _pickedBirth(tester, 1, 2);
+    final KundliResult expected = KundliCalculator.calculate(
+      birthLocal: picked,
+      placeText: 'Jaipur, Rajasthan',
+    );
     await tester.tap(find.text('Show Kundli'));
     await tester.pumpAndSettle();
-    // The chart is calculated from the entered birth details,
-    // so the real lagna for 14 March 1998, 06:25 AM, Jaipur
-    // is Kumbha, and the screen never marks it as sample.
-    expect(find.text('Lagna Kumbha'), findsOneWidget);
-    expect(find.text('Meena'), findsOneWidget);
+    // The chart is calculated from the picked birth
+    // details, so the real lagna for those details shows
+    // and the screen never marks it as sample.
+    expect(find.text('Lagna ${expected.lagna}'), findsOneWidget);
+    expect(find.text(expected.moonRashi), findsWidgets);
     expect(find.text('Lagna'), findsOneWidget);
     expect(
       find.text('Sample data only. No real prediction.'),
       findsNothing,
     );
     expect(find.text('Sample data'), findsNothing);
+  });
+
+  testWidgets('Kundli form picks date and time, never types them',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: KundliInputScreen()),
+    );
+    await tester.pumpAndSettle();
+    // The date and time fields are pickers, not typing: no
+    // keyboard opens, tapping the field opens the dialog.
+    expect(
+      tester.widget<TextField>(find.byType(TextField).at(1)).readOnly,
+      isTrue,
+    );
+    expect(
+      tester.widget<TextField>(find.byType(TextField).at(2)).readOnly,
+      isTrue,
+    );
+    await tester.enterText(find.byType(TextField).at(0), 'Sunmughan Swamy');
+    await tester.enterText(
+      find.byType(TextField).at(3),
+      'Durg, Chhattisgarh',
+    );
+    await tester.tap(find.byType(TextField).at(1));
+    await tester.pumpAndSettle();
+    expect(find.byType(DatePickerDialog), findsOneWidget);
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(TextField).at(2));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Show Kundli'));
+    await tester.pumpAndSettle();
+    // The picked values pass validation: the chart opens and
+    // the "Enter a valid date and time." error never appears.
+    expect(find.text('Enter a valid date and time.'), findsNothing);
+    expect(find.byType(KundliChartScreen), findsOneWidget);
   });
 
   testWidgets('Matching calculates a real score from two real charts',
@@ -675,20 +738,30 @@ void main() {
       const MaterialApp(home: MatchingScreen()),
     );
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).at(1), '1 January 2000');
-    await tester.enterText(find.byType(TextField).at(2), '06:25 AM');
+    await _acceptPicker(tester, find.byType(TextField).at(1));
+    await _acceptPicker(tester, find.byType(TextField).at(2));
     await tester.enterText(find.byType(TextField).at(3), 'Jaipur');
-    await tester.enterText(find.byType(TextField).at(5), '14 March 1998');
-    await tester.enterText(find.byType(TextField).at(6), '06:25 AM');
+    // The second person picks a different day in the same
+    // month, so the two charts differ and the score is a
+    // real comparison, not two identical charts.
+    await tester.tap(find.byType(TextField).at(5));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('15'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await _acceptPicker(tester, find.byType(TextField).at(6));
     await tester.enterText(find.byType(TextField).at(7), 'Jaipur, Rajasthan');
+    final DateTime firstPicked = _pickedBirth(tester, 1, 2);
+    final DateTime secondPicked = _pickedBirth(tester, 5, 6);
     await tester.tap(find.text('Calculate matching'));
     await tester.pumpAndSettle();
     final KundliResult first = KundliCalculator.calculate(
-      birthLocal: DateTime(2000, 1, 1, 6, 25),
+      birthLocal: firstPicked,
       placeText: 'Jaipur',
     );
     final KundliResult second = KundliCalculator.calculate(
-      birthLocal: DateTime(1998, 3, 14, 6, 25),
+      birthLocal: secondPicked,
       placeText: 'Jaipur, Rajasthan',
     );
     final MatchingResult expected = MatchingCalculator.calculate(

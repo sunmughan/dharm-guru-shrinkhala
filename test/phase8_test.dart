@@ -338,10 +338,12 @@ void main() {
         find.byType(TextField).first,
         'Test User',
       );
-      await tester.enterText(
-        find.byType(TextField).last,
-        '15 January 2000',
-      );
+      // The date is a picker now, never typed: tap the
+      // field and accept the default with OK.
+      await tester.tap(find.byType(TextField).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Calculate numbers'));
       await tester.pumpAndSettle();
       expect(find.text('Life Path'), findsOneWidget);

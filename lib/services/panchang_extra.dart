@@ -95,28 +95,33 @@ int tithiNumberAtNoon(DateTime day) {
 DateTime observanceMoment(
   DateTime day,
   AstroPlace place,
-  String moment,
-) {
-  final SunTimes times = sunTimesFor(day, place);
+  String moment, {
+  SunTimes? times,
+}) {
+  final SunTimes sunTimes = times ?? sunTimesFor(day, place);
   final double hours = switch (moment) {
-    'sunrise' => times.sunrise,
+    'sunrise' => sunTimes.sunrise,
     'noon' => 12.0,
     'afternoon' => 15.0,
-    'sunset' => times.sunset,
+    'sunset' => sunTimes.sunset,
     'midnight' => 24.0,
-    _ => times.sunrise,
+    _ => sunTimes.sunrise,
   };
   final DateTime base = DateTime(day.year, day.month, day.day);
   return _utcFromIst(base.add(Duration(minutes: (hours * 60).round())));
 }
 
 /// Tithi number at the observance moment on a date.
+/// Pass the day's [times] when the caller already has
+/// them, so a scan over many rules does not recompute
+/// sunrise and sunset once per rule.
 int tithiNumberAtMoment(
   DateTime day,
   AstroPlace place,
-  String moment,
-) =>
-    tithiNumberAtUtc(observanceMoment(day, place, moment));
+  String moment, {
+  SunTimes? times,
+}) =>
+    tithiNumberAtUtc(observanceMoment(day, place, moment, times: times));
 
 /// The most recent moment before [fromUtc] when the
 /// elongation crossed [target]: 0 for a new moon, 180 for a
@@ -253,10 +258,53 @@ String _monthFromSunSign(int sunSign) =>
 /// so the search moves to the next month. A month with two
 /// sankrantis (Kshaya Masa) takes the first; Kshaya Masa is
 /// not otherwise handled.
+/// New moon instants for one year, memoized. One whole
+/// year costs a single newMoonMoments scan, about 8ms,
+/// instead of a phase scan per lunar month lookup. The
+/// list runs from just before 1 January to just after
+/// 31 December, so the windows at both ends of the year
+/// are complete.
+final Map<int, List<DateTime>> _newMoonsByYear =
+    <int, List<DateTime>>{};
+
+List<DateTime> _newMoonsForYear(int year) =>
+    _newMoonsByYear.putIfAbsent(year, () => newMoonMoments(year));
+
+/// Amanta month name for the lunar month holding [moment],
+/// resolved from the month of the window it falls in.
+/// The window edges come from the memoized new moons of
+/// the years around the moment, never from a fresh phase
+/// scan: the old code scanned back and forward for every
+/// lookup, about 6ms a call, and the festival scan makes
+/// thousands of lookups per year, which froze the UI for
+/// seconds on every Panchang build. The month of a window
+/// is cached under every window start the search visits,
+/// so each window is resolved once per app run.
+final Map<DateTime, String> _monthForWindowStart =
+    <DateTime, String>{};
+
 String _amantaMonthAt(DateTime moment) {
-  DateTime start = _phaseBefore(moment, 0);
-  DateTime end = _phaseAfter(moment, 0);
+  final List<DateTime> moons = <DateTime>[
+    ..._newMoonsForYear(moment.year - 1),
+    ..._newMoonsForYear(moment.year),
+    ..._newMoonsForYear(moment.year + 1),
+  ]..sort();
+  int index = moons.lastIndexWhere((DateTime m) => !m.isAfter(moment));
+  if (index < 0) {
+    index = 0;
+  }
+  final List<DateTime> visited = <DateTime>[];
   for (int i = 0; i < 3; i++) {
+    final DateTime start = moons[index];
+    final DateTime end = moons[index + 1];
+    visited.add(start);
+    final String? cached = _monthForWindowStart[start];
+    if (cached != null) {
+      for (final DateTime windowStart in visited) {
+        _monthForWindowStart[windowStart] = cached;
+      }
+      return cached;
+    }
     final List<DateTime> sankrantis =
         sankrantiMoments(start, end).where(
       (DateTime m) => m.isAfter(start) && m.isBefore(end),
@@ -265,10 +313,13 @@ String _amantaMonthAt(DateTime moment) {
       final int sign = _sunSignAt(
         sankrantis.first.add(const Duration(hours: 12)),
       );
-      return kLunarMonths[sign];
+      final String month = kLunarMonths[sign];
+      for (final DateTime windowStart in visited) {
+        _monthForWindowStart[windowStart] = month;
+      }
+      return month;
     }
-    start = end;
-    end = _phaseAfter(end.add(const Duration(days: 1)), 0);
+    index++;
   }
   throw StateError(
     'No sankranti found in three lunar months from $moment',
