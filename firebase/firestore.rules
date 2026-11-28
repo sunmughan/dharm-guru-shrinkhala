@@ -7,15 +7,72 @@ service cloud.firestore {
     }
 
     // A user reads and writes only their own profile document.
+    // The owner also reads and writes user documents, for
+    // status, verification, and suspension in user management.
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if request.auth != null &&
+        (request.auth.uid == uid || isOwner());
     }
 
     // Admin access is recorded in /admins/{uid} with role 'owner'.
     // The owner creates that record himself in the console; see
-    // FIREBASE-SETUP.md. Only the owner reads it.
+    // FIREBASE-SETUP.md. A signed in user creates only their own
+    // record, which is how a Google sign in first opens admin
+    // access. Only the owner changes or revokes a role.
     match /admins/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null &&
+        (request.auth.uid == uid || isOwner());
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update, delete: if isOwner();
+    }
+
+    // Admin invitations. Owner only.
+    match /admin_invites/{doc} {
+      allow read, write: if isOwner();
+    }
+
+    // Astrology library entries. Signed in users read them.
+    // Only the owner writes them, from the admin app.
+    match /library_items/{doc} {
+      allow read: if request.auth != null;
+      allow write: if isOwner();
+    }
+
+    // Calculation configuration versions. Owner only. The user
+    // app never reads a draft, only the active version, and
+    // only once the owner publishes it through the app.
+    match /calc_configs/{doc} {
+      allow read, write: if isOwner();
+    }
+
+    // Managed content items. Signed in users read published
+    // items. Only the owner writes them, from the admin app.
+    match /content_items/{doc} {
+      allow read: if request.auth != null;
+      allow write: if isOwner();
+    }
+
+    // Consultations. The owner reads and writes every booking.
+    // A user reads only their own booking and creates a booking
+    // only for themselves.
+    match /consultations/{doc} {
+      allow read: if isOwner() || (request.auth != null &&
+        request.auth.uid == resource.data.userId);
+      allow create: if isOwner() || (request.auth != null &&
+        request.auth.uid == request.resource.data.userId);
+      allow update, delete: if isOwner();
+    }
+
+    // Audit logs. Owner only, read and write.
+    match /audit_logs/{doc} {
+      allow read, write: if isOwner();
+    }
+
+    // Activity events for active user metrics. Signed in users
+    // write their own activity; only the owner reads it.
+    match /activity_events/{doc} {
+      allow read: if isOwner();
+      allow create: if request.auth != null;
     }
 
     // Published content. Signed in users read it. Only the owner

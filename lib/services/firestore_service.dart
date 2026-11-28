@@ -48,6 +48,30 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get moderation =>
       _db.collection('moderation');
 
+  CollectionReference<Map<String, dynamic>> get auditLogs =>
+      _db.collection('audit_logs');
+
+  /// Writes one audit log entry for an admin action. Owner
+  /// only by rules. The entry records who acted, what action
+  /// ran, which record it touched, and a short detail.
+  Future<void> logAudit({
+    required String actor,
+    required String action,
+    required String target,
+    required String detail,
+  }) async {
+    await auditLogs.doc(DateTime.now().millisecondsSinceEpoch.toString()).set(
+      <String, Object?>{
+        'actor': actor,
+        'action': action,
+        'target': target,
+        'detail': detail,
+        'status': 'recorded',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+    );
+  }
+
   /// True only when the admins collection holds a document for
   /// this uid with role owner. The owner creates that document
   /// in the Firebase console; the app never grants admin access.

@@ -65,9 +65,11 @@ void main() {
           onNavigate: (_) {},
         ),
       );
-      expect(find.text('2'), findsNWidgets(2));
+      expect(find.text('2'), findsNWidgets(3));
       expect(find.text('1'), findsOneWidget);
-      expect(find.text('499 INR'), findsOneWidget);
+      expect(find.text('499 INR'), findsNWidgets(2));
+      expect(find.text('No data yet'), findsOneWidget);
+      expect(find.text('0'), findsOneWidget);
       expect(
         find.text('Astrologers waiting for approval: 1'),
         findsOneWidget,
@@ -94,8 +96,8 @@ void main() {
           onNavigate: (_) {},
         ),
       );
-      expect(find.text('No data yet'), findsNWidgets(3));
-      expect(find.text('No payments yet'), findsOneWidget);
+      expect(find.text('No data yet'), findsNWidgets(6));
+      expect(find.text('No payments yet'), findsNWidgets(2));
       expect(find.text('Moderation items waiting: 0'), findsOneWidget);
     });
   });

@@ -6,6 +6,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/build_info.dart';
 import '../core/theme/design_tokens.dart';
+import '../services/admin_metrics.dart';
+import 'admin_phase9_screens.dart';
 import 'auth_screen.dart';
 import 'screens.dart';
 import '../services/auth_service.dart';
@@ -672,6 +674,13 @@ class _AdminShellState extends State<AdminShell> {
     'Analytics',
     'Notifications',
     'Moderation',
+    'Users',
+    'Admin Team',
+    'Library',
+    'Calc Config',
+    'Content',
+    'Consultations',
+    'Security',
     'Account',
   ];
 
@@ -684,6 +693,13 @@ class _AdminShellState extends State<AdminShell> {
     Icons.bar_chart,
     Icons.notifications,
     Icons.shield,
+    Icons.group,
+    Icons.admin_panel_settings,
+    Icons.menu_book,
+    Icons.calculate,
+    Icons.article,
+    Icons.event,
+    Icons.security,
     Icons.manage_accounts,
   ];
 
@@ -708,6 +724,16 @@ class _AdminShellState extends State<AdminShell> {
       5 => AnalyticsScreen(firestore: widget.firestore),
       6 => NotificationsScreenAdmin(firestore: widget.firestore),
       7 => ModerationScreen(firestore: widget.firestore),
+      8 => UsersScreen(firestore: widget.firestore),
+      9 => AdminTeamScreen(firestore: widget.firestore),
+      10 => AdminLibraryScreen(firestore: widget.firestore),
+      11 => CalcConfigScreen(firestore: widget.firestore),
+      12 => ContentManagerScreen(firestore: widget.firestore),
+      13 => ConsultationsScreen(firestore: widget.firestore),
+      14 => SecurityAuditScreen(
+          firestore: widget.firestore,
+          auth: widget.auth,
+        ),
       _ => AdminAccountScreen(
           firestore: widget.firestore,
           auth: widget.auth,
@@ -849,7 +875,7 @@ class _AdminShellState extends State<AdminShell> {
 }
 
 /// Dashboard, design 16. Live counts only, no sample numbers.
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({
     super.key,
     required this.firestore,
@@ -861,8 +887,15 @@ class AdminDashboardScreen extends StatelessWidget {
   final Map<String, bool>? featureFlags;
   final void Function(int index) onNavigate;
 
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  String _range = 'Today';
+
   Map<String, bool> _flags() {
-    if (featureFlags != null) return featureFlags!;
+    if (widget.featureFlags != null) return widget.featureFlags!;
     try {
       final FirebaseRemoteConfig config = FirebaseRemoteConfig.instance;
       return <String, bool>{
@@ -884,9 +917,25 @@ class AdminDashboardScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text('Dashboard', style: AppTextStyles.themed(context, AppTextStyles.display)),
-        Text(
-          'Today',
-          style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+        Row(
+          children: <Widget>[
+            Text(
+              'Range',
+              style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            SegmentedButton<String>(
+              segments: const <ButtonSegment<String>>[
+                ButtonSegment<String>(value: 'Today', label: Text('Today')),
+                ButtonSegment<String>(value: '7 days', label: Text('7 days')),
+                ButtonSegment<String>(
+                    value: '30 days', label: Text('30 days')),
+              ],
+              selected: <String>{_range},
+              onSelectionChanged: (Set<String> value) =>
+                  setState(() => _range = value.first),
+            ),
+          ],
         ),
         const SizedBox(height: AppSpacing.md),
         LayoutBuilder(
@@ -895,21 +944,70 @@ class AdminDashboardScreen extends StatelessWidget {
             final List<Widget> cards = <Widget>[
               _CountStat(
                 label: 'Users',
-                stream: firestore.watchDocs('users'),
+                stream: widget.firestore.watchDocs('users'),
               ),
               _CountStat(
                 label: 'Astrologers',
-                stream: firestore.watchDocs('astrologers'),
+                stream: widget.firestore.watchDocs('astrologers'),
               ),
               _CountStat(
                 label: 'Published horoscopes',
-                stream: firestore.watchDocs('horoscopes'),
+                stream: widget.firestore.watchDocs('horoscopes'),
                 count: (List<Map<String, dynamic>> docs) => docs
                     .where((Map<String, dynamic> d) =>
                         str(d, 'status') == 'published')
                     .length,
               ),
-              _EarningsStat(firestore: firestore),
+              _EarningsStat(firestore: widget.firestore),
+            ];
+            return GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: cols,
+                mainAxisSpacing: AppSpacing.md,
+                crossAxisSpacing: AppSpacing.md,
+                mainAxisExtent: 150,
+              ),
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: cards.length,
+              itemBuilder: (BuildContext context, int index) =>
+                  cards[index],
+            );
+          },
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'In this range',
+          style: AppTextStyles.themed(context, AppTextStyles.subtitle),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final int cols = constraints.maxWidth > 700 ? 4 : 2;
+            final List<Widget> cards = <Widget>[
+              _CountStat(
+                label: 'New registrations',
+                stream: widget.firestore.watchDocs('users'),
+                count: (List<Map<String, dynamic>> docs) =>
+                    AdminMetrics.countInRange(docs, _range, DateTime.now()),
+              ),
+              _CountStat(
+                label: 'Active users',
+                stream: widget.firestore.watchDocs('users'),
+                count: (List<Map<String, dynamic>> docs) =>
+                    AdminMetrics.activeUsersInRange(
+                        docs, _range, DateTime.now()),
+              ),
+              _CountStat(
+                label: 'Consultations',
+                stream: widget.firestore.watchDocs('consultations'),
+                count: (List<Map<String, dynamic>> docs) =>
+                    AdminMetrics.countInRange(docs, _range, DateTime.now()),
+              ),
+              _RangeEarningsStat(
+                firestore: widget.firestore,
+                range: _range,
+              ),
             ];
             return GridView.builder(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -940,31 +1038,31 @@ class AdminDashboardScreen extends StatelessWidget {
                 const SizedBox(height: AppSpacing.sm),
                 _AttentionRow(
                   label: 'Astrologers waiting for approval',
-                  stream: firestore.watchDocs('astrologers'),
+                  stream: widget.firestore.watchDocs('astrologers'),
                   count: (List<Map<String, dynamic>> docs) => docs
                       .where((Map<String, dynamic> d) =>
                           str(d, 'status') == 'waiting')
                       .length,
-                  onTap: () => onNavigate(1),
+                  onTap: () => widget.onNavigate(1),
                 ),
                 _AttentionRow(
                   label: 'Horoscopes still drafts today',
-                  stream: firestore.watchDocs('horoscopes'),
+                  stream: widget.firestore.watchDocs('horoscopes'),
                   count: (List<Map<String, dynamic>> docs) => docs
                       .where((Map<String, dynamic> d) =>
                           str(d, 'date') == dateKey(DateTime.now()) &&
                           str(d, 'status') == 'draft')
                       .length,
-                  onTap: () => onNavigate(2),
+                  onTap: () => widget.onNavigate(2),
                 ),
                 _AttentionRow(
                   label: 'Moderation items waiting',
-                  stream: firestore.watchDocs('moderation'),
+                  stream: widget.firestore.watchDocs('moderation'),
                   count: (List<Map<String, dynamic>> docs) => docs
                       .where((Map<String, dynamic> d) =>
                           str(d, 'status') == 'pending')
                       .length,
-                  onTap: () => onNavigate(7),
+                  onTap: () => widget.onNavigate(7),
                 ),
               ],
             ),
@@ -976,19 +1074,19 @@ class AdminDashboardScreen extends StatelessWidget {
           runSpacing: AppSpacing.md,
           children: <Widget>[
             OutlinedButton(
-              onPressed: () => onNavigate(2),
+              onPressed: () => widget.onNavigate(2),
               child: const Text('Publish todays horoscope'),
             ),
             OutlinedButton(
-              onPressed: () => onNavigate(1),
+              onPressed: () => widget.onNavigate(1),
               child: const Text('Add astrologer'),
             ),
             OutlinedButton(
-              onPressed: () => onNavigate(6),
+              onPressed: () => widget.onNavigate(6),
               child: const Text('Send notification'),
             ),
             OutlinedButton(
-              onPressed: () => onNavigate(7),
+              onPressed: () => widget.onNavigate(7),
               child: const Text('Review reports'),
             ),
           ],
@@ -1115,6 +1213,50 @@ class _EarningsStat extends StatelessWidget {
   }
 }
 
+/// Revenue inside the dashboard range, from paid payments only.
+class _RangeEarningsStat extends StatelessWidget {
+  const _RangeEarningsStat({required this.firestore, required this.range});
+
+  final FirestoreService firestore;
+  final String range;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: firestore.watchDocs('payments'),
+      builder: (
+        BuildContext context,
+        AsyncSnapshot<List<Map<String, dynamic>>> snap,
+      ) {
+        if (snap.hasError) {
+          return const _StatCard(label: 'Revenue', value: 'Could not load.');
+        }
+        if (!snap.hasData) {
+          return const _StatCard(label: 'Revenue', value: 'Loading');
+        }
+        final double total = AdminMetrics.paidTotalInRange(
+          snap.data!,
+          range,
+          DateTime.now(),
+        );
+        if (total == 0) {
+          return const _StatCard(label: 'Revenue', value: 'No payments yet');
+        }
+        final List<Map<String, dynamic>> paid = AdminMetrics.inRange(
+          snap.data!,
+          range,
+          DateTime.now(),
+        ).where((Map<String, dynamic> d) => str(d, 'status') == 'paid').toList();
+        final String currency = paid.isEmpty ? '' : str(paid.first, 'currency');
+        final String shown = total == total.truncateToDouble()
+            ? total.toInt().toString()
+            : total.toStringAsFixed(2);
+        return _StatCard(label: 'Revenue', value: '$shown $currency'.trim());
+      },
+    );
+  }
+}
+
 class _AttentionRow extends StatelessWidget {
   const _AttentionRow({
     required this.label,
@@ -1213,6 +1355,8 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
                       value: 'Offline', label: Text('Offline')),
                   ButtonSegment<String>(
                       value: 'waiting', label: Text('Waiting approval')),
+                  ButtonSegment<String>(
+                      value: 'Suspended', label: Text('Suspended')),
                 ],
                 selected: <String>{_filter},
                 onSelectionChanged: (Set<String> value) =>
@@ -1241,7 +1385,8 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
             if (_filter != 'All') {
               docs = docs
                   .where((Map<String, dynamic> d) =>
-                      str(d, 'status') == _filter)
+                      str(d, 'status').toLowerCase() ==
+                      _filter.toLowerCase())
                   .toList();
             }
             if (_query.isNotEmpty) {
@@ -1316,6 +1461,8 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
     final TextEditingController name = TextEditingController();
     final TextEditingController languages = TextEditingController();
     final TextEditingController bio = TextEditingController();
+    final TextEditingController expertise = TextEditingController();
+    final TextEditingController availability = TextEditingController();
     final TextEditingController phone = TextEditingController();
     final TextEditingController rate = TextEditingController();
     bool chat = true;
@@ -1341,6 +1488,16 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
                       label: 'Short bio',
                       controller: bio,
                       maxLines: 3,
+                    ),
+                    _adminField(
+                      label: 'Expertise',
+                      controller: expertise,
+                      hint: 'Vedic, KP, Numerology',
+                    ),
+                    _adminField(
+                      label: 'Availability',
+                      controller: availability,
+                      hint: 'Mon to Sat, 10 AM to 6 PM',
                     ),
                     _adminField(
                       label: 'Phone for calls',
@@ -1392,6 +1549,9 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
                                   'name': name.text.trim(),
                                   'languages': languages.text.trim(),
                                   'bio': bio.text.trim(),
+                                  'expertise': expertise.text.trim(),
+                                  'availability': availability.text.trim(),
+                                  'kycStatus': 'pending',
                                   'phone': phone.text.trim(),
                                   'rate': rate.text.trim(),
                                   'chatAvailable': chat,
@@ -1445,6 +1605,15 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
                 Text('Languages: ${str(doc, 'languages')}'),
                 Text('Status: ${str(doc, 'status')}'),
                 Text(
+                  'KYC: ${str(doc, 'kycStatus').isEmpty ? 'pending' : str(doc, 'kycStatus')}',
+                ),
+                Text(
+                  'Expertise: ${str(doc, 'expertise').isEmpty ? 'Not set' : str(doc, 'expertise')}',
+                ),
+                Text(
+                  'Availability: ${str(doc, 'availability').isEmpty ? 'Not set' : str(doc, 'availability')}',
+                ),
+                Text(
                   'Phone: ${str(doc, 'phone').isEmpty ? 'Not set' : str(doc, 'phone')}',
                 ),
                 Text(
@@ -1464,7 +1633,31 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
                   'Session history',
                   style: AppTextStyles.themed(context, AppTextStyles.subtitle),
                 ),
-                const Text('No sessions yet.'),
+                StreamBuilder<List<Map<String, dynamic>>>(
+                  stream: widget.firestore.watchDocs('consultations'),
+                  builder: (
+                    BuildContext context,
+                    AsyncSnapshot<List<Map<String, dynamic>>> snap,
+                  ) {
+                    if (!snap.hasData) {
+                      return const Text('Loading sessions');
+                    }
+                    final List<Map<String, dynamic>> sessions = snap.data!
+                        .where((Map<String, dynamic> d) =>
+                            str(d, 'astrologer') == str(doc, 'name'))
+                        .toList();
+                    if (sessions.isEmpty) {
+                      return const Text('No sessions yet.');
+                    }
+                    int minutes = 0;
+                    for (final Map<String, dynamic> d in sessions) {
+                      minutes += numVal(d, 'durationMinutes').toInt();
+                    }
+                    return Text(
+                      '${sessions.length} sessions, $minutes minutes in total.',
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -1472,7 +1665,16 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
             TextButton(
               onPressed: () async {
                 await widget.firestore.saveDoc('astrologers', id,
-                    <String, Object?>{'status': 'rejected'});
+                    <String, Object?>{
+                      'status': 'rejected',
+                      'kycStatus': 'rejected',
+                    });
+                await widget.firestore.logAudit(
+                  actor: 'owner',
+                  action: 'astrologer_rejected',
+                  target: id,
+                  detail: str(doc, 'name'),
+                );
                 if (context.mounted) {
                   Navigator.of(context).pop();
                   _toast(context, 'Astrologer rejected.');
@@ -1480,10 +1682,48 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
               },
               child: const Text('Reject'),
             ),
+            TextButton(
+              onPressed: () async {
+                final bool suspended = str(doc, 'status') == 'suspended';
+                await widget.firestore.saveDoc('astrologers', id,
+                    <String, Object?>{
+                      'status': suspended ? 'offline' : 'suspended',
+                    });
+                await widget.firestore.logAudit(
+                  actor: 'owner',
+                  action: suspended
+                      ? 'astrologer_reactivated'
+                      : 'astrologer_suspended',
+                  target: id,
+                  detail: str(doc, 'name'),
+                );
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  _toast(
+                    context,
+                    suspended
+                        ? 'Astrologer reactivated.'
+                        : 'Astrologer suspended.',
+                  );
+                }
+              },
+              child: Text(
+                str(doc, 'status') == 'suspended' ? 'Reactivate' : 'Suspend',
+              ),
+            ),
             ElevatedButton(
               onPressed: () async {
                 await widget.firestore.saveDoc('astrologers', id,
-                    <String, Object?>{'status': 'offline'});
+                    <String, Object?>{
+                      'status': 'offline',
+                      'kycStatus': 'approved',
+                    });
+                await widget.firestore.logAudit(
+                  actor: 'owner',
+                  action: 'astrologer_approved',
+                  target: id,
+                  detail: str(doc, 'name'),
+                );
                 if (context.mounted) {
                   Navigator.of(context).pop();
                   _toast(
@@ -2176,6 +2416,10 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                               ),
                               if (str(plan, 'length').isNotEmpty)
                                 Text(str(plan, 'length')),
+                              if (str(plan, 'limit').isNotEmpty)
+                                Text('Limit: ${str(plan, 'limit')}'),
+                              if (str(plan, 'promotion').isNotEmpty)
+                                Text('Promotion: ${str(plan, 'promotion')}'),
                               ...benefits.map((String b) => Text('• $b')),
                               const SizedBox(height: AppSpacing.sm),
                               Row(
@@ -2226,6 +2470,61 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 Text('Trials'),
                 Text('Trial length is to be decided.'),
                 Text('Turn on trials when trial length is decided.'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Reconciliation',
+                  style: AppTextStyles.themed(context, AppTextStyles.subtitle),
+                ),
+                StreamBuilder<List<Map<String, dynamic>>>(
+                  stream: widget.firestore.watchDocs('payments'),
+                  builder: (
+                    BuildContext context,
+                    AsyncSnapshot<List<Map<String, dynamic>>> snap,
+                  ) {
+                    if (!snap.hasData) {
+                      return const Text('Loading');
+                    }
+                    final Map<String, int> counts =
+                        AdminMetrics.countsByStatus(snap.data!);
+                    double paidTotal = 0;
+                    double refundedTotal = 0;
+                    for (final Map<String, dynamic> d in snap.data!) {
+                      if (str(d, 'status') == 'paid') {
+                        paidTotal += numVal(d, 'amount');
+                      }
+                      if (str(d, 'status') == 'refunded') {
+                        refundedTotal += numVal(d, 'amount');
+                      }
+                    }
+                    final String paidShown = paidTotal ==
+                            paidTotal.truncateToDouble()
+                        ? paidTotal.toInt().toString()
+                        : paidTotal.toStringAsFixed(2);
+                    final String refundedShown = refundedTotal ==
+                            refundedTotal.truncateToDouble()
+                        ? refundedTotal.toInt().toString()
+                        : refundedTotal.toStringAsFixed(2);
+                    return Text(
+                      'Paid ${counts['paid'] ?? 0} totalling $paidShown. '
+                      'Failed ${counts['failed'] ?? 0}. '
+                      'Refunded ${counts['refunded'] ?? 0} totalling $refundedShown. '
+                      'Pending ${counts['pending'] ?? 0}.',
+                    );
+                  },
+                ),
+                const Text(
+                  'Refunds recorded here are records only. Return the money in the payment provider.',
+                ),
               ],
             ),
           ),
@@ -2324,6 +2623,10 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         TextEditingController(text: plan == null ? '' : str(plan, 'name'));
     final TextEditingController length = TextEditingController(
         text: plan == null ? '' : str(plan, 'length'));
+    final TextEditingController limit = TextEditingController(
+        text: plan == null ? '' : str(plan, 'limit'));
+    final TextEditingController promotion = TextEditingController(
+        text: plan == null ? '' : str(plan, 'promotion'));
     final TextEditingController benefits = TextEditingController(
       text: plan == null
           ? ''
@@ -2345,6 +2648,16 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   label: 'Length',
                   controller: length,
                   hint: 'Monthly',
+                ),
+                _adminField(
+                  label: 'Duration limit',
+                  controller: limit,
+                  hint: '12 kundlis a month',
+                ),
+                _adminField(
+                  label: 'Promotion',
+                  controller: promotion,
+                  hint: 'First month free, when decided',
                 ),
                 _adminField(
                   label: 'Benefits, one per line',
@@ -2372,6 +2685,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   <String, Object?>{
                     'name': name.text.trim(),
                     'length': length.text.trim(),
+                    'limit': limit.text.trim(),
+                    'promotion': promotion.text.trim(),
                     'benefits': benefits.text
                         .split('\n')
                         .map((String b) => b.trim())
@@ -2410,6 +2725,24 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Close'),
             ),
+            if (str(doc, 'status') == 'paid' && doc['verified'] != true)
+              TextButton(
+                onPressed: () async {
+                  await widget.firestore.saveDoc(
+                    'payments',
+                    str(doc, 'id'),
+                    <String, Object?>{'verified': true},
+                  );
+                  await widget.firestore.logAudit(
+                    actor: 'owner',
+                    action: 'payment_verified',
+                    target: str(doc, 'id'),
+                    detail: '${str(doc, 'user')} ${str(doc, 'plan')}',
+                  );
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+                child: const Text('Mark verified'),
+              ),
             if (str(doc, 'status') == 'paid')
               TextButton(
                 onPressed: () async {
@@ -2506,9 +2839,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     stream: widget.firestore.watchDocs('users'),
                     range: _range,
                   ),
-                  const _StatCard(
-                    label: 'Consult minutes',
-                    value: 'No data yet',
+                  _ConsultMinutesStat(
+                    stream: widget.firestore.watchDocs('consultations'),
+                    range: _range,
                   ),
                   _EarningsStat(firestore: widget.firestore),
                 ];
@@ -2613,6 +2946,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             ),
           ),
         ),
+        const SizedBox(height: AppSpacing.md),
+        _SubscriptionMetricsCard(firestore: widget.firestore),
+        const SizedBox(height: AppSpacing.md),
+        _FeatureUsageCard(firestore: widget.firestore),
       ],
     );
   }
@@ -2648,6 +2985,156 @@ class _RangeStat extends StatelessWidget {
           value: count == 0 ? 'No data yet' : '$count',
         );
       },
+    );
+  }
+}
+
+/// Consult minutes in the range, summed from consultation
+/// documents that carry durationMinutes.
+class _ConsultMinutesStat extends StatelessWidget {
+  const _ConsultMinutesStat({required this.stream, required this.range});
+
+  final Stream<List<Map<String, dynamic>>> stream;
+  final String range;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: stream,
+      builder: (
+        BuildContext context,
+        AsyncSnapshot<List<Map<String, dynamic>>> snap,
+      ) {
+        if (!snap.hasData) {
+          return const _StatCard(label: 'Consult minutes', value: 'Loading');
+        }
+        final int total = AdminMetrics.consultMinutesInRange(
+          snap.data!,
+          range,
+          DateTime.now(),
+        );
+        return _StatCard(
+          label: 'Consult minutes',
+          value: total == 0 ? 'No data yet' : '$total',
+        );
+      },
+    );
+  }
+}
+
+/// Subscription metrics from plans and payments. Retention
+/// has no source yet: activity events do not exist, so the
+/// card says so in words instead of showing a made up rate.
+class _SubscriptionMetricsCard extends StatelessWidget {
+  const _SubscriptionMetricsCard({required this.firestore});
+
+  final FirestoreService firestore;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'Subscription metrics',
+              style: AppTextStyles.themed(context, AppTextStyles.subtitle),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: firestore.watchDocs('plans'),
+              builder: (
+                BuildContext context,
+                AsyncSnapshot<List<Map<String, dynamic>>> snap,
+              ) {
+                final int active = snap.hasData
+                    ? snap.data!
+                        .where((Map<String, dynamic> d) =>
+                            str(d, 'status') == 'Active')
+                        .length
+                    : 0;
+                return StreamBuilder<List<Map<String, dynamic>>>(
+                  stream: firestore.watchDocs('payments'),
+                  builder: (
+                    BuildContext context,
+                    AsyncSnapshot<List<Map<String, dynamic>>> paySnap,
+                  ) {
+                    final Map<String, int> counts = paySnap.hasData
+                        ? AdminMetrics.countsByStatus(paySnap.data!)
+                        : <String, int>{};
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text('Active plans $active'),
+                        Text('Paid payments ${counts['paid'] ?? 0}'),
+                        Text('Refunded payments ${counts['refunded'] ?? 0}'),
+                        const Text(
+                          'Retention needs activity events. No data yet.',
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Feature usage as plain counts per collection, read once
+/// per build. A count of zero means no record exists yet.
+class _FeatureUsageCard extends StatelessWidget {
+  const _FeatureUsageCard({required this.firestore});
+
+  final FirestoreService firestore;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'Feature usage',
+              style: AppTextStyles.themed(context, AppTextStyles.subtitle),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            FutureBuilder<List<List<Map<String, dynamic>>>>(
+              future: Future.wait(<Future<List<Map<String, dynamic>>>>[
+                firestore.watchDocs('users').first,
+                firestore.watchDocs('chats').first,
+                firestore.watchDocs('notifications').first,
+                firestore.watchDocs('consultations').first,
+              ]),
+              builder: (
+                BuildContext context,
+                AsyncSnapshot<List<List<Map<String, dynamic>>>> snap,
+              ) {
+                if (!snap.hasData) {
+                  return const Text('Loading');
+                }
+                final List<List<Map<String, dynamic>>> data = snap.data!;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text('Users ${data[0].length}'),
+                    Text('Chats ${data[1].length}'),
+                    Text('Notifications ${data[2].length}'),
+                    Text('Consultations ${data[3].length}'),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -2939,6 +3426,49 @@ class _NotificationsScreenAdminState
               child: const Text('New notification'),
             ),
           ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Delivery status',
+                  style: AppTextStyles.themed(context, AppTextStyles.subtitle),
+                ),
+                StreamBuilder<List<Map<String, dynamic>>>(
+                  stream: widget.firestore.watchDocs('notifications'),
+                  builder: (
+                    BuildContext context,
+                    AsyncSnapshot<List<Map<String, dynamic>>> snap,
+                  ) {
+                    if (!snap.hasData) {
+                      return const Text('Loading');
+                    }
+                    final Map<String, int> counts =
+                        AdminMetrics.countsByStatus(snap.data!);
+                    final int failed = counts['failed'] ?? 0;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'Sent ${counts['sent'] ?? 0}  •  Scheduled ${counts['scheduled'] ?? 0}  •  Failed $failed  •  Draft ${counts['draft'] ?? 0}',
+                        ),
+                        if (failed > 0)
+                          const Text(
+                            'Failed rows carry a Retry action in the list below.',
+                          )
+                        else
+                          const Text('No failed deliveries.'),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         if (_composing)
