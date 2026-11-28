@@ -106,13 +106,9 @@ service cloud.firestore {
       allow write: if isOwner();
     }
 
-    // Plans, payments, notifications and moderation. Signed in
-    // users read plans and the notifications sent to them. Only
-    // the owner writes any of these.
-    match /plans/{doc} {
-      allow read: if request.auth != null;
-      allow write: if isOwner();
-    }
+    // Payments, notifications and moderation. Signed in users
+    // read the notifications sent to them. Only the owner
+    // writes any of these.
     match /payments/{doc} {
       allow read: if isOwner() ||
         (request.auth != null &&

@@ -33,9 +33,6 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get admins =>
       _db.collection('admins');
 
-  CollectionReference<Map<String, dynamic>> get plans =>
-      _db.collection('plans');
-
   CollectionReference<Map<String, dynamic>> get payments =>
       _db.collection('payments');
 
@@ -133,24 +130,48 @@ class FirestoreService {
   /// its document id under 'id'. Sorted client side by createdAt
   /// descending, documents without one last, so old documents
   /// are never hidden by a server side orderBy.
-  Stream<List<Map<String, dynamic>>> watchDocs(String collection) {
-    return _db.collection(collection).snapshots().map(
-      (QuerySnapshot<Map<String, dynamic>> snap) {
-        final List<Map<String, dynamic>> docs =
-            snap.docs.map((QueryDocumentSnapshot<Map<String, dynamic>> d) {
-          return <String, dynamic>{'id': d.id, ...d.data()};
-        }).toList();
-        docs.sort((Map<String, dynamic> a, Map<String, dynamic> b) {
-          final Timestamp? at = a['createdAt'] as Timestamp?;
-          final Timestamp? bt = b['createdAt'] as Timestamp?;
-          if (at == null && bt == null) return 0;
-          if (at == null) return 1;
-          if (bt == null) return -1;
-          return bt.compareTo(at);
-        });
-        return docs;
-      },
+  ///
+  /// Lag fix: one shared listener per collection path, capped
+  /// at [limit] documents. Before this, every StreamBuilder
+  /// built a fresh snapshots() stream, so every rebuild
+  /// re-listened and re-downloaded the whole collection, and
+  /// the five tab screens each held their own live copy. A new
+  /// listener now replays the latest list at once.
+  /// shortcut: limit without orderBy returns an arbitrary slice
+  /// once a collection passes the limit; add an orderBy on
+  /// createdAt for a collection that grows past it.
+  final Map<String, _WatchCache> _watchCache = <String, _WatchCache>{};
+
+  Stream<List<Map<String, dynamic>>> watchDocs(
+    String collection, {
+    int limit = 100,
+  }) {
+    final String key = '$collection|$limit';
+    final _WatchCache cached = _watchCache.putIfAbsent(
+      key,
+      () => _WatchCache(
+        _db.collection(collection).limit(limit).snapshots().map(_decodeDocs),
+      ),
     );
+    return cached.stream;
+  }
+
+  static List<Map<String, dynamic>> _decodeDocs(
+    QuerySnapshot<Map<String, dynamic>> snap,
+  ) {
+    final List<Map<String, dynamic>> docs =
+        snap.docs.map((QueryDocumentSnapshot<Map<String, dynamic>> d) {
+      return <String, dynamic>{'id': d.id, ...d.data()};
+    }).toList();
+    docs.sort((Map<String, dynamic> a, Map<String, dynamic> b) {
+      final Timestamp? at = a['createdAt'] as Timestamp?;
+      final Timestamp? bt = b['createdAt'] as Timestamp?;
+      if (at == null && bt == null) return 0;
+      if (at == null) return 1;
+      if (bt == null) return -1;
+      return bt.compareTo(at);
+    });
+    return docs;
   }
 
   /// One document by id, or null when it does not exist.
@@ -213,5 +234,29 @@ class FirestoreService {
       body['updatedAt'] = FieldValue.serverTimestamp();
     }
     await users.doc(uid).set(body, SetOptions(merge: true));
+  }
+}
+
+/// One live Firestore listener shared by every reader of
+/// a collection path. The broadcast source starts on first
+/// use; the latest list is kept so a reader that arrives
+/// later, for example a StreamBuilder rebuilt after a tab
+/// switch, gets data at once instead of waiting for the next
+/// snapshot event.
+class _WatchCache {
+  _WatchCache(Stream<List<Map<String, dynamic>>> source)
+      : _broadcast = source.asBroadcastStream() {
+    _broadcast.listen((List<Map<String, dynamic>> docs) {
+      latest = docs;
+    });
+  }
+
+  final Stream<List<Map<String, dynamic>>> _broadcast;
+  List<Map<String, dynamic>>? latest;
+
+  Stream<List<Map<String, dynamic>>> get stream async* {
+    final List<Map<String, dynamic>>? current = latest;
+    if (current != null) yield current;
+    yield* _broadcast;
   }
 }

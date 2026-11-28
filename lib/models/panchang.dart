@@ -46,15 +46,3 @@ class HoroscopeEntry {
   final String summary;
 }
 
-enum PlanTier { free, premium }
-
-/// User profile model. Pricing is to be decided. No price is stored here.
-class UserProfile {
-  const UserProfile({
-    required this.displayName,
-    required this.plan,
-  });
-
-  final String displayName;
-  final PlanTier plan;
-}

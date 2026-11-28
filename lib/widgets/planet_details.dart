@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 import '../core/theme/design_tokens.dart';
 import '../models/kundli.dart';
 import '../services/astro.dart';
-import '../services/premium_service.dart';
 
 /// Planet details table with degrees, rashi, bhava and swami.
 /// Renders the kundli it is given, calculated by the engine.
@@ -14,16 +13,12 @@ class PlanetDetails extends StatelessWidget {
     required this.lagna,
     required this.rashi,
     required this.nakshatra,
-    this.premiumService,
   });
 
   final List<PlanetDetail> planets;
   final String lagna;
   final String rashi;
   final String nakshatra;
-
-  /// Premium gate. Tests pass their own flag reader.
-  final PremiumService? premiumService;
 
   @override
   Widget build(BuildContext context) {
@@ -100,48 +95,6 @@ class PlanetDetails extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.space3),
-          decoration: BoxDecoration(
-            color: AppColors.resolve(
-              context,
-              AppColors.surface2,
-              AppColorsDark.surface2,
-            ),
-            borderRadius: BorderRadius.circular(AppSpacing.smallRadius),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                'Full planet detail is a premium feature. '
-                'Your basic chart stays free.',
-                style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    final bool enabled = (premiumService ?? PremiumService())
-                        .isPremiumEnabled;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          enabled
-                              ? 'Premium is on. Full planet detail opens here.'
-                              : 'Premium is not available yet. Pricing to be decided.',
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text('View premium'),
-                ),
-              ),
-            ],
           ),
         ),
       ],

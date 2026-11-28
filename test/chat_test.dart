@@ -55,4 +55,32 @@ void main() {
       'chat_a1_u1',
     );
   });
+  test('admin reply without participantIds keeps the user in the chat', () async {
+    final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
+    final FirestoreService service = FirestoreService(firestore: fake);
+    final ChatService chat = ChatService(firestore: service);
+    const String chatId = 'user_test_uid';
+    await chat.sendMessage(
+      chatId: chatId,
+      senderId: 'test_uid',
+      senderRole: 'user',
+      text: 'Hello',
+      participantIds: <String>['test_uid'],
+    );
+    // The admin thread opens without participantIds, exactly
+    // as AdminChatsScreen opens ChatScreen.
+    await chat.sendMessage(
+      chatId: chatId,
+      senderId: 'admin_uid',
+      senderRole: 'admin',
+      text: 'Namaste',
+    );
+    final Map<String, dynamic>? doc =
+        await service.getDoc('chats', chatId);
+    expect(
+      (doc?['participantIds'] as List<dynamic>?)?.contains('test_uid'),
+      isTrue,
+    );
+    expect(doc?['lastMessage'], 'Namaste');
+  });
 }

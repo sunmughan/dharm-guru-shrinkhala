@@ -1291,7 +1291,7 @@ class _FakeFirestore extends FirestoreService {
   }
 
   @override
-  Stream<List<Map<String, dynamic>>> watchDocs(String collection) =>
+  Stream<List<Map<String, dynamic>>> watchDocs(String collection, {int limit = 100}) =>
       Stream<List<Map<String, dynamic>>>.value(
         docs[collection] ?? <Map<String, dynamic>>[],
       );
@@ -1327,7 +1327,7 @@ class _FakeChatService extends ChatService {
     required String senderId,
     required String senderRole,
     required String text,
-    required List<String> participantIds,
+    List<String>? participantIds,
   }) async {
     sent.add(
       ChatMessage(

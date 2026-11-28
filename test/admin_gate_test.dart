@@ -86,7 +86,7 @@ class _FailOnceFirestore extends FirestoreService {
       adminGranted;
 
   @override
-  Stream<List<Map<String, dynamic>>> watchDocs(String collection) =>
+  Stream<List<Map<String, dynamic>>> watchDocs(String collection, {int limit = 100}) =>
       Stream<List<Map<String, dynamic>>>.value(
         <Map<String, dynamic>>[],
       );

@@ -671,7 +671,6 @@ class _AdminShellState extends State<AdminShell> {
     'Astrologers',
     'Daily Content',
     'Chats',
-    'Subscriptions',
     'Analytics',
     'Notifications',
     'Moderation',
@@ -690,7 +689,6 @@ class _AdminShellState extends State<AdminShell> {
     Icons.person,
     Icons.wb_sunny,
     Icons.chat,
-    Icons.card_membership,
     Icons.bar_chart,
     Icons.notifications,
     Icons.shield,
@@ -721,17 +719,16 @@ class _AdminShellState extends State<AdminShell> {
           firestore: widget.firestore,
           auth: widget.auth,
         ),
-      4 => SubscriptionsScreen(firestore: widget.firestore),
-      5 => AnalyticsScreen(firestore: widget.firestore),
-      6 => NotificationsScreenAdmin(firestore: widget.firestore),
-      7 => ModerationScreen(firestore: widget.firestore),
-      8 => UsersScreen(firestore: widget.firestore),
-      9 => AdminTeamScreen(firestore: widget.firestore),
-      10 => AdminLibraryScreen(firestore: widget.firestore),
-      11 => CalcConfigScreen(firestore: widget.firestore),
-      12 => ContentManagerScreen(firestore: widget.firestore),
-      13 => ConsultationsScreen(firestore: widget.firestore),
-      14 => SecurityAuditScreen(
+      4 => AnalyticsScreen(firestore: widget.firestore),
+      5 => NotificationsScreenAdmin(firestore: widget.firestore),
+      6 => ModerationScreen(firestore: widget.firestore),
+      7 => UsersScreen(firestore: widget.firestore),
+      8 => AdminTeamScreen(firestore: widget.firestore),
+      9 => AdminLibraryScreen(firestore: widget.firestore),
+      10 => CalcConfigScreen(firestore: widget.firestore),
+      11 => ContentManagerScreen(firestore: widget.firestore),
+      12 => ConsultationsScreen(firestore: widget.firestore),
+      13 => SecurityAuditScreen(
           firestore: widget.firestore,
           auth: widget.auth,
         ),
@@ -900,12 +897,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     try {
       final FirebaseRemoteConfig config = FirebaseRemoteConfig.instance;
       return <String, bool>{
-        'premium_enabled': config.getBool('premium_enabled'),
         'live_consult_enabled': config.getBool('live_consult_enabled'),
       };
     } catch (_) {
       return <String, bool>{
-        'premium_enabled': false,
         'live_consult_enabled': false,
       };
     }
@@ -2536,462 +2531,6 @@ class _PanchangFormState extends State<_PanchangForm> {
   }
 }
 
-/// Subscriptions and payments, design 19. Plans are real documents.
-/// Pricing is to be decided, so no price is invented anywhere: a
-/// plan without a price shows "To be decided".
-class SubscriptionsScreen extends StatefulWidget {
-  const SubscriptionsScreen({super.key, required this.firestore});
-
-  final FirestoreService firestore;
-
-  @override
-  State<SubscriptionsScreen> createState() => _SubscriptionsScreenState();
-}
-
-class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
-  String _query = '';
-  String _filter = 'All';
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                'Subscriptions and Payments',
-                style: AppTextStyles.themed(context, AppTextStyles.display),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => _showPlanForm(context, null),
-              child: const Text('New plan'),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        StreamBuilder<List<Map<String, dynamic>>>(
-          stream: widget.firestore.watchDocs('plans'),
-          builder: (
-            BuildContext context,
-            AsyncSnapshot<List<Map<String, dynamic>>> snap,
-          ) {
-            if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final List<Map<String, dynamic>> plans = snap.data!;
-            if (plans.isEmpty) {
-              return const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.md),
-                  child: Text('No plans yet. Create the first plan.'),
-                ),
-              );
-            }
-            return LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                return Wrap(
-                  spacing: AppSpacing.md,
-                  runSpacing: AppSpacing.md,
-                  children: plans.map((Map<String, dynamic> plan) {
-                    final List<String> benefits =
-                        (plan['benefits'] as List<dynamic>? ?? <dynamic>[])
-                            .map((dynamic b) => b.toString())
-                            .toList();
-                    final String status = str(plan, 'status').isEmpty
-                        ? 'Draft'
-                        : str(plan, 'status');
-                    return SizedBox(
-                      width: 320,
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.md),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Row(
-                                children: <Widget>[
-                                  Expanded(
-                                    child: Text(
-                                      str(plan, 'name'),
-                                      style: AppTextStyles.themed(
-                                        context,
-                                        AppTextStyles.subtitle,
-                                      ),
-                                    ),
-                                  ),
-                                  _Pill(
-                                    label: status,
-                                    color: _statusColor(status),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              Text(
-                                'Price to be decided',
-                                style: AppTextStyles.themed(
-                                  context,
-                                  AppTextStyles.title,
-                                ),
-                              ),
-                              if (str(plan, 'length').isNotEmpty)
-                                Text(str(plan, 'length')),
-                              if (str(plan, 'limit').isNotEmpty)
-                                Text('Limit: ${str(plan, 'limit')}'),
-                              if (str(plan, 'promotion').isNotEmpty)
-                                Text('Promotion: ${str(plan, 'promotion')}'),
-                              ...benefits.map((String b) => Text('• $b')),
-                              const SizedBox(height: AppSpacing.sm),
-                              Row(
-                                children: <Widget>[
-                                  TextButton(
-                                    onPressed: () =>
-                                        _showPlanForm(context, plan),
-                                    child: const Text('Edit plan'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () async {
-                                      await widget.firestore.saveDoc(
-                                        'plans',
-                                        str(plan, 'id'),
-                                        <String, Object?>{
-                                          'status': status == 'Paused'
-                                              ? 'Active'
-                                              : 'Paused',
-                                        },
-                                      );
-                                    },
-                                    child: Text(
-                                      status == 'Paused'
-                                          ? 'Resume'
-                                          : 'Pause',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            );
-          },
-        ),
-        const SizedBox(height: AppSpacing.md),
-        const Card(
-          child: Padding(
-            padding: EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text('Trials'),
-                Text('Trial length is to be decided.'),
-                Text('Turn on trials when trial length is decided.'),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'Reconciliation',
-                  style: AppTextStyles.themed(context, AppTextStyles.subtitle),
-                ),
-                StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: widget.firestore.watchDocs('payments'),
-                  builder: (
-                    BuildContext context,
-                    AsyncSnapshot<List<Map<String, dynamic>>> snap,
-                  ) {
-                    if (!snap.hasData) {
-                      return const Text('Loading');
-                    }
-                    final Map<String, int> counts =
-                        AdminMetrics.countsByStatus(snap.data!);
-                    double paidTotal = 0;
-                    double refundedTotal = 0;
-                    for (final Map<String, dynamic> d in snap.data!) {
-                      if (str(d, 'status') == 'paid') {
-                        paidTotal += numVal(d, 'amount');
-                      }
-                      if (str(d, 'status') == 'refunded') {
-                        refundedTotal += numVal(d, 'amount');
-                      }
-                    }
-                    final String paidShown = paidTotal ==
-                            paidTotal.truncateToDouble()
-                        ? paidTotal.toInt().toString()
-                        : paidTotal.toStringAsFixed(2);
-                    final String refundedShown = refundedTotal ==
-                            refundedTotal.truncateToDouble()
-                        ? refundedTotal.toInt().toString()
-                        : refundedTotal.toStringAsFixed(2);
-                    return Text(
-                      'Paid ${counts['paid'] ?? 0} totalling $paidShown. '
-                      'Failed ${counts['failed'] ?? 0}. '
-                      'Refunded ${counts['refunded'] ?? 0} totalling $refundedShown. '
-                      'Pending ${counts['pending'] ?? 0}.',
-                    );
-                  },
-                ),
-                const Text(
-                  'Refunds recorded here are records only. Return the money in the payment provider.',
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: TextField(
-                onChanged: (String value) =>
-                    setState(() => _query = value.toLowerCase()),
-                decoration: const InputDecoration(
-                  hintText: 'Search by user',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            SegmentedButton<String>(
-              segments: const <ButtonSegment<String>>[
-                ButtonSegment<String>(value: 'All', label: Text('All')),
-                ButtonSegment<String>(value: 'paid', label: Text('Paid')),
-                ButtonSegment<String>(value: 'failed', label: Text('Failed')),
-                ButtonSegment<String>(
-                    value: 'refunded', label: Text('Refunded')),
-                ButtonSegment<String>(
-                    value: 'pending', label: Text('Pending')),
-              ],
-              selected: <String>{_filter},
-              onSelectionChanged: (Set<String> value) =>
-                  setState(() => _filter = value.first),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        StreamBuilder<List<Map<String, dynamic>>>(
-          stream: widget.firestore.watchDocs('payments'),
-          builder: (
-            BuildContext context,
-            AsyncSnapshot<List<Map<String, dynamic>>> snap,
-          ) {
-            if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            List<Map<String, dynamic>> docs = snap.data!;
-            if (_filter != 'All') {
-              docs = docs
-                  .where((Map<String, dynamic> d) =>
-                      str(d, 'status') == _filter)
-                  .toList();
-            }
-            if (_query.isNotEmpty) {
-              docs = docs
-                  .where((Map<String, dynamic> d) =>
-                      str(d, 'user').toLowerCase().contains(_query))
-                  .toList();
-            }
-            if (docs.isEmpty) {
-              return const _Empty(
-                title: 'No payments yet.',
-                body: 'Payments appear here once users pay.',
-              );
-            }
-            return Card(
-              child: Column(
-                children: docs
-                    .map(
-                      (Map<String, dynamic> doc) => ListTile(
-                        title: Text(
-                          '${formatStamp(doc['createdAt'])}  •  ${str(doc, 'user')}',
-                        ),
-                        subtitle: Text(
-                          '${str(doc, 'plan')}  •  ${numVal(doc, 'amount')} ${str(doc, 'currency')}',
-                        ),
-                        trailing: _Pill(
-                          label: str(doc, 'status'),
-                          color: _statusColor(str(doc, 'status')),
-                        ),
-                        onTap: () => _showPayment(context, doc),
-                      ),
-                    )
-                    .toList(),
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Future<void> _showPlanForm(
-    BuildContext context,
-    Map<String, dynamic>? plan,
-  ) async {
-    final TextEditingController name =
-        TextEditingController(text: plan == null ? '' : str(plan, 'name'));
-    final TextEditingController length = TextEditingController(
-        text: plan == null ? '' : str(plan, 'length'));
-    final TextEditingController limit = TextEditingController(
-        text: plan == null ? '' : str(plan, 'limit'));
-    final TextEditingController promotion = TextEditingController(
-        text: plan == null ? '' : str(plan, 'promotion'));
-    final TextEditingController benefits = TextEditingController(
-      text: plan == null
-          ? ''
-          : ((plan['benefits'] as List<dynamic>? ?? <dynamic>[])
-                  .map((dynamic b) => b.toString())
-                  .join('\n')),
-    );
-    await showDialog<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(plan == null ? 'New plan' : 'Edit plan'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                _adminField(label: 'Plan name', controller: name),
-                _adminField(
-                  label: 'Length',
-                  controller: length,
-                  hint: 'Monthly',
-                ),
-                _adminField(
-                  label: 'Duration limit',
-                  controller: limit,
-                  hint: '12 kundlis a month',
-                ),
-                _adminField(
-                  label: 'Promotion',
-                  controller: promotion,
-                  hint: 'First month free, when decided',
-                ),
-                _adminField(
-                  label: 'Benefits, one per line',
-                  controller: benefits,
-                  maxLines: 5,
-                ),
-                const Text(
-                  'Price is to be decided. Plans stay in Draft until a price is set.',
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                await widget.firestore.saveDoc(
-                  'plans',
-                  plan == null
-                      ? DateTime.now().millisecondsSinceEpoch.toString()
-                      : str(plan, 'id'),
-                  <String, Object?>{
-                    'name': name.text.trim(),
-                    'length': length.text.trim(),
-                    'limit': limit.text.trim(),
-                    'promotion': promotion.text.trim(),
-                    'benefits': benefits.text
-                        .split('\n')
-                        .map((String b) => b.trim())
-                        .where((String b) => b.isNotEmpty)
-                        .toList(),
-                    'status': plan == null ? 'Draft' : str(plan, 'status'),
-                  },
-                  isNew: plan == null,
-                );
-                if (context.mounted) Navigator.of(context).pop();
-              },
-              child: const Text('Save plan'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _showPayment(
-    BuildContext context,
-    Map<String, dynamic> doc,
-  ) async {
-    await showDialog<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('${str(doc, 'user')}  •  ${str(doc, 'plan')}'),
-          content: Text(
-            'Amount ${numVal(doc, 'amount')} ${str(doc, 'currency')}. '
-            'Status ${str(doc, 'status')}. '
-            '${str(doc, 'note')}',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-            if (str(doc, 'status') == 'paid' && doc['verified'] != true)
-              TextButton(
-                onPressed: () async {
-                  await widget.firestore.saveDoc(
-                    'payments',
-                    str(doc, 'id'),
-                    <String, Object?>{'verified': true},
-                  );
-                  await widget.firestore.logAudit(
-                    actor: 'owner',
-                    action: 'payment_verified',
-                    target: str(doc, 'id'),
-                    detail: '${str(doc, 'user')} ${str(doc, 'plan')}',
-                  );
-                  if (context.mounted) Navigator.of(context).pop();
-                },
-                child: const Text('Mark verified'),
-              ),
-            if (str(doc, 'status') == 'paid')
-              TextButton(
-                onPressed: () async {
-                  final bool ok = await _confirm(
-                    context,
-                    'Refund this payment?',
-                    'The amount returns to the user. This cannot be undone. '
-                    'Record the refund here, and return the money in the payment provider.',
-                    'Refund',
-                  );
-                  if (!ok) return;
-                  await widget.firestore.saveDoc(
-                    'payments',
-                    str(doc, 'id'),
-                    <String, Object?>{'status': 'refunded'},
-                  );
-                  if (context.mounted) Navigator.of(context).pop();
-                },
-                child: const Text('Refund'),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
 /// Analytics and revenue, design 20. Every number comes from
 /// Firestore. Charts with no source data say so plainly.
 class AnalyticsScreen extends StatefulWidget {
@@ -3169,8 +2708,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        _SubscriptionMetricsCard(firestore: widget.firestore),
-        const SizedBox(height: AppSpacing.md),
         _FeatureUsageCard(firestore: widget.firestore),
       ],
     );
@@ -3240,70 +2777,6 @@ class _ConsultMinutesStat extends StatelessWidget {
           value: total == 0 ? 'No data yet' : '$total',
         );
       },
-    );
-  }
-}
-
-/// Subscription metrics from plans and payments. Retention
-/// has no source yet: activity events do not exist, so the
-/// card says so in words instead of showing a made up rate.
-class _SubscriptionMetricsCard extends StatelessWidget {
-  const _SubscriptionMetricsCard({required this.firestore});
-
-  final FirestoreService firestore;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'Subscription metrics',
-              style: AppTextStyles.themed(context, AppTextStyles.subtitle),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            StreamBuilder<List<Map<String, dynamic>>>(
-              stream: firestore.watchDocs('plans'),
-              builder: (
-                BuildContext context,
-                AsyncSnapshot<List<Map<String, dynamic>>> snap,
-              ) {
-                final int active = snap.hasData
-                    ? snap.data!
-                        .where((Map<String, dynamic> d) =>
-                            str(d, 'status') == 'Active')
-                        .length
-                    : 0;
-                return StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: firestore.watchDocs('payments'),
-                  builder: (
-                    BuildContext context,
-                    AsyncSnapshot<List<Map<String, dynamic>>> paySnap,
-                  ) {
-                    final Map<String, int> counts = paySnap.hasData
-                        ? AdminMetrics.countsByStatus(paySnap.data!)
-                        : <String, int>{};
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text('Active plans $active'),
-                        Text('Paid payments ${counts['paid'] ?? 0}'),
-                        Text('Refunded payments ${counts['refunded'] ?? 0}'),
-                        const Text(
-                          'Retention needs activity events. No data yet.',
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -3710,17 +3183,6 @@ class _NotificationsScreenAdminState
                     controller: _message,
                     maxLines: 4,
                     hint: 'Kanya: a strong day for money talks.',
-                  ),
-                  _SegmentRow(
-                    label: 'Audience',
-                    value: _audience,
-                    options: const <String>[
-                      'All users',
-                      'Free users',
-                      'Premium users',
-                    ],
-                    onChanged: (String v) =>
-                        setState(() => _audience = v),
                   ),
                   _SegmentRow(
                     label: 'Type',

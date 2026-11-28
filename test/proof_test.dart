@@ -6,7 +6,6 @@ import 'package:dharm_guru_shrinkhala/services/firestore_service.dart';
 import 'package:dharm_guru_shrinkhala/services/library_content.dart';
 import 'package:dharm_guru_shrinkhala/services/matching.dart';
 import 'package:dharm_guru_shrinkhala/services/notification_schedule.dart';
-import 'package:dharm_guru_shrinkhala/services/premium_service.dart';
 import 'package:dharm_guru_shrinkhala/services/remedies_engine.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -245,16 +244,6 @@ void main() {
     expect(read?['name'], 'Test User');
     expect(read?['dateOfBirth'], '2000-01-15');
     expect(read?['birthCity'], 'Delhi');
-  });
-
-  test('PROOF Premium: flag off means the premium flow stays gated', () {
-    final PremiumService premium = PremiumService(isEnabled: () => false);
-    // ignore: avoid_print
-    print(
-      'INPUT Remote Config premium_enabled false '
-      'OUTPUT isPremiumEnabled ${premium.isPremiumEnabled}',
-    );
-    expect(premium.isPremiumEnabled, isFalse);
   });
 
   test('PROOF Library: real timeline, festivals and planets', () {

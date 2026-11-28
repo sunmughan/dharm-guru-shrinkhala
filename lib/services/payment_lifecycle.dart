@@ -180,7 +180,7 @@ class PaymentLifecycle {
     return order.copyWith(state: PaymentState.verified);
   }
 
-  /// Applies the entitlement, for example premium access.
+  /// Applies the entitlement.
   /// Calling it twice throws, so a retried webhook or a
   /// retried job can never grant the entitlement twice.
   static PaymentOrder applyEntitlement(PaymentOrder order) {

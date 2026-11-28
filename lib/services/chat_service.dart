@@ -95,7 +95,9 @@ class ChatService {
 
   /// Messages oldest first, live.
   Stream<List<ChatMessage>> watchMessages(String chatId) {
-    return _firestore.watchDocs('chats/$chatId/messages').map(
+    return _firestore
+        .watchDocs('chats/$chatId/messages', limit: 200)
+        .map(
       (List<Map<String, dynamic>> docs) {
         final List<ChatMessage> messages =
             docs.map(ChatMessage.fromMap).toList();
@@ -119,17 +121,22 @@ class ChatService {
     required String senderId,
     required String senderRole,
     required String text,
-    required List<String> participantIds,
+    List<String>? participantIds,
   }) async {
     final String trimmed = text.trim();
     if (trimmed.isEmpty) return;
     final Map<String, dynamic>? existing =
         await _firestore.getDoc('chats', chatId);
+    final List<String> kept = participantIds ??
+        (existing?['participantIds'] as List<dynamic>?)
+            ?.map((dynamic e) => e.toString())
+            .toList() ??
+        <String>[senderId];
     await _firestore.saveDoc(
       'chats',
       chatId,
       <String, Object?>{
-        'participantIds': participantIds,
+        'participantIds': kept,
         'lastMessage': trimmed,
         'lastMessageAt': FieldValue.serverTimestamp(),
       },

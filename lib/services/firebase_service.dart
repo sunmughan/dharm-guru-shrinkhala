@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -47,8 +49,8 @@ class FirebaseService {
           '$error\n${stack.toString().split('\n').take(6).join('\n')}';
       rethrow;
     }
-    await _runOptional(_configureRemoteConfig);
-    await _runOptional(_configureMessaging);
+    unawaited(_runOptional(_configureRemoteConfig));
+    unawaited(_runOptional(_configureMessaging));
   }
 
   // One optional step that must never kill the app. Remote Config
@@ -71,7 +73,6 @@ class FirebaseService {
       ),
     );
     await remoteConfig.setDefaults(<String, Object>{
-      'premium_enabled': false,
       'live_consult_enabled': false,
     });
     await remoteConfig.fetchAndActivate();

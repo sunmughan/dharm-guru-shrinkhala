@@ -27,7 +27,6 @@ import '../services/library_content.dart';
 import '../services/matching.dart';
 import '../services/notification_schedule.dart';
 import '../services/panchang_extra.dart';
-import '../services/premium_service.dart';
 import '../services/remedies_engine.dart';
 import '../services/user_profile.dart';
 import '../widgets/brand_mark.dart';
@@ -1574,10 +1573,9 @@ class _PlanetSummaryList extends StatelessWidget {
   }
 }
 
-/// Planet details screen: full table with exact degrees,
-/// swami notes and the premium note, per
-/// design/screens/06-planet-details.md. Shows the computed
-/// kundli it is given.
+/// Planet details screen: full table with exact degrees and
+/// swami notes, per design/screens/06-planet-details.md.
+/// Shows the computed kundli it is given.
 class PlanetDetailsScreen extends StatelessWidget {
   const PlanetDetailsScreen({super.key, required this.kundli});
 
@@ -2288,22 +2286,17 @@ class _PanchangCard extends StatelessWidget {
 /// MatchingCalculator: all eight gunas from the Moon rashi
 /// and Moon nakshatra, plus Mangal Dosha from the Mars bhava.
 /// The first person prefills from the saved profile when one
-/// is complete. The full report is premium, gated by the
-/// Remote Config flag, so its button says so honestly until
-/// premium is on.
+/// is complete. The full report opens directly from the
+/// calculated result.
 class MatchingScreen extends StatefulWidget {
   const MatchingScreen({
     super.key,
     this.firestore,
     this.authService,
-    this.premiumService,
   });
 
   final FirestoreService? firestore;
   final AuthService? authService;
-
-  /// Premium gate. Tests pass their own flag reader.
-  final PremiumService? premiumService;
 
   @override
   State<MatchingScreen> createState() => _MatchingScreenState();
@@ -2457,18 +2450,6 @@ class _MatchingScreenState extends State<MatchingScreen> {
   void _showFullReport() {
     final MatchingResult? result = _result;
     if (result == null) return;
-    final bool enabled =
-        (widget.premiumService ?? PremiumService()).isPremiumEnabled;
-    if (!enabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Full milan report is premium. Premium is not available yet. Pricing to be decided.',
-          ),
-        ),
-      );
-      return;
-    }
     showDialog<void>(
       context: context,
       builder: (BuildContext context) {
@@ -4151,9 +4132,7 @@ class _ChatScreenState extends State<ChatScreen> {
 /// birth details, place of birth, marital status, occupation,
 /// phone, language and the daily horoscope alert time. With no
 /// profile yet it asks the user to complete one instead of
-/// showing a made up name. Free and premium plan. Pricing to
-/// be decided. With a Firestore service, it shows the active
-/// plan the admin set, instead of assuming the free plan.
+/// showing a made up name.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, this.firestore, this.authService});
 
@@ -4422,49 +4401,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           Card(
             child: ListTile(
-              title: Text('Plan', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
-              subtitle: _firestore == null
-                  ? Text(
-                      'Free plan. Premium pricing to be decided.',
-                      style: AppTextStyles.themed(
-                          context, AppTextStyles.bodySmall),
-                    )
-                  : StreamBuilder<List<Map<String, dynamic>>>(
-                      stream: _firestore!.watchDocs('plans'),
-                      builder: (
-                        BuildContext context,
-                        AsyncSnapshot<List<Map<String, dynamic>>> snap,
-                      ) {
-                        if (snap.hasError || !snap.hasData) {
-                          return Text(
-                            'Plan could not be loaded.',
-                            style: AppTextStyles.themed(
-                                context, AppTextStyles.bodySmall),
-                          );
-                        }
-                        final List<Map<String, dynamic>> active = snap.data!
-                            .where((Map<String, dynamic> d) =>
-                                str(d, 'status') == 'active')
-                            .toList();
-                        if (active.isEmpty) {
-                          return Text(
-                            'Free plan. Premium pricing to be decided.',
-                            style: AppTextStyles.themed(
-                                context, AppTextStyles.bodySmall),
-                          );
-                        }
-                        final Map<String, dynamic> plan = active.first;
-                        return Text(
-                          '${str(plan, 'name')} plan',
-                          style: AppTextStyles.themed(
-                              context, AppTextStyles.bodySmall),
-                        );
-                      },
-                    ),
-            ),
-          ),
-          Card(
-            child: ListTile(
               title: Text('Birth Profiles', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
               subtitle: Text('Birth details for family members.', style: AppTextStyles.themed(context, AppTextStyles.bodySmall)),
               trailing: const Icon(Icons.chevron_right),
@@ -4500,20 +4436,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => ReportsScreen(firestore: _firestore, authService: _auth),
-                  ),
-                );
-              },
-            ),
-          ),
-          Card(
-            child: ListTile(
-              title: Text('Subscription', style: AppTextStyles.themed(context, AppTextStyles.subtitle)),
-              subtitle: Text('Plan, entitlement and payment history.', style: AppTextStyles.themed(context, AppTextStyles.bodySmall)),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => SubscriptionScreen(firestore: _firestore),
                   ),
                 );
               },

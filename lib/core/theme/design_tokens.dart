@@ -41,7 +41,6 @@ class AppColors {
   static const Color textOnSaffron = Color(0xFFFFFFFF);
   static const Color divider = line;
   static const Color success = good;
-  static const Color premiumGold = gold;
 }
 
 /// Dark colour tokens from design/DESIGN-SYSTEM.md section 2.

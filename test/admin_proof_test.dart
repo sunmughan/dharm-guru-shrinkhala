@@ -59,7 +59,6 @@ void main() {
         AdminDashboardScreen(
           firestore: service,
           featureFlags: const <String, bool>{
-            'premium_enabled': false,
             'live_consult_enabled': false,
           },
           onNavigate: (_) {},
@@ -90,7 +89,6 @@ void main() {
         AdminDashboardScreen(
           firestore: service,
           featureFlags: const <String, bool>{
-            'premium_enabled': false,
             'live_consult_enabled': false,
           },
           onNavigate: (_) {},
@@ -171,48 +169,6 @@ void main() {
           await service.getDoc('horoscopes', '${today}_Kanya');
       expect(doc?['status'], 'published');
       expect(doc?['summary'], 'A strong day for money talks.');
-    });
-  });
-
-  group('Subscriptions and Payments', () {
-    testWidgets('shows the seeded plan and payment',
-        (WidgetTester tester) async {
-      final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
-      final FirestoreService service = FirestoreService(firestore: fake);
-      await fake.collection('plans').doc('p1').set(
-        <String, Object?>{
-          'name': 'Monthly',
-          'length': 'Monthly',
-          'benefits': <String>['Full kundli', 'Daily horoscope'],
-          'status': 'Active',
-        },
-      );
-      await fake.collection('payments').doc('pay1').set(
-        <String, Object?>{
-          'user': 'Test User',
-          'plan': 'Monthly',
-          'amount': 499,
-          'currency': 'INR',
-          'status': 'paid',
-          'createdAt': Timestamp.fromDate(DateTime.now()),
-        },
-      );
-      await _pump(tester, SubscriptionsScreen(firestore: service));
-      expect(find.text('Price to be decided'), findsOneWidget);
-      expect(find.textContaining('499.0 INR'), findsOneWidget);
-      expect(find.textContaining('Test User'), findsOneWidget);
-    });
-
-    testWidgets('shows empty states with no plans or payments',
-        (WidgetTester tester) async {
-      final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
-      final FirestoreService service = FirestoreService(firestore: fake);
-      await _pump(tester, SubscriptionsScreen(firestore: service));
-      expect(
-        find.text('No plans yet. Create the first plan.'),
-        findsOneWidget,
-      );
-      expect(find.text('No payments yet.'), findsOneWidget);
     });
   });
 
