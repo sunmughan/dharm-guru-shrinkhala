@@ -1,0 +1,206 @@
+[2026-11-27T19:40:46.900Z] cdnmap.serve: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.wasm -> chromium/canvaskit.wasm
+[2026-11-27T19:40:46.975Z] cdnmap.serve: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.js -> chromium/canvaskit.js
+[2026-11-27T19:40:46.980Z] console.debug: Injecting <script> tag. Using callback.
+[2026-11-27T19:40:48.713Z] fontmap.serve: https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Me4GZLCzYlKw.woff2
+[2026-11-27T19:40:48.837Z] console.debug: TrustedTypes available. Creating policy: gis-dart
+[2026-11-27T19:40:48.853Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_core
+[2026-11-27T19:40:48.857Z] console.debug: Initializing Firebase firebase_core
+[2026-11-27T19:40:48.864Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js -> firebase-app.js
+[2026-11-27T19:40:48.880Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_firestore
+[2026-11-27T19:40:48.880Z] console.debug: Initializing Firebase firebase_firestore
+[2026-11-27T19:40:48.880Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js -> firebase-firestore.js
+[2026-11-27T19:40:48.941Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_analytics
+[2026-11-27T19:40:48.955Z] console.debug: Initializing Firebase firebase_analytics
+[2026-11-27T19:40:48.956Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_auth
+[2026-11-27T19:40:48.956Z] console.debug: Initializing Firebase firebase_auth
+[2026-11-27T19:40:48.956Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_messaging
+[2026-11-27T19:40:48.960Z] console.debug: Initializing Firebase firebase_messaging
+[2026-11-27T19:40:48.961Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js -> firebase-analytics.js
+[2026-11-27T19:40:48.973Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js -> firebase-auth.js
+[2026-11-27T19:40:49.021Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging.js -> firebase-messaging.js
+[2026-11-27T19:40:49.026Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_remote_config
+[2026-11-27T19:40:49.026Z] console.debug: Initializing Firebase firebase_remote_config
+[2026-11-27T19:40:49.027Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-remote-config.js -> firebase-remote-config.js
+[2026-11-27T19:40:50.421Z] requestfailed: https://accounts.google.com/gsi/client :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:40:50.421Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:40:51.305Z] requestfailed: https://firebaseinstallations.googleapis.com/v1/projects/PROJECT_ID_PLACEHOLDER/installations :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:40:51.305Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:40:51.309Z] console.error: TypeError: Failed to fetch
+    at https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10744
+    at retryIfServerError (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:7551)
+    at createInstallationRequest (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10720)
+    at async registerInstallation (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10342)
+[2026-11-27T19:40:52.247Z] requestfailed: https://firebaseinstallations.googleapis.com/v1/projects/PROJECT_ID_PLACEHOLDER/installations :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:40:52.248Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:40:52.252Z] console.log: Firebase optional setup failed: TypeError: Failed to fetch
+[2026-11-27T19:40:53.709Z] console.log: Firebase optional setup failed: [firebase_messaging/permission-blocked] Messaging: The notification permission was not granted and blocked instead. .
+[2026-11-27T19:40:54.129Z] requestfailed: https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=WEB_API_KEY_PLACEHOLDER :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:40:54.129Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:40:54.132Z] console.log: Admin seed failed: [firebase_auth/network-request-failed] A network AuthError (such as timeout, interrupted connection or unreachable host) has occurred.
+[2026-11-27T19:40:55.159Z] console.warning: [.WebGL-0x754016fca00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[2026-11-27T19:40:55.670Z] console.warning: [.WebGL-0x754016fca00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[2026-11-27T19:40:55.762Z] console.warning: [.WebGL-0x754016fca00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[2026-11-27T19:40:55.849Z] console.warning: [.WebGL-0x754016fca00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+[2026-11-27T19:41:03.588Z] ADM006r: submitted valid email plus 3 char password
+[2026-11-27T19:41:03.727Z] cdnmap.serve: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.wasm -> chromium/canvaskit.wasm
+[2026-11-27T19:41:03.823Z] console.debug: Injecting <script> tag. Using callback.
+[2026-11-27T19:41:03.939Z] cdnmap.serve: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.js -> chromium/canvaskit.js
+[2026-11-27T19:41:04.640Z] fontmap.serve: https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Me4GZLCzYlKw.woff2
+[2026-11-27T19:41:04.692Z] console.debug: TrustedTypes available. Creating policy: gis-dart
+[2026-11-27T19:41:04.724Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_core
+[2026-11-27T19:41:04.724Z] console.debug: Initializing Firebase firebase_core
+[2026-11-27T19:41:04.724Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_firestore
+[2026-11-27T19:41:04.724Z] console.debug: Initializing Firebase firebase_firestore
+[2026-11-27T19:41:04.724Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_analytics
+[2026-11-27T19:41:04.725Z] console.debug: Initializing Firebase firebase_analytics
+[2026-11-27T19:41:04.729Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_auth
+[2026-11-27T19:41:04.740Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js -> firebase-app.js
+[2026-11-27T19:41:04.747Z] console.debug: Initializing Firebase firebase_auth
+[2026-11-27T19:41:04.748Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_messaging
+[2026-11-27T19:41:04.748Z] console.debug: Initializing Firebase firebase_messaging
+[2026-11-27T19:41:04.748Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_remote_config
+[2026-11-27T19:41:04.748Z] console.debug: Initializing Firebase firebase_remote_config
+[2026-11-27T19:41:04.749Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js -> firebase-firestore.js
+[2026-11-27T19:41:04.771Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js -> firebase-analytics.js
+[2026-11-27T19:41:04.788Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js -> firebase-auth.js
+[2026-11-27T19:41:04.831Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging.js -> firebase-messaging.js
+[2026-11-27T19:41:04.836Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-remote-config.js -> firebase-remote-config.js
+[2026-11-27T19:41:05.144Z] requestfailed: https://accounts.google.com/gsi/client :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:05.144Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:06.546Z] requestfailed: https://firebaseinstallations.googleapis.com/v1/projects/PROJECT_ID_PLACEHOLDER/installations :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:06.546Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:06.561Z] console.error: TypeError: Failed to fetch
+    at https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10744
+    at retryIfServerError (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:7551)
+    at createInstallationRequest (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10720)
+    at async registerInstallation (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10342)
+[2026-11-27T19:41:09.077Z] requestfailed: https://firebaseinstallations.googleapis.com/v1/projects/PROJECT_ID_PLACEHOLDER/installations :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:09.077Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:09.094Z] console.log: Firebase optional setup failed: TypeError: Failed to fetch
+[2026-11-27T19:41:09.101Z] console.log: Firebase optional setup failed: [firebase_messaging/permission-blocked] Messaging: The notification permission was not granted and blocked instead. .
+[2026-11-27T19:41:10.077Z] requestfailed: https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=WEB_API_KEY_PLACEHOLDER :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:10.084Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:10.126Z] console.log: Admin seed failed: [firebase_auth/network-request-failed] A network AuthError (such as timeout, interrupted connection or unreachable host) has occurred.
+[2026-11-27T19:41:18.863Z] requestfailed: https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=WEB_API_KEY_PLACEHOLDER :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:18.864Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:26.342Z] ADM007r: submitted probe sign in, waited 8s for Auth error
+[2026-11-27T19:41:26.487Z] cdnmap.serve: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.wasm -> chromium/canvaskit.wasm
+[2026-11-27T19:41:26.586Z] console.debug: Injecting <script> tag. Using callback.
+[2026-11-27T19:41:26.586Z] cdnmap.serve: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.js -> chromium/canvaskit.js
+[2026-11-27T19:41:27.583Z] fontmap.serve: https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Me4GZLCzYlKw.woff2
+[2026-11-27T19:41:27.653Z] console.debug: TrustedTypes available. Creating policy: gis-dart
+[2026-11-27T19:41:27.665Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_core
+[2026-11-27T19:41:27.665Z] console.debug: Initializing Firebase firebase_core
+[2026-11-27T19:41:27.676Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js -> firebase-app.js
+[2026-11-27T19:41:27.725Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_firestore
+[2026-11-27T19:41:27.725Z] console.debug: Initializing Firebase firebase_firestore
+[2026-11-27T19:41:27.725Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js -> firebase-firestore.js
+[2026-11-27T19:41:27.741Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_analytics
+[2026-11-27T19:41:27.748Z] console.debug: Initializing Firebase firebase_analytics
+[2026-11-27T19:41:27.751Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js -> firebase-analytics.js
+[2026-11-27T19:41:27.761Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_auth
+[2026-11-27T19:41:27.762Z] console.debug: Initializing Firebase firebase_auth
+[2026-11-27T19:41:27.762Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_messaging
+[2026-11-27T19:41:27.762Z] console.debug: Initializing Firebase firebase_messaging
+[2026-11-27T19:41:27.764Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js -> firebase-auth.js
+[2026-11-27T19:41:27.774Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging.js -> firebase-messaging.js
+[2026-11-27T19:41:27.778Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_remote_config
+[2026-11-27T19:41:27.779Z] console.debug: Initializing Firebase firebase_remote_config
+[2026-11-27T19:41:27.780Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-remote-config.js -> firebase-remote-config.js
+[2026-11-27T19:41:29.392Z] requestfailed: https://accounts.google.com/gsi/client :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:29.392Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:29.932Z] requestfailed: https://firebaseinstallations.googleapis.com/v1/projects/PROJECT_ID_PLACEHOLDER/installations :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:29.932Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:29.936Z] console.error: TypeError: Failed to fetch
+    at https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10744
+    at retryIfServerError (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:7551)
+    at createInstallationRequest (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10720)
+    at async registerInstallation (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10342)
+[2026-11-27T19:41:31.642Z] requestfailed: https://firebaseinstallations.googleapis.com/v1/projects/PROJECT_ID_PLACEHOLDER/installations :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:31.646Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:31.657Z] console.log: Firebase optional setup failed: TypeError: Failed to fetch
+[2026-11-27T19:41:31.667Z] console.log: Firebase optional setup failed: [firebase_messaging/permission-blocked] Messaging: The notification permission was not granted and blocked instead. .
+[2026-11-27T19:41:32.534Z] requestfailed: https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=WEB_API_KEY_PLACEHOLDER :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:32.534Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:32.535Z] console.log: Admin seed failed: [firebase_auth/network-request-failed] A network AuthError (such as timeout, interrupted connection or unreachable host) has occurred.
+[2026-11-27T19:41:42.131Z] ADM008r: tapped Create account link
+[2026-11-27T19:41:42.272Z] cdnmap.serve: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.wasm -> chromium/canvaskit.wasm
+[2026-11-27T19:41:42.292Z] console.debug: Injecting <script> tag. Using callback.
+[2026-11-27T19:41:42.293Z] cdnmap.serve: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.js -> chromium/canvaskit.js
+[2026-11-27T19:41:43.086Z] fontmap.serve: https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Me4GZLCzYlKw.woff2
+[2026-11-27T19:41:43.172Z] console.debug: TrustedTypes available. Creating policy: gis-dart
+[2026-11-27T19:41:43.227Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_core
+[2026-11-27T19:41:43.232Z] console.debug: Initializing Firebase firebase_core
+[2026-11-27T19:41:43.232Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_firestore
+[2026-11-27T19:41:43.232Z] console.debug: Initializing Firebase firebase_firestore
+[2026-11-27T19:41:43.232Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_analytics
+[2026-11-27T19:41:43.232Z] console.debug: Initializing Firebase firebase_analytics
+[2026-11-27T19:41:43.236Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js -> firebase-app.js
+[2026-11-27T19:41:43.237Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_auth
+[2026-11-27T19:41:43.237Z] console.debug: Initializing Firebase firebase_auth
+[2026-11-27T19:41:43.238Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_messaging
+[2026-11-27T19:41:43.238Z] console.debug: Initializing Firebase firebase_messaging
+[2026-11-27T19:41:43.238Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_remote_config
+[2026-11-27T19:41:43.238Z] console.debug: Initializing Firebase firebase_remote_config
+[2026-11-27T19:41:43.238Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js -> firebase-firestore.js
+[2026-11-27T19:41:43.240Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js -> firebase-analytics.js
+[2026-11-27T19:41:43.242Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js -> firebase-auth.js
+[2026-11-27T19:41:43.243Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging.js -> firebase-messaging.js
+[2026-11-27T19:41:43.260Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-remote-config.js -> firebase-remote-config.js
+[2026-11-27T19:41:44.104Z] requestfailed: https://accounts.google.com/gsi/client :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:44.104Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:44.766Z] requestfailed: https://firebaseinstallations.googleapis.com/v1/projects/PROJECT_ID_PLACEHOLDER/installations :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:44.766Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:44.773Z] console.error: TypeError: Failed to fetch
+    at https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10744
+    at retryIfServerError (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:7551)
+    at createInstallationRequest (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10720)
+    at async registerInstallation (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10342)
+[2026-11-27T19:41:46.162Z] requestfailed: https://firebaseinstallations.googleapis.com/v1/projects/PROJECT_ID_PLACEHOLDER/installations :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:46.164Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:46.172Z] console.log: Firebase optional setup failed: TypeError: Failed to fetch
+[2026-11-27T19:41:46.174Z] console.log: Firebase optional setup failed: [firebase_messaging/permission-blocked] Messaging: The notification permission was not granted and blocked instead. .
+[2026-11-27T19:41:47.264Z] requestfailed: https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=WEB_API_KEY_PLACEHOLDER :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:47.264Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:41:47.265Z] console.log: Admin seed failed: [firebase_auth/network-request-failed] A network AuthError (such as timeout, interrupted connection or unreachable host) has occurred.
+[2026-11-27T19:41:56.880Z] ADM009r: tapped Forgot password link
+[2026-11-27T19:41:57.151Z] cdnmap.serve: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.wasm -> chromium/canvaskit.wasm
+[2026-11-27T19:41:57.249Z] console.debug: Injecting <script> tag. Using callback.
+[2026-11-27T19:41:57.249Z] cdnmap.serve: https://www.gstatic.com/flutter-canvaskit/4d35714800b9266b6693a58e1225ecd7e9e45ed7/chromium/canvaskit.js -> chromium/canvaskit.js
+[2026-11-27T19:41:58.370Z] fontmap.serve: https://fonts.gstatic.com/s/roboto/v32/KFOmCnqEu92Fr1Me4GZLCzYlKw.woff2
+[2026-11-27T19:41:58.430Z] console.debug: TrustedTypes available. Creating policy: gis-dart
+[2026-11-27T19:41:58.481Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_core
+[2026-11-27T19:41:58.481Z] console.debug: Initializing Firebase firebase_core
+[2026-11-27T19:41:58.481Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js -> firebase-app.js
+[2026-11-27T19:41:58.482Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_firestore
+[2026-11-27T19:41:58.483Z] console.debug: Initializing Firebase firebase_firestore
+[2026-11-27T19:41:58.484Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_analytics
+[2026-11-27T19:41:58.485Z] console.debug: Initializing Firebase firebase_analytics
+[2026-11-27T19:41:58.485Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_auth
+[2026-11-27T19:41:58.485Z] console.debug: Initializing Firebase firebase_auth
+[2026-11-27T19:41:58.485Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_messaging
+[2026-11-27T19:41:58.487Z] console.debug: Initializing Firebase firebase_messaging
+[2026-11-27T19:41:58.487Z] console.debug: TrustedTypes available. Creating policy: flutterfire-firebase_remote_config
+[2026-11-27T19:41:58.487Z] console.debug: Initializing Firebase firebase_remote_config
+[2026-11-27T19:41:58.488Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js -> firebase-firestore.js
+[2026-11-27T19:41:58.497Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js -> firebase-analytics.js
+[2026-11-27T19:41:58.498Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js -> firebase-auth.js
+[2026-11-27T19:41:58.499Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging.js -> firebase-messaging.js
+[2026-11-27T19:41:58.500Z] fbmap.serve: https://www.gstatic.com/firebasejs/11.9.1/firebase-remote-config.js -> firebase-remote-config.js
+[2026-11-27T19:42:00.027Z] requestfailed: https://accounts.google.com/gsi/client :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:42:00.027Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:42:00.131Z] requestfailed: https://firebaseinstallations.googleapis.com/v1/projects/PROJECT_ID_PLACEHOLDER/installations :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:42:00.131Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:42:00.132Z] console.error: TypeError: Failed to fetch
+    at https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10744
+    at retryIfServerError (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:7551)
+    at createInstallationRequest (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10720)
+    at async registerInstallation (https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js:1:10342)
+[2026-11-27T19:42:01.978Z] requestfailed: https://firebaseinstallations.googleapis.com/v1/projects/PROJECT_ID_PLACEHOLDER/installations :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:42:01.978Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:42:01.980Z] console.log: Firebase optional setup failed: TypeError: Failed to fetch
+[2026-11-27T19:42:01.984Z] console.log: Firebase optional setup failed: [firebase_messaging/permission-blocked] Messaging: The notification permission was not granted and blocked instead. .
+[2026-11-27T19:42:02.768Z] requestfailed: https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=WEB_API_KEY_PLACEHOLDER :: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:42:02.768Z] console.error: Failed to load resource: net::ERR_TUNNEL_CONNECTION_FAILED
+[2026-11-27T19:42:02.770Z] console.log: Admin seed failed: [firebase_auth/network-request-failed] A network AuthError (such as timeout, interrupted connection or unreachable host) has occurred.
+[2026-11-27T19:42:17.239Z] ADM010r: tapped Continue with Google
