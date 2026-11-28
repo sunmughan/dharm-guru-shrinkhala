@@ -15,11 +15,11 @@ import 'screens.dart';
 /// `astrologers` collection, document id `hans-ojha`, never
 /// from a hardcoded string in this widget. Chat opens his
 /// assigned chat room; Call dials the phone saved on his
-/// record. Anything he has not provided yet, phone, photo,
-/// bio, qualifications, languages, experience, rate, is
-/// shown as "not provided yet", never filled with invented
-/// content. There is no AI astrology here: the workspace is
-/// a room to reach the human astrologer.
+/// record. Anything he has not provided yet, photo, bio,
+/// languages, experience, rate, is shown as "not provided
+/// yet", never filled with invented content. There is no AI
+/// astrology here: the workspace is a room to reach the
+/// human astrologer.
 class AstrologerWorkspaceScreen extends StatelessWidget {
   const AstrologerWorkspaceScreen({
     super.key,
@@ -159,6 +159,13 @@ class AstrologerWorkspaceScreen extends StatelessWidget {
                             AppTextStyles.title,
                           ),
                         ),
+                        Text(
+                          'Astrologer',
+                          style: AppTextStyles.themed(
+                            context,
+                            AppTextStyles.bodySmall,
+                          ),
+                        ),
                         const SizedBox(height: AppSpacing.sm),
                         if (!astrologer.hasPhoto)
                           Text(
@@ -211,6 +218,29 @@ class AstrologerWorkspaceScreen extends StatelessWidget {
                 value: astrologer.rate,
                 emptyText: 'Rate to be decided',
               ),
+              if (astrologer.hasSpecialities) ...<Widget>[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Specialities',
+                  style: AppTextStyles.themed(
+                    context,
+                    AppTextStyles.subtitle,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                ...astrologer.specialities!.map(
+                  (String item) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: Text(
+                      item,
+                      style: AppTextStyles.themed(
+                        context,
+                        AppTextStyles.body,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: AppSpacing.md),
               Row(
                 children: <Widget>[

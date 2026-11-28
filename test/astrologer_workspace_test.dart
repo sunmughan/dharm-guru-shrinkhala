@@ -15,12 +15,13 @@ import 'package:material_ui/material_ui.dart';
 /// Every test runs against the real AstrologerService,
 /// ChatService and FirestoreService on an in memory
 /// Firestore. Nothing about Hans Ojha is invented here:
-/// the record is created with his name only, and the tests
-/// assert the fields he has not provided stay absent and
-/// the UI says so plainly.
+/// the record is created with his name plus the details he
+/// has provided, phone, qualifications and specialities,
+/// and the tests assert the fields he has not provided stay
+/// absent and the UI says so plainly.
 void main() {
   group('Astrologer model', () {
-    test('name only record has no phone, photo, bio or qualifications', () {
+    test('name only record has no phone, photo, bio, qualifications or specialities', () {
       const Astrologer astrologer = Astrologer(
         id: kHansOjhaDocId,
         name: kHansOjhaName,
@@ -30,6 +31,7 @@ void main() {
       expect(astrologer.hasPhoto, isFalse);
       expect(astrologer.hasBio, isFalse);
       expect(astrologer.hasQualifications, isFalse);
+      expect(astrologer.hasSpecialities, isFalse);
       expect(astrologer.hasLanguages, isFalse);
       expect(astrologer.hasExperience, isFalse);
       expect(astrologer.hasRate, isFalse);
@@ -40,6 +42,7 @@ void main() {
           'Photo',
           'Bio',
           'Qualifications',
+          'Specialities',
           'Languages',
           'Experience',
           'Rate',
@@ -74,11 +77,31 @@ void main() {
       expect(map.containsKey('photoUrl'), isFalse);
       expect(map.containsKey('bio'), isFalse);
       expect(map.containsKey('qualifications'), isFalse);
-      expect(Astrologer.initialHansOjhaRecord()['name'], 'Hans Ojha');
+      expect(map.containsKey('specialities'), isFalse);
+      // The seed carries the details he has provided.
+      final Map<String, Object?> initial =
+          Astrologer.initialHansOjhaRecord();
+      expect(initial['name'], 'Hans Ojha');
+      expect(initial['phone'], '9303849941');
+      expect(initial['qualifications'], 'Astrology');
       expect(
-        Astrologer.initialHansOjhaRecord().containsKey('phone'),
-        isFalse,
+        initial['specialities'],
+        <String>[
+          'Kundli vishleshan',
+          'Mahadosh nivaran',
+          'Vivah evam rishta margdarshan',
+          'Career evam vyavasay margdarshan',
+          'Grah shanti evam vastu margdarshan',
+          'Swasthya margdarshan',
+          'Santan prapti evam parivar sukh',
+          'Adhyatmik sadhna evam jeevan margdarshan',
+        ],
       );
+      expect(initial.containsKey('photoUrl'), isFalse);
+      expect(initial.containsKey('bio'), isFalse);
+      expect(initial.containsKey('languages'), isFalse);
+      expect(initial.containsKey('experience'), isFalse);
+      expect(initial.containsKey('rate'), isFalse);
     });
 
     test('listed for consult once approved, online or offline', () {
@@ -92,7 +115,7 @@ void main() {
   });
 
   group('AstrologerService record', () {
-    test('ensure creates the Hans Ojha record with his name only', () async {
+    test('ensure creates the Hans Ojha record with his provided details', () async {
       final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
       final FirestoreService firestore = FirestoreService(firestore: fake);
       final AstrologerService service = AstrologerService(
@@ -102,14 +125,29 @@ void main() {
       final Astrologer created = await service.ensureHansOjhaRecord();
       expect(created.id, 'hans-ojha');
       expect(created.name, 'Hans Ojha');
+      expect(created.phone, '9303849941');
+      expect(created.qualifications, 'Astrology');
+      expect(created.specialities, <String>[
+        'Kundli vishleshan',
+        'Mahadosh nivaran',
+        'Vivah evam rishta margdarshan',
+        'Career evam vyavasay margdarshan',
+        'Grah shanti evam vastu margdarshan',
+        'Swasthya margdarshan',
+        'Santan prapti evam parivar sukh',
+        'Adhyatmik sadhna evam jeevan margdarshan',
+      ]);
       expect(created.status, 'waiting');
       final Map<String, dynamic>? doc =
           await firestore.getDoc('astrologers', 'hans-ojha');
       expect(doc?['name'], 'Hans Ojha');
-      expect(doc?.containsKey('phone'), isFalse);
+      expect(doc?['phone'], '9303849941');
+      expect(doc?['qualifications'], 'Astrology');
       expect(doc?.containsKey('photoUrl'), isFalse);
       expect(doc?.containsKey('bio'), isFalse);
-      expect(doc?.containsKey('qualifications'), isFalse);
+      expect(doc?.containsKey('languages'), isFalse);
+      expect(doc?.containsKey('experience'), isFalse);
+      expect(doc?.containsKey('rate'), isFalse);
       // The admin list reads him back from the collection.
       final List<Astrologer> listed =
           await service.watchAstrologers().first;
@@ -211,11 +249,22 @@ void main() {
   group('Consult call behaviour', () {
     test('no phone saved means no dial URI', () async {
       final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
+      final FirestoreService firestore = FirestoreService(firestore: fake);
       final AstrologerService service = AstrologerService(
-        firestore: FirestoreService(firestore: fake),
+        firestore: firestore,
       );
-      final Astrologer hans = await service.ensureHansOjhaRecord();
-      expect(AstrologerService.callUri(hans), isNull);
+      // A record without a phone, as the seed was before he
+      // provided his number.
+      await fake.collection('astrologers').doc('hans-ojha').set(
+        <String, Object?>{
+          'name': 'Hans Ojha',
+          'status': 'waiting',
+          'chatAvailable': true,
+          'callAvailable': true,
+        },
+      );
+      final Astrologer? hans = await service.getHansOjha();
+      expect(AstrologerService.callUri(hans!), isNull);
     });
 
     test('saved phone dials that number and only that number', () async {
@@ -242,6 +291,12 @@ void main() {
       final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
       final FirestoreService firestore = FirestoreService(firestore: fake);
       await AstrologerService(firestore: firestore).ensureHansOjhaRecord();
+      // The profile is longer than the default 600px test
+      // surface once specialities are listed, so give the
+      // viewport room to build the whole list.
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
       await _pumpApp(
         tester,
         AstrologerWorkspaceScreen(
@@ -250,15 +305,25 @@ void main() {
         ),
       );
       expect(find.text('Hans Ojha'), findsOneWidget);
-      expect(find.text('Phone: Phone number not provided yet'), findsOneWidget);
+      expect(find.text('Astrologer'), findsNWidgets(2));
+      expect(find.text('Phone: 9303849941'), findsOneWidget);
       expect(find.text('Photo not provided yet'), findsOneWidget);
       expect(find.text('Bio: Bio not provided yet'), findsOneWidget);
+      expect(find.text('Qualifications: Astrology'), findsOneWidget);
+      expect(find.text('Specialities'), findsOneWidget);
+      expect(find.text('Kundli vishleshan'), findsOneWidget);
+      expect(find.text('Mahadosh nivaran'), findsOneWidget);
+      expect(find.text('Vivah evam rishta margdarshan'), findsOneWidget);
+      expect(find.text('Career evam vyavasay margdarshan'), findsOneWidget);
+      expect(find.text('Grah shanti evam vastu margdarshan'), findsOneWidget);
+      expect(find.text('Swasthya margdarshan'), findsOneWidget);
+      expect(find.text('Santan prapti evam parivar sukh'), findsOneWidget);
       expect(
-        find.text('Qualifications: Qualifications not provided yet'),
+        find.text('Adhyatmik sadhna evam jeevan margdarshan'),
         findsOneWidget,
       );
       expect(find.text('Rate: Rate to be decided'), findsOneWidget);
-      expect(find.text('Phone number: not provided yet'), findsOneWidget);
+      expect(find.text('Phone number: not provided yet'), findsNothing);
       expect(find.text('Photo: not provided yet'), findsOneWidget);
     });
 
@@ -279,7 +344,16 @@ void main() {
         (WidgetTester tester) async {
       final FakeFirebaseFirestore fake = FakeFirebaseFirestore();
       final FirestoreService firestore = FirestoreService(firestore: fake);
-      await AstrologerService(firestore: firestore).ensureHansOjhaRecord();
+      // A record without a phone, as the seed was before he
+      // provided his number.
+      await fake.collection('astrologers').doc('hans-ojha').set(
+        <String, Object?>{
+          'name': 'Hans Ojha',
+          'status': 'waiting',
+          'chatAvailable': true,
+          'callAvailable': true,
+        },
+      );
       await _pumpApp(
         tester,
         AstrologerWorkspaceScreen(
@@ -304,6 +378,11 @@ void main() {
         firestore: firestore,
         chatService: chat,
       ).ensureHansOjhaRecord();
+      // Tall surface, as in the profile states test above:
+      // the chat button sits below the specialities list.
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
       await _pumpApp(
         tester,
         AstrologerWorkspaceScreen(
@@ -405,8 +484,10 @@ void main() {
       );
       await tester.tap(find.text('View'));
       await tester.pumpAndSettle();
-      expect(find.text('Qualifications: Not provided yet'), findsOneWidget);
-      expect(find.text('Phone: Not set'), findsOneWidget);
+      expect(find.text('Qualifications: Astrology'), findsOneWidget);
+      expect(find.text('Phone: 9303849941'), findsOneWidget);
+      expect(find.text('Kundli vishleshan'), findsOneWidget);
+      expect(find.text('Adhyatmik sadhna evam jeevan margdarshan'), findsOneWidget);
       await tester.tap(find.text('Edit details'));
       await tester.pumpAndSettle();
       // Index 0 is the search field behind the dialog; the
@@ -420,6 +501,21 @@ void main() {
       expect(doc?['qualifications'], 'Jyotishacharya');
       expect(doc?['phone'], '9876543210');
       expect(doc?['name'], 'Hans Ojha');
+      // The seeded specialities survive an edit that does
+      // not touch them.
+      expect(
+        doc?['specialities'],
+        <String>[
+          'Kundli vishleshan',
+          'Mahadosh nivaran',
+          'Vivah evam rishta margdarshan',
+          'Career evam vyavasay margdarshan',
+          'Grah shanti evam vastu margdarshan',
+          'Swasthya margdarshan',
+          'Santan prapti evam parivar sukh',
+          'Adhyatmik sadhna evam jeevan margdarshan',
+        ],
+      );
     });
 
     testWidgets('admin chat view routes his chats to him by name',

@@ -7,8 +7,9 @@ import 'firestore_service.dart';
 /// Owns the Hans Ojha record in the `astrologers`
 /// collection and the wiring from that record into consult
 /// chat and consult call. Firebase only. The record is
-/// created with his name only; every other field stays
-/// absent until he provides it, and the service never
+/// created with his name plus the details he has provided,
+/// phone, qualifications and specialities; every other field
+/// stays absent until he provides it, and the service never
 /// invents a value for one.
 class AstrologerService {
   AstrologerService({
@@ -51,7 +52,8 @@ class AstrologerService {
   Future<Astrologer?> getHansOjha() => getAstrologer(kHansOjhaDocId);
 
   /// Creates the Hans Ojha record when it does not exist yet:
-  /// document id `hans-ojha`, name only, status 'waiting'.
+  /// document id `hans-ojha`, his name plus the details he
+  /// has provided, status 'waiting'.
   /// Returns the record. Never overwrites an existing
   /// record, so edits the owner made to it are kept.
   /// Call from the admin app only: the rules let only the

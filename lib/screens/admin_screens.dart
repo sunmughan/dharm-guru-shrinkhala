@@ -1612,6 +1612,10 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
         (doc['slots'] as List<dynamic>? ?? <dynamic>[])
             .map((dynamic s) => s.toString())
             .toList();
+    final List<String> specialities =
+        (doc['specialities'] as List<dynamic>? ?? <dynamic>[])
+            .map((dynamic s) => s.toString())
+            .toList();
     await showDialog<void>(
       context: context,
       builder: (BuildContext context) {
@@ -1647,6 +1651,15 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
                 Text(
                   'Rate: ${str(doc, 'rate').isEmpty ? 'Rate to be decided' : str(doc, 'rate')}',
                 ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Specialities',
+                  style: AppTextStyles.themed(context, AppTextStyles.subtitle),
+                ),
+                if (specialities.isEmpty)
+                  const Text('Not provided yet.')
+                else
+                  ...specialities.map((String s) => Text(s)),
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   'Slots',
@@ -1802,6 +1815,11 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
         TextEditingController(text: str(doc, 'phone'));
     final TextEditingController rate =
         TextEditingController(text: str(doc, 'rate'));
+    final TextEditingController specialities = TextEditingController(
+      text: (doc['specialities'] as List<dynamic>? ?? <dynamic>[])
+          .map((dynamic s) => s.toString())
+          .join('\n'),
+    );
     bool chat = doc['chatAvailable'] is bool
         ? doc['chatAvailable'] as bool
         : true;
@@ -1850,6 +1868,12 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
                       controller: rate,
                       hint: 'Pricing is to be decided. Leave blank until rates are set.',
                     ),
+                    _adminField(
+                      label: 'Specialities',
+                      controller: specialities,
+                      hint: 'One per line',
+                      maxLines: 4,
+                    ),
                     SwitchListTile(
                       title: const Text('Chat available'),
                       value: chat,
@@ -1893,6 +1917,11 @@ class _AstrologersScreenState extends State<AstrologersScreen> {
                                   'experience': experience.text.trim(),
                                   'phone': phone.text.trim(),
                                   'rate': rate.text.trim(),
+                                  'specialities': specialities.text
+                                      .split('\n')
+                                      .map((String s) => s.trim())
+                                      .where((String s) => s.isNotEmpty)
+                                      .toList(),
                                   'chatAvailable': chat,
                                   'callAvailable': call,
                                 },

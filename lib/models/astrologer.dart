@@ -5,9 +5,9 @@
 /// astrologer the app is built for is Hans Ojha: his document
 /// id and name below are the only identity facts the code
 /// carries. Everything else about him, phone, photo, bio,
-/// qualifications, languages, experience and rate, comes from
-/// his record, and stays absent until he provides it. Nothing
-/// here invents any of those values.
+/// qualifications, specialities, languages, experience and
+/// rate, comes from his record, and stays absent until he
+/// provides it. Nothing here invents any of those values.
 library;
 
 /// Stable document id for the Hans Ojha record, so the
@@ -46,6 +46,7 @@ class Astrologer {
     this.bio,
     this.languages,
     this.qualifications,
+    this.specialities,
     this.experience,
     this.rate,
     this.chatAvailable = true,
@@ -74,6 +75,10 @@ class Astrologer {
   /// Qualifications. Null when not provided yet.
   final String? qualifications;
 
+  /// Specialities, in his own words. Null when not
+  /// provided yet.
+  final List<String>? specialities;
+
   /// Experience. Null when not provided yet.
   final String? experience;
 
@@ -96,6 +101,19 @@ class Astrologer {
     return trimmed.isEmpty ? null : trimmed;
   }
 
+  static List<String>? _stringList(
+    Map<String, dynamic> map,
+    String key,
+  ) {
+    final Object? raw = map[key];
+    if (raw is! List<dynamic>) return null;
+    final List<String> items = raw
+        .map((dynamic s) => s.toString().trim())
+        .where((String s) => s.isNotEmpty)
+        .toList();
+    return items.isEmpty ? null : items;
+  }
+
   factory Astrologer.fromMap(Map<String, dynamic> map) {
     final Object? rawSlots = map['slots'];
     return Astrologer(
@@ -106,6 +124,7 @@ class Astrologer {
       bio: _text(map, 'bio'),
       languages: _text(map, 'languages'),
       qualifications: _text(map, 'qualifications'),
+      specialities: _stringList(map, 'specialities'),
       experience: _text(map, 'experience'),
       rate: _text(map, 'rate'),
       chatAvailable: map['chatAvailable'] is bool
@@ -139,17 +158,32 @@ class Astrologer {
     if (bio != null) map['bio'] = bio;
     if (languages != null) map['languages'] = languages;
     if (qualifications != null) map['qualifications'] = qualifications;
+    if (specialities != null) map['specialities'] = specialities;
     if (experience != null) map['experience'] = experience;
     if (rate != null) map['rate'] = rate;
     return map;
   }
 
   /// The record the admin app creates for Hans Ojha when none
-  /// exists yet: his name only. Every other field stays
-  /// absent until he provides it.
+  /// exists yet: his name plus the details he has provided,
+  /// phone, qualifications and specialities. Photo, bio,
+  /// languages, experience and rate stay absent until he
+  /// provides them.
   static Map<String, Object?> initialHansOjhaRecord() {
     return <String, Object?>{
       'name': kHansOjhaName,
+      'phone': '9303849941',
+      'qualifications': 'Astrology',
+      'specialities': <String>[
+        'Kundli vishleshan',
+        'Mahadosh nivaran',
+        'Vivah evam rishta margdarshan',
+        'Career evam vyavasay margdarshan',
+        'Grah shanti evam vastu margdarshan',
+        'Swasthya margdarshan',
+        'Santan prapti evam parivar sukh',
+        'Adhyatmik sadhna evam jeevan margdarshan',
+      ],
       'chatAvailable': true,
       'callAvailable': true,
       'status': AstrologerStatus.waiting,
@@ -161,6 +195,8 @@ class Astrologer {
   bool get hasPhoto => photoUrl != null;
   bool get hasBio => bio != null;
   bool get hasQualifications => qualifications != null;
+  bool get hasSpecialities =>
+      specialities != null && specialities!.isNotEmpty;
   bool get hasLanguages => languages != null;
   bool get hasExperience => experience != null;
   bool get hasRate => rate != null;
@@ -191,6 +227,7 @@ class Astrologer {
     if (!hasPhoto) missing.add('Photo');
     if (!hasBio) missing.add('Bio');
     if (!hasQualifications) missing.add('Qualifications');
+    if (!hasSpecialities) missing.add('Specialities');
     if (!hasLanguages) missing.add('Languages');
     if (!hasExperience) missing.add('Experience');
     if (!hasRate) missing.add('Rate');
