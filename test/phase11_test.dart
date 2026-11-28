@@ -96,20 +96,19 @@ void main() {
       expect(config, contains('Time note'));
     });
 
-    test('unknown place is marked approximate in the report', () {
-      final KundliResult kundli = KundliCalculator.calculate(
-        birthLocal: DateTime(1998, 3, 14, 6, 25),
-        placeText: 'Nowhere City',
+    test('unknown place throws instead of a silent fallback chart', () {
+      // Phases 2 3 4 17 changed the contract: an unknown place
+      // throws ArgumentError instead of silently falling back
+      // to Jaipur, so no report is ever built from it. The
+      // report still marks approximate data, covered by the
+      // unknown time test above.
+      expect(
+        () => KundliCalculator.calculate(
+          birthLocal: DateTime(1998, 3, 14, 6, 25),
+          placeText: 'Nowhere City',
+        ),
+        throwsArgumentError,
       );
-      final KundliReportData data = buildKundliReportData(
-        birth: birth,
-        kundli: kundli,
-        chartKind: 'Lagna Chart',
-      );
-      expect(data.kundli.placeApproximate, isTrue);
-      final String config =
-          data.configRows.map((List<String> r) => r.join(' ')).join(' ');
-      expect(config, contains('Place note'));
     });
 
     test('moon chart report uses the moon lagna', () {
