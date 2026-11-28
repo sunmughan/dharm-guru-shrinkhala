@@ -1306,12 +1306,27 @@ class _KundliChartScreenState extends State<KundliChartScreen> {
   Future<void> _downloadPdfReport(KundliResult kundli) async {
     try {
       final KundliPdfFonts fonts = await KundliPdfFonts.load();
-      final KundliResult shown =
-          _showMoonChart ? kundli.moonChart : kundli;
+      // The chart on screen follows _chartMode: 0 Lagna, 1 Moon,
+      // 2 Navamsa. The PDF reports whichever chart is showing.
+      // Phase 11 used the old _showMoonChart flag here; main
+      // replaced it with _chartMode in Phase 8, so this follows
+      // the current switcher instead.
+      final KundliResult shown;
+      final String chartKind;
+      if (_chartMode == 1) {
+        shown = kundli.moonChart;
+        chartKind = 'Moon Chart';
+      } else if (_chartMode == 2) {
+        shown = Divisional.navamsaChart(kundli);
+        chartKind = 'Navamsa Chart';
+      } else {
+        shown = kundli;
+        chartKind = 'Lagna Chart';
+      }
       final KundliReportData data = buildKundliReportData(
         birth: widget.birth,
         kundli: shown,
-        chartKind: _showMoonChart ? 'Moon Chart' : 'Lagna Chart',
+        chartKind: chartKind,
       );
       final Uint8List bytes = await KundliPdfBuilder.build(data, fonts: fonts);
       final String safeName = widget.birth.name.replaceAll(
