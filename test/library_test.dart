@@ -149,13 +149,14 @@ void main() {
 
 
 
-/// Drags to a row, then drags once more so the row sits in
-/// the middle of the viewport, then taps it. _dragTo stops
-/// the moment the row is built, which can leave it half off
-/// the bottom edge, and a tap there misses the row.
+/// Drags to a row, then makes sure it is fully visible
+/// before tapping it. _dragTo stops the moment the row is
+/// built, which can leave it half off the bottom edge, and
+/// a blind extra drag can push it off the top edge instead,
+/// so the row is disposed and the tap finds no element.
 Future<void> _tapRow(WidgetTester tester, Finder target) async {
   await _dragTo(tester, target);
-  await tester.drag(find.byType(ListView).first, const Offset(0, -300));
+  await tester.ensureVisible(target.first);
   await tester.pumpAndSettle();
   await tester.tap(target.first);
 }

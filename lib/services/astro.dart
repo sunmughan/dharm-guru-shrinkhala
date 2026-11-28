@@ -1068,6 +1068,122 @@ String _formatClock(double hours) {
   return '${fixedHour.toString().padLeft(2, '0')}:${fixedMinute.toString().padLeft(2, '0')} $suffix';
 }
 
+/// Clock text for a local time in hours, same format the
+/// panchang uses. Public so the daily timings module can
+/// format its windows the same way.
+String formatClockHours(double hours) => _formatClock(hours);
+
+/// Sunrise, sunset and solar noon in local clock hours.
+class SunTimes {
+  const SunTimes({
+    required this.sunrise,
+    required this.sunset,
+    required this.noon,
+  });
+
+  final double sunrise;
+  final double sunset;
+  final double noon;
+}
+
+/// Sunrise, sunset and solar noon for a date and a place.
+/// Public so the daily timings module reuses the same
+/// sunrise instead of recomputing it a second way.
+SunTimes sunTimesFor(DateTime day, AstroPlace place) {
+  final DateTime noon =
+      DateTime(day.year, day.month, day.day, 12);
+  final DateTime utcNoon = noon.subtract(
+    const Duration(hours: 5, minutes: 30),
+  );
+  final double d = _dayNumber(utcNoon);
+  final ({double lon, double xs, double ys}) sun = _sunPosition(d);
+  final double eps = 23.4393 - 3.563e-7 * d;
+  final double decl = math.asin(
+        _sinD(eps) * _sinD(sun.lon),
+      ) *
+      180.0 /
+      math.pi;
+  final double cosH = (_sinD(-0.833) -
+          _sinD(place.latitude) * _sinD(decl)) /
+      (_cosD(place.latitude) * _cosD(decl));
+  final double clamped = cosH.clamp(-1.0, 1.0);
+  final double h0 =
+      math.acos(clamped) * 180.0 / math.pi / 15.0;
+  // Solar noon in local clock time: 12 minus the longitude
+  // difference from the IST meridian, minus the equation of
+  // time. IST meridian is 82.5 degrees east.
+  final double noonLocal =
+      12.0 - (place.longitude - 82.5) / 15.0 - _equationOfTime(day) / 60.0;
+  return SunTimes(
+    sunrise: noonLocal - h0,
+    sunset: noonLocal + h0,
+    noon: noonLocal,
+  );
+}
+
+/// Sidereal longitudes of all nine grahas at a UTC moment,
+/// in degrees. Public so the gochar, festival and strength
+/// modules can read positions for any date, not just a birth.
+Map<String, double> siderealLongitudes(DateTime utc) {
+  final double d = _dayNumber(utc);
+  final double ayan = ayanamsa(d);
+  final ({double lon, double xs, double ys}) sun = _sunPosition(d);
+  final double moonTropical = _moonLongitude(d);
+  final double rahuTropical = _rahuLongitude(d);
+  return <String, double>{
+    'Sun': _norm(sun.lon - ayan),
+    'Moon': _norm(moonTropical - ayan),
+    'Mars':
+        _norm(_planetLongitude('Mars', d, sun.xs, sun.ys) - ayan),
+    'Mercury':
+        _norm(_planetLongitude('Mercury', d, sun.xs, sun.ys) - ayan),
+    'Jupiter':
+        _norm(_planetLongitude('Jupiter', d, sun.xs, sun.ys) - ayan),
+    'Venus':
+        _norm(_planetLongitude('Venus', d, sun.xs, sun.ys) - ayan),
+    'Saturn':
+        _norm(_planetLongitude('Saturn', d, sun.xs, sun.ys) - ayan),
+    'Rahu': _norm(rahuTropical - ayan),
+    'Ketu': _norm(rahuTropical + 180.0 - ayan),
+  };
+}
+
+/// Tropical longitudes of the seven visible grahas at a UTC
+/// moment, for the Western system evaluation only. Rahu and
+/// Ketu have no Western counterpart and are left out.
+Map<String, double> tropicalLongitudes(DateTime utc) {
+  final double d = _dayNumber(utc);
+  final ({double lon, double xs, double ys}) sun = _sunPosition(d);
+  final double moonTropical = _moonLongitude(d);
+  return <String, double>{
+    'Sun': sun.lon,
+    'Moon': moonTropical,
+    'Mars': _planetLongitude('Mars', d, sun.xs, sun.ys),
+    'Mercury': _planetLongitude('Mercury', d, sun.xs, sun.ys),
+    'Jupiter': _planetLongitude('Jupiter', d, sun.xs, sun.ys),
+    'Venus': _planetLongitude('Venus', d, sun.xs, sun.ys),
+    'Saturn': _planetLongitude('Saturn', d, sun.xs, sun.ys),
+  };
+}
+
+/// Tropical ascendant in degrees at a UTC moment for a
+/// place, for the Western system evaluation only.
+double tropicalAscendant(DateTime utc, AstroPlace place) {
+  final double d = _dayNumber(utc);
+  return _ascendant(d, place);
+}
+
+/// Local sidereal time in hours at a UTC moment for a
+/// longitude east in degrees. Used by the moonrise scan.
+double localSiderealTimeHours(DateTime utc, double longitudeDeg) {
+  final double d = _dayNumber(utc);
+  final double jd = 2451543.5 + d;
+  final double gmst = _norm(
+    280.46061837 + 360.98564736629 * (jd - 2451545.0),
+  );
+  return _norm(gmst + longitudeDeg) / 15.0;
+}
+
 /// Real daily panchang, computed from the actual date and the
 /// place, not from a stored table. Sun and Moon are taken at
 /// local noon. Rahu kaal follows the standard weekday table
@@ -1089,26 +1205,10 @@ class PanchangCalculator {
     final double moonSidereal = _norm(moonTropical - ayan);
     final double elongation = _norm(moonSidereal - sunSidereal);
 
-    // Sunrise and sunset from the solar declination.
-    final double eps = 23.4393 - 3.563e-7 * d;
-    final double decl = math.asin(
-          _sinD(eps) * _sinD(sun.lon),
-        ) *
-        180.0 /
-        math.pi;
-    final double cosH = (_sinD(-0.833) -
-            _sinD(place.latitude) * _sinD(decl)) /
-        (_cosD(place.latitude) * _cosD(decl));
-    final double clamped = cosH.clamp(-1.0, 1.0);
-    final double h0 =
-        math.acos(clamped) * 180.0 / math.pi / 15.0;
-    // Solar noon in local clock time: 12 minus the longitude
-    // difference from the IST meridian, minus the equation of
-    // time. IST meridian is 82.5 degrees east.
-    final double noonLocal =
-        12.0 - (place.longitude - 82.5) / 15.0 - _equationOfTime(day) / 60.0;
-    final double sunrise = noonLocal - h0;
-    final double sunset = noonLocal + h0;
+    final SunTimes times = sunTimesFor(day, place);
+    final double sunrise = times.sunrise;
+    final double sunset = times.sunset;
+    final double noonLocal = times.noon;
     final double abhijitStart = noonLocal - 24.0 / 60.0;
     final double abhijitEnd = noonLocal + 24.0 / 60.0;
 

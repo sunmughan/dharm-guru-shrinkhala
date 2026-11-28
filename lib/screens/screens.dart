@@ -17,6 +17,7 @@ import '../services/horoscope_periods.dart';
 import '../services/notification_prefs.dart';
 import '../services/auth_service.dart';
 import '../services/chat_service.dart';
+import '../services/dasha_detail.dart';
 import '../services/firebase_service.dart';
 import '../services/firestore_service.dart';
 import '../services/kundli_pdf.dart';
@@ -24,6 +25,7 @@ import '../services/kundli_report.dart';
 import '../services/library_content.dart';
 import '../services/matching.dart';
 import '../services/notification_schedule.dart';
+import '../services/panchang_extra.dart';
 import '../services/premium_service.dart';
 import '../services/remedies_engine.dart';
 import '../services/user_profile.dart';
@@ -2037,6 +2039,12 @@ class _PanchangBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<String> muhuratWindows =
         panchang.shubhMuhurat.split(' and ');
+    final AstroPlace place = placeFor(panchang.city) ?? kDefaultPlace;
+    final DailyTimings timings = dailyTimings(date, place);
+    final String goodChoghadiya = timings.choghadiyaDay
+        .where((ChoghadiyaSegment s) => s.isGood)
+        .map((ChoghadiyaSegment s) => s.text)
+        .join(', ');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Panchang'),
@@ -2182,6 +2190,65 @@ class _PanchangBody extends StatelessWidget {
                 '${formatDay(f.date)}: ${f.tithi}, ${f.observance}.',
                 style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
               ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.space3),
+          Card(
+            color: AppColors.resolve(
+              context,
+              AppColors.surface2,
+              AppColorsDark.surface2,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.space5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Daily timings',
+                    style: AppTextStyles.themed(context, AppTextStyles.caption.copyWith(
+                      color: AppColors.saffron2,
+                    )),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Yamaganda ${timings.yamaganda.text}.',
+                    style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+                  ),
+                  Text(
+                    'Gulika ${timings.gulika.text}.',
+                    style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+                  ),
+                  Text(
+                    'Brahma Muhurat ${timings.brahmaMuhurat.text}.',
+                    style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+                  ),
+                  Text(
+                    'Moonrise ${timings.moonrise ?? 'no moonrise today'} (approx).',
+                    style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+                  ),
+                  Text(
+                    'Moonset ${timings.moonset ?? 'no moonset today'} (approx).',
+                    style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+                  ),
+                  Text(
+                    'Paksha ${timings.paksha}.',
+                    style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+                  ),
+                  Text(
+                    'Lunar month ${timings.lunarMonthAmanta} (Amanta), ${timings.lunarMonthPurnimanta} (Purnimanta).',
+                    style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+                  ),
+                  if (timings.adhika)
+                    Text(
+                      'Adhika Masa month: no sankranti falls in this lunar month.',
+                      style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+                    ),
+                  Text(
+                    'Good Choghadiya: $goodChoghadiya.',
+                    style: AppTextStyles.themed(context, AppTextStyles.bodySmall),
+                  ),
+                ],              ),
             ),
           ),
         ],
@@ -3247,6 +3314,7 @@ class _LibraryBody extends StatelessWidget {
                 Text('Sunset ${panchang.sunset}.'),
                 Text('Shubh muhurat ${panchang.shubhMuhurat}.'),
                 Text('Rahu kaal ${panchang.rahuKaal}'),
+                if (day.rule.isNotEmpty) Text(day.rule),
               ],
             ),
           ),
@@ -3269,6 +3337,9 @@ class _LibraryBody extends StatelessWidget {
         birth == null ? <DashaInfo>[] : vimshottariTimeline(birthLocal: birth);
     final DateTime today = DateTime.now();
     final DateTime todayDay = DateTime(today.year, today.month, today.day);
+    final DashaDetail? detail = birth == null
+        ? null
+        : dashaDetail(birthLocal: birth, asOf: todayDay);
     final List<FestivalDay> festivals =
         festivalDays(from: todayDay);
     return ListView(
@@ -3338,7 +3409,9 @@ class _LibraryBody extends StatelessWidget {
                   ),
                 ),
                 subtitle: Text(
-                  '${formatDay(span.start)} to ${formatDay(span.end)}',
+                  current && detail != null
+                      ? '${formatDay(span.start)} to ${formatDay(span.end)}\nAntar: ${detail.antardasha.lord} till ${formatDay(detail.antardasha.end)}'
+                      : '${formatDay(span.start)} to ${formatDay(span.end)}',
                   style: AppTextStyles.themed(
                     context,
                     AppTextStyles.bodySmall,
